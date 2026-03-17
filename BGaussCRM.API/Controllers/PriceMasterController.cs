@@ -51,29 +51,31 @@ namespace BGaussCRM.API.Controllers
         // ADD PRICE
         // =============================
         [HttpPost("add")]
+        [Consumes("multipart/form-data")]
         public async Task<IActionResult> Add(
-            int modelId,
-            int variantId,
-            DateOnly effectiveStartDate,
-            DateOnly? effectiveEndDate,
-            decimal price,
-            IFormFile? priceListFile)
+            [FromForm] int modelId,
+            [FromForm] int variantId,
+            [FromForm] DateOnly? effectiveStartDate,
+            [FromForm] DateOnly? effectiveEndDate,
+            [FromForm] decimal price,
+            [FromForm] IFormFile? priceListFile)
         {
             try
             {
-                string? filePath = null;
+                if (effectiveStartDate == null)
+                    return BadRequest("EffectiveStartDate is required.");
 
+                // Handle file upload
+                string? filePath = null;
                 if (priceListFile != null && priceListFile.Length > 0)
                 {
                     var rootPath = _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-
                     string folder = Path.Combine(rootPath, "PriceListFiles");
 
                     if (!Directory.Exists(folder))
                         Directory.CreateDirectory(folder);
 
                     string fileName = Guid.NewGuid() + Path.GetExtension(priceListFile.FileName);
-
                     string fullPath = Path.Combine(folder, fileName);
 
                     using (var stream = new FileStream(fullPath, FileMode.Create))
@@ -88,7 +90,7 @@ namespace BGaussCRM.API.Controllers
                 {
                     ModelId = modelId,
                     VariantId = variantId,
-                    EffectiveStartDate = effectiveStartDate,
+                    EffectiveStartDate = effectiveStartDate.Value,
                     EffectiveEndDate = effectiveEndDate,
                     Price = price,
                     PriceListFile = filePath
@@ -111,35 +113,39 @@ namespace BGaussCRM.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(
             int id,
-            int modelId,
-            int variantId,
-            DateOnly effectiveStartDate,
-            DateOnly? effectiveEndDate,
-            decimal price,
-            IFormFile? priceListFile)
+            [FromForm] int modelId,
+            [FromForm] int variantId,
+            [FromForm] DateOnly? effectiveStartDate,   // nullable
+            [FromForm] DateOnly? effectiveEndDate,     // nullable
+            [FromForm] decimal price,
+            [FromForm] IFormFile? priceListFile)
         {
             var existing = await _context.PriceMasters.FindAsync(id);
 
             if (existing == null)
                 return NotFound();
 
+            // Only update start date if provided
+            if (effectiveStartDate.HasValue)
+                existing.EffectiveStartDate = effectiveStartDate.Value;
+
+            // End date can be null
+            existing.EffectiveEndDate = effectiveEndDate;
+
             existing.ModelId = modelId;
             existing.VariantId = variantId;
-            existing.EffectiveStartDate = effectiveStartDate;
-            existing.EffectiveEndDate = effectiveEndDate;
             existing.Price = price;
 
+            // File upload update
             if (priceListFile != null && priceListFile.Length > 0)
             {
                 var rootPath = _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-
                 string folder = Path.Combine(rootPath, "PriceListFiles");
 
                 if (!Directory.Exists(folder))
                     Directory.CreateDirectory(folder);
 
                 string fileName = Guid.NewGuid() + Path.GetExtension(priceListFile.FileName);
-
                 string fullPath = Path.Combine(folder, fileName);
 
                 using (var stream = new FileStream(fullPath, FileMode.Create))
@@ -179,7 +185,6 @@ namespace BGaussCRM.API.Controllers
         public IActionResult DownloadTemplate()
         {
             using var package = new ExcelPackage();
-
             var sheet = package.Workbook.Worksheets.Add("PriceMaster");
 
             sheet.Cells[1, 1].Value = "ModelId";
@@ -238,7 +243,17 @@ namespace BGaussCRM.API.Controllers
                     continue;
                 }
 
-                DateOnly startDate = DateOnly.Parse(startDateText);
+                DateOnly startDate;
+                try
+                {
+                    startDate = DateOnly.Parse(startDateText);
+                }
+                catch
+                {
+                    skippedRows.Add(row);
+                    continue;
+                }
+
                 DateOnly? endDate = string.IsNullOrWhiteSpace(endDateText)
                     ? null
                     : DateOnly.Parse(endDateText);
@@ -252,21 +267,18 @@ namespace BGaussCRM.API.Controllers
                 {
                     existing.Price = price;
                     existing.EffectiveEndDate = endDate;
-
                     updatedCount++;
                     continue;
                 }
 
-                var priceData = new PriceMaster
+                priceToInsert.Add(new PriceMaster
                 {
                     ModelId = modelId,
                     VariantId = variantId,
                     EffectiveStartDate = startDate,
                     EffectiveEndDate = endDate,
                     Price = price
-                };
-
-                priceToInsert.Add(priceData);
+                });
             }
 
             if (priceToInsert.Any())
@@ -276,7 +288,6 @@ namespace BGaussCRM.API.Controllers
                 await _context.SaveChangesAsync();
 
             var message = $"{priceToInsert.Count} inserted, {updatedCount} updated.";
-
             if (skippedRows.Any())
                 message += $" Skipped rows: {string.Join(",", skippedRows)}";
 
