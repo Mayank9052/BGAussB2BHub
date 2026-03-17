@@ -1,0 +1,17 @@
+﻿using System;
+using System.Collections.Generic;
+
+namespace BGaussCRM.API.Models;
+
+public partial class VehicleColour
+{
+    public int Id { get; set; }
+
+    public string? ColourName { get; set; }
+
+    public int? ModelId { get; set; }
+
+    public int? VariantId { get; set; }
+
+    public virtual ICollection<ScootyInventory> ScootyInventories { get; set; } = new List<ScootyInventory>();
+}
