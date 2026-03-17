@@ -19,7 +19,7 @@ public partial class ScootyInventory
 
     public int? RangeKm { get; set; }
 
-    public int? StockAvailable { get; set; }
+    public bool StockAvailable { get; set; }
 
     public string? ImageUrl { get; set; }
 

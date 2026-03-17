@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using BGaussCRM.API.Data;
 using OfficeOpenXml;
+using BGaussCRM.API.ModelBinders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +14,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 );
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Insert at position 0 to give it highest priority
+    options.ModelBinderProviders.Insert(0, new DateOnlyModelBinderProvider());
+});
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();

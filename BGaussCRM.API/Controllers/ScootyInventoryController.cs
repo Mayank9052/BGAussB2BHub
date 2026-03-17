@@ -83,7 +83,7 @@ namespace BGaussCRM.API.Controllers
             decimal? price,
             string? batterySpecs,
             int? rangeKm,
-            int? stockAvailable,
+            bool stockAvailable,
             IFormFile? image)
         {
             try
@@ -136,24 +136,6 @@ namespace BGaussCRM.API.Controllers
             {
                 return BadRequest(ex.Message);
             }
-        }
-
-        // =============================
-        // CREATE INVENTORY
-        // =============================
-        [HttpPost]
-        public async Task<IActionResult> Create([FromForm] ScootyInventory model, IFormFile? image)
-        {
-            if (image != null)
-            {
-                var imagePath = SaveImage(image);
-                model.ImageUrl = imagePath;
-            }
-
-            _context.ScootyInventories.Add(model);
-            await _context.SaveChangesAsync();
-
-            return Ok(model);
         }
 
         // =============================
@@ -350,7 +332,7 @@ namespace BGaussCRM.API.Controllers
                 int? colourId = int.TryParse(colourIdText, out int cId) ? cId : null;
                 decimal? price = decimal.TryParse(priceText, out decimal p) ? p : null;
                 int? rangeKm = int.TryParse(rangeText, out int r) ? r : null;
-                int? stock = int.TryParse(stockText, out int s) ? s : null;
+                bool stock = stockText == "1" || stockText.ToLower() == "true";
 
                 var existing = existingInventory.FirstOrDefault(x =>
                     x.ModelId == modelId &&
