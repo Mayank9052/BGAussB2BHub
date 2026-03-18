@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-const IMAGE_BASE = "https://localhost:7181";
+const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "https://localhost:7181";
 
 interface VehicleDetailsResponse {
   scootyId: number;
@@ -19,6 +19,10 @@ interface VehicleDetailsResponse {
   rangeKm: number | null;
   stockAvailable: boolean;
 }
+
+type VehicleDetailsResponseApi = VehicleDetailsResponse & {
+  imagePath?: string | null;
+};
 
 interface InventoryItem {
   scootyId: number;
@@ -35,6 +39,18 @@ interface InventoryItem {
   imageUrl: string | null;
 }
 
+type InventoryItemApi = InventoryItem & {
+  imagePath?: string | null;
+};
+
+const resolveImageSrc = (path: string | null) => {
+  if (!path) return noImage;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_ORIGIN}${normalizedPath}`;
+};
+
 export default function VehicleDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,6 +59,13 @@ export default function VehicleDetails() {
   const [availableModels, setAvailableModels] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const normalizeImageField = <T extends { imageUrl?: string | null; imagePath?: string | null }>(
+    item: T
+  ): T & { imageUrl: string | null } => ({
+    ...item,
+    imageUrl: item.imageUrl ?? item.imagePath ?? null,
+  });
 
   useEffect(() => {
     if (!id) {
@@ -57,28 +80,31 @@ export default function VehicleDetails() {
 
       try {
         const [detailsRes, inventoryListRes] = await Promise.all([
-          axios.get<VehicleDetailsResponse>(`/api/ScootyInventory/details/${id}`),
-          axios.get<InventoryItem[]>("/api/ScootyInventory"),
+          axios.get<VehicleDetailsResponseApi>(`/api/ScootyInventory/details/${id}`),
+          axios.get<InventoryItemApi[]>("/api/ScootyInventory"),
         ]);
 
-        const currentInventory = inventoryListRes.data.find(
+        const vehicleDetails = normalizeImageField(detailsRes.data);
+        const inventoryList = inventoryListRes.data.map(normalizeImageField);
+
+        const currentInventory = inventoryList.find(
           (item) => item.scootyId === Number(id)
         );
 
-        const relatedModels = inventoryListRes.data
+        const relatedModels = inventoryList
           .filter((item) =>
             currentInventory
               ? item.modelId === currentInventory.modelId
-              : item.modelName === detailsRes.data.modelName
+              : item.modelName === vehicleDetails.modelName
           )
           .sort((a, b) => {
-            if (a.scootyId === detailsRes.data.scootyId) return -1;
-            if (b.scootyId === detailsRes.data.scootyId) return 1;
+            if (a.scootyId === vehicleDetails.scootyId) return -1;
+            if (b.scootyId === vehicleDetails.scootyId) return 1;
             if (a.stockAvailable !== b.stockAvailable) return a.stockAvailable ? -1 : 1;
             return (b.price ?? 0) - (a.price ?? 0);
           });
 
-        setVehicle(detailsRes.data);
+        setVehicle(vehicleDetails);
         setAvailableModels(relatedModels);
         window.scrollTo(0, 0);
       } catch (fetchError) {
@@ -93,9 +119,6 @@ export default function VehicleDetails() {
 
     fetchVehiclePage();
   }, [id]);
-
-  const getImage = (imageUrl: string | null) =>
-    imageUrl ? `${IMAGE_BASE}${imageUrl}` : noImage;
 
   const formatCurrency = (value: number | null) => {
     if (typeof value !== "number") {
@@ -185,7 +208,7 @@ export default function VehicleDetails() {
                 <div className="vehicle-details-gallery-grid">
                   <article className="vehicle-details-gallery-card vehicle-details-gallery-card-main">
                     <img
-                      src={getImage(vehicle.imageUrl)}
+                      src={resolveImageSrc(vehicle.imageUrl)}
                       alt={`${vehicle.modelName} ${vehicle.variantName}`}
                       onError={(event) => {
                         event.currentTarget.src = noImage;

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const IMAGE_BASE = "https://localhost:7181";
+const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "https://localhost:7181";
 
 interface Vehicle {
   scootyId: number;
@@ -18,6 +18,18 @@ interface Vehicle {
   stockAvailable: boolean;
   imageUrl: string | null;
 }
+
+type VehicleApi = Vehicle & {
+  imagePath?: string | null;
+};
+
+const resolveImageSrc = (path: string | null) => {
+  if (!path) return noImage;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_ORIGIN}${normalizedPath}`;
+};
 
 export default function Dashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -32,17 +44,19 @@ export default function Dashboard() {
 
   const fetchVehicles = async () => {
     try {
-      const res = await axios.get("/api/ScootyInventory/models-list");
-      setVehicles(res.data);
+      const res = await axios.get<VehicleApi[]>("/api/ScootyInventory/models-list");
+      const normalized = res.data.map((item) => ({
+        ...item,
+        imageUrl: item.imageUrl ?? item.imagePath ?? null,
+      }));
+
+      setVehicles(normalized);
     } catch {
       setError("Failed to load vehicles");
     } finally {
       setLoading(false);
     }
   };
-
-  const getImage = (url: string | null) =>
-    url ? `${IMAGE_BASE}${url}` : noImage;
 
   return (
     <div className="dashboard">
@@ -83,9 +97,11 @@ export default function Dashboard() {
               onClick={() => navigate(`/vehicle/${v.scootyId}`)}
             >
               <img
-                src={getImage(v.imageUrl)}
+                src={resolveImageSrc(v.imageUrl)}
                 className="vehicle-img"
-                onError={(e: any) => (e.target.src = noImage)}
+                onError={(event) => {
+                  event.currentTarget.src = noImage;
+                }}
               />
 
               <h3>{v.modelName}</h3>
