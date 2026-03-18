@@ -39,18 +39,29 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 🚀 Load from cache first (instant UI)
+    const cached = localStorage.getItem("vehicles");
+    if (cached) {
+      setVehicles(JSON.parse(cached));
+      setLoading(false);
+    }
+
     fetchVehicles();
   }, []);
 
   const fetchVehicles = async () => {
     try {
       const res = await axios.get<VehicleApi[]>("/api/ScootyInventory/models-list");
+
       const normalized = res.data.map((item) => ({
         ...item,
         imageUrl: item.imageUrl ?? item.imagePath ?? null,
       }));
 
       setVehicles(normalized);
+
+      // 💾 Save to cache
+      localStorage.setItem("vehicles", JSON.stringify(normalized));
     } catch {
       setError("Failed to load vehicles");
     } finally {
@@ -61,10 +72,8 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
 
-      {/* ✅ PROFESSIONAL NAVBAR */}
+      {/* ✅ NAVBAR */}
       <header className="pro-navbar">
-
-        {/* LEFT */}
         <div className="pro-left">
           <img src={logo} className="pro-logo" />
 
@@ -74,22 +83,31 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* RIGHT */}
         <div className="pro-right">
           <span className="user-name">Welcome, Admin</span>
         </div>
-
       </header>
 
       {/* CONTENT */}
       <div className="main-content">
-
         <h1>Vehicle Collection</h1>
 
-        {loading && <p>Loading...</p>}
         {error && <p className="error">{error}</p>}
 
         <div className="vehicle-grid">
+
+          {/* 🔄 Skeleton Loader */}
+          {loading &&
+            Array.from({ length: 6 }).map((_, i) => (
+              <div className="vehicle-card skeleton" key={i}>
+                <div className="skeleton-img"></div>
+                <div className="skeleton-text"></div>
+                <div className="skeleton-text small"></div>
+              </div>
+            ))
+          }
+
+          {/* 🚗 Actual Vehicles */}
           {vehicles.map((v) => (
             <div
               className="vehicle-card"
@@ -99,6 +117,7 @@ export default function Dashboard() {
               <img
                 src={resolveImageSrc(v.imageUrl)}
                 className="vehicle-img"
+                loading="lazy"
                 onError={(event) => {
                   event.currentTarget.src = noImage;
                 }}
@@ -106,14 +125,15 @@ export default function Dashboard() {
 
               <h3>{v.modelName}</h3>
               <p>{v.variantName}</p>
-              <p>{v.rangeKm} km</p>
-              <p>₹ {v.price}</p>
+              <p>{v.rangeKm ?? "N/A"} km</p>
+              <p>₹ {v.price ?? "N/A"}</p>
 
               <span className={v.stockAvailable ? "green" : "red"}>
                 {v.stockAvailable ? "In Stock" : "Out"}
               </span>
             </div>
           ))}
+
         </div>
       </div>
     </div>

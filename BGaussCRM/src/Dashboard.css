@@ -140,3 +140,32 @@
 .error {
   color: red;
 }
+
+/* Skeleton Loader */
+.skeleton {
+  animation: pulse 1.5s infinite;
+}
+
+.skeleton-img {
+  width: 100%;
+  height: 150px;
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+.skeleton-text {
+  height: 15px;
+  background: #e5e7eb;
+  margin-top: 10px;
+  border-radius: 5px;
+}
+
+.skeleton-text.small {
+  width: 60%;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
