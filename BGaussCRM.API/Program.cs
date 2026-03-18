@@ -16,7 +16,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Controllers
 builder.Services.AddControllers(options =>
 {
-    // Insert at position 0 to give it highest priority
     options.ModelBinderProviders.Insert(0, new DateOnlyModelBinderProvider());
 });
 
@@ -24,7 +23,7 @@ builder.Services.AddControllers(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS for React frontend
+// CORS (only for development)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactDev",
@@ -37,21 +36,30 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Swagger enabled in development and will open automatically
+// Swagger only in development
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "BGaussCRM API V1");
-        c.RoutePrefix = "swagger"; // Swagger available at /swagger
-    });
+    app.UseSwaggerUI();
 }
 
+// ⚠️ Keep HTTPS only if needed (IIS handles HTTPS usually)
 app.UseHttpsRedirection();
+
+// Serve React build
+app.UseDefaultFiles();
 app.UseStaticFiles();
-app.UseCors("AllowReactDev");
+
+// Use CORS only in development
+if (app.Environment.IsDevelopment())
+{
+    app.UseCors("AllowReactDev");
+}
+
 app.UseAuthorization();
 app.MapControllers();
+
+// React routing fallback
+app.MapFallbackToFile("index.html");
 
 app.Run();
