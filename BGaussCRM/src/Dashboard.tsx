@@ -38,7 +38,20 @@ export default function Dashboard() {
 
   const navigate = useNavigate();
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("vehicles");
+    navigate("/", { replace: true });
+  };
+
   useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/", { replace: true });
+      return;
+    }
+
     // 🚀 Load from cache first (instant UI)
     const cached = localStorage.getItem("vehicles");
     if (cached) {
@@ -47,7 +60,7 @@ export default function Dashboard() {
     }
 
     fetchVehicles();
-  }, []);
+  }, [navigate]);
 
   const fetchVehicles = async () => {
     try {
@@ -85,6 +98,9 @@ export default function Dashboard() {
 
         <div className="pro-right">
           <span className="user-name">Welcome, Admin</span>
+          <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
         </div>
       </header>
 

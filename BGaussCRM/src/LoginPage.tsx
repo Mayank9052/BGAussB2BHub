@@ -14,6 +14,8 @@ const LoginPage = () => {
     e.preventDefault();
 
     if (identifier && password) {
+      // Set a simple session flag; replace with real auth token when backend is ready
+      localStorage.setItem("token", "session");
       navigate("/dashboard");
     } else {
       alert("Enter credentials");
