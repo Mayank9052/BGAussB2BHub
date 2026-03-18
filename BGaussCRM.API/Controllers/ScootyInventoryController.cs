@@ -261,6 +261,112 @@ namespace BGaussCRM.API.Controllers
         }
 
         // =============================
+        // GET UNIQUE MODEL LIST (ONLY 1 IMAGE PER MODEL)
+        // =============================
+        [HttpGet("models-list")]
+        public async Task<IActionResult> GetUniqueModels()
+        {
+            var data = await _context.ScootyInventories
+                .Include(x => x.Model)
+                .Include(x => x.Variant)
+                .Where(x => x.ImageUrl != null) // only records with image
+                .GroupBy(x => x.ModelId)
+                .Select(g => g
+                    .OrderByDescending(x => x.ScootyId) // latest image
+                    .Select(x => new
+                    {
+                        ScootyId = x.ScootyId,   // IMPORTANT for click
+                        ModelId = x.ModelId,
+                        ModelName = x.Model.ModelName,
+                        VariantName = x.Variant.VariantName,
+                        ImageUrl = x.ImageUrl,
+                        StockAvailable = x.StockAvailable,
+                        Price = x.Price
+                    })
+                    .FirstOrDefault()
+                )
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
+        // =============================
+        // GET DETAILS FOR CLICKED SCOOTY ONLY
+        // =============================
+        [HttpGet("details/{id}")]
+        public async Task<IActionResult> GetScootyDetails(int id)
+        {
+            var data = await _context.ScootyInventories
+                .Include(x => x.Model)
+                .Include(x => x.Variant)
+                .Include(x => x.Colour)
+                .Where(x => x.ScootyId == id)
+                .Select(x => new
+                {
+                    x.ImageUrl,
+                    x.ScootyId,
+
+                    ModelName = x.Model.ModelName,
+                    VariantName = x.Variant.VariantName,
+                    ColourName = x.Colour != null ? x.Colour.ColourName : null,
+
+                    x.Price,
+                    x.BatterySpecs,
+                    x.RangeKm,
+                    x.StockAvailable
+                    
+                })
+                .FirstOrDefaultAsync();
+
+            if (data == null)
+                return NotFound();
+
+            return Ok(data);
+        }
+
+        // =============================
+        // SHARE ACTIVE SCOOTY DETAILS
+        // =============================
+        [HttpGet("share/{id}")]
+        public async Task<IActionResult> ShareScooty(int id)
+        {
+            var data = await _context.ScootyInventories
+                .Include(x => x.Model)
+                .Include(x => x.Variant)
+                .Include(x => x.Colour)
+                .Where(x => x.ScootyId == id && x.StockAvailable == true) // ONLY ACTIVE
+                .Select(x => new
+                {
+                    Title = x.Model.ModelName + " " + x.Variant.VariantName,
+
+                    Model = x.Model.ModelName,
+                    Variant = x.Variant.VariantName,
+                    Colour = x.Colour != null ? x.Colour.ColourName : null,
+
+                    Price = x.Price,
+                    Range = x.RangeKm,
+                    Battery = x.BatterySpecs,
+
+                    ImageUrl = x.ImageUrl,
+
+                    // Share Text (READY TO USE)
+                    ShareText =
+                        "Scooty Details:\n" +
+                        "Model: " + x.Model.ModelName + "\n" +
+                        "Variant: " + x.Variant.VariantName + "\n" +
+                        "Price: ₹" + x.Price + "\n" +
+                        "Range: " + x.RangeKm + " km\n" +
+                        "Battery: " + x.BatterySpecs
+                })
+                .FirstOrDefaultAsync();
+
+            if (data == null)
+                return NotFound("Scooty not found or not active");
+
+            return Ok(data);
+        }
+
+        // =============================
         // DOWNLOAD EXCEL TEMPLATE
         // =============================
         [HttpGet("download-template")]
