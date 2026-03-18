@@ -6,6 +6,16 @@
   color: #0f172a;
 }
 
+.vehicle-details-nav-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.vehicle-details-back-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ===== Professional Navbar (shared) ===== */
 .pro-navbar {
   position: sticky;

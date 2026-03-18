@@ -10,6 +10,7 @@ export default defineConfig({
   ],
   server: {
     port: 5173, // React dev server port
+    open: true,
     proxy: {
       '/api': {
         target: 'https://localhost:7181', // Your .NET backend URL

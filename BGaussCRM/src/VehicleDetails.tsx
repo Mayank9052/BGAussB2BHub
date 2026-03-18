@@ -92,17 +92,20 @@ export default function VehicleDetails() {
         );
 
         const relatedModels = inventoryList
-          .filter((item) =>
-            currentInventory
-              ? item.modelId === currentInventory.modelId
-              : item.modelName === vehicleDetails.modelName
-          )
-          .sort((a, b) => {
-            if (a.scootyId === vehicleDetails.scootyId) return -1;
-            if (b.scootyId === vehicleDetails.scootyId) return 1;
-            if (a.stockAvailable !== b.stockAvailable) return a.stockAvailable ? -1 : 1;
-            return (b.price ?? 0) - (a.price ?? 0);
-          });
+        .filter((item) =>
+          currentInventory
+            ? item.modelId === currentInventory.modelId
+            : item.modelName === vehicleDetails.modelName
+        )
+        .sort((a, b) => {
+          // First: stock available
+          if (a.stockAvailable !== b.stockAvailable) {
+            return a.stockAvailable ? -1 : 1;
+          }
+
+          // Second: price high → low
+          return (b.price ?? 0) - (a.price ?? 0);
+        });
 
         setVehicle(vehicleDetails);
         setAvailableModels(relatedModels);
@@ -119,6 +122,34 @@ export default function VehicleDetails() {
 
     fetchVehiclePage();
   }, [id]);
+
+  const goToDashboard = () => {
+    navigate("/dashboard");
+  };
+
+  const goToPrevious = () => {
+    if (!availableModels.length || !vehicle) return;
+
+    const currentIndex = availableModels.findIndex(
+      (x) => x.scootyId === vehicle.scootyId
+    );
+
+    if (currentIndex > 0) {
+      navigate(`/vehicle/${availableModels[currentIndex - 1].scootyId}`);
+    }
+  };
+
+  const goToNext = () => {
+    if (!availableModels.length || !vehicle) return;
+
+    const currentIndex = availableModels.findIndex(
+      (x) => x.scootyId === vehicle.scootyId
+    );
+
+    if (currentIndex < availableModels.length - 1) {
+      navigate(`/vehicle/${availableModels[currentIndex + 1].scootyId}`);
+    }
+  };
 
   const formatCurrency = (value: number | null) => {
     if (typeof value !== "number") {
@@ -179,9 +210,31 @@ export default function VehicleDetails() {
           </div>
         </div>
 
-        <div className="pro-right">
-          <button className="vehicle-details-back-btn" onClick={() => navigate(-1)}>
-            Back to Dashboard
+        <div className="pro-right vehicle-details-nav-buttons">
+          <button className="vehicle-details-back-btn" onClick={goToDashboard}>
+            Dashboard
+          </button>
+
+          <button
+            className="vehicle-details-back-btn"
+            onClick={goToPrevious}
+            disabled={
+              !vehicle ||
+              availableModels.findIndex(x => x.scootyId === vehicle?.scootyId) === 0
+            }
+          >
+            ⬅ Prev Vehicle
+          </button>
+
+          <button
+            className="vehicle-details-back-btn"
+            onClick={goToNext}
+            disabled={
+              !vehicle ||
+              availableModels.findIndex(x => x.scootyId === vehicle?.scootyId) === availableModels.length - 1
+            }
+          >
+            Next Vehicle ➡
           </button>
         </div>
       </header>
