@@ -1,0 +1,142 @@
+/* ===== PROFESSIONAL NAVBAR ===== */
+
+.pro-navbar {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 70px;
+  background: #ffffff;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  padding: 0 30px;
+
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+
+  z-index: 100;
+}
+
+/* LEFT */
+
+.pro-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pro-logo {
+  height: 38px;
+  border-radius: 6px;
+}
+
+/* TEXT */
+
+.pro-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pro-brand {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pro-page {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* RIGHT */
+
+.pro-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-name {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* ===== MAIN ===== */
+
+.main-content {
+  padding: 20px 30px;
+}
+
+/* ===== GRID ===== */
+
+.vehicle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 14px;
+}
+
+/* ===== CARD ===== */
+
+.vehicle-card {
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.vehicle-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+}
+
+/* IMAGE */
+
+.vehicle-img {
+  width: 100%;
+  height: 110px;
+  object-fit: contain;
+}
+
+/* TEXT */
+
+.vehicle-card h3 {
+  font-size: 13px;
+  margin: 6px 0;
+}
+
+.vehicle-card p {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* STATUS */
+
+.green {
+  background: #22c55e;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  display: inline-block;
+  margin-top: 6px;
+}
+
+.red {
+  background: #ef4444;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  display: inline-block;
+  margin-top: 6px;
+}
+
+/* ERROR */
+
+.error {
+  color: red;
+}
