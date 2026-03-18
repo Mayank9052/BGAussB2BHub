@@ -8,15 +8,14 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] })
   ],
 server: {
-  host: true,
-  port: 5173,
-  open: "http://192.168.68.56:5173",
-  proxy: {
-    '/api': {
-      target: 'http://192.168.68.56:5181',
-      changeOrigin: true,
-      secure: false,
-    },
+    port: 5173, // React dev server port
+    open: true,
+    proxy: {
+      '/api': {
+        target: 'https://localhost:7181', // Your .NET backend URL
+        changeOrigin: true,
+        secure: false, // self-signed certificates in dev
+      },
   },
 },
 });
