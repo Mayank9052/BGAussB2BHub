@@ -29,7 +29,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactDev",
         policy => policy
-            .WithOrigins("http://192.168.68.56:5173","http://localhost:5173") // React dev server
+            .WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod()
     );
@@ -48,7 +48,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-//app.UseHttpsRedirection();
+app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseCors("AllowReactDev");
 app.UseAuthorization();
