@@ -1,6 +1,8 @@
-# Build folders
+# Build folders (root + subfolders)
 bin/
 obj/
+**/bin/
+**/obj/
 
 # Visual Studio
 .vs/
