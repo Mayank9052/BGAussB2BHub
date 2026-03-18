@@ -2,21 +2,21 @@ import { defineConfig } from 'vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
-  server: {
-    port: 5173, // React dev server port
-    open: true,
-    proxy: {
-      '/api': {
-        target: 'https://localhost:7181', // Your .NET backend URL
-        changeOrigin: true,
-        secure: false, // self-signed certificates in dev
-      },
+server: {
+  host: true,
+  port: 5173,
+  open: "http://192.168.68.56:5173",
+  proxy: {
+    '/api': {
+      target: 'http://192.168.68.56:5181',
+      changeOrigin: true,
+      secure: false,
     },
   },
+},
 });
