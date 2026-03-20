@@ -156,11 +156,11 @@ namespace BGaussCRM.API.Controllers
                     if (modelId == 0)
                         continue;
 
-                    // Check existing variant
-                    var existingVariant = existingVariants
+                   // Check existing variant
+                   var existingVariant = existingVariants
                         .FirstOrDefault(v =>
                             v.ModelId == modelId &&
-                            v.VariantName.Equals(variantName, StringComparison.OrdinalIgnoreCase));
+                            string.Equals(v.VariantName, variantName, StringComparison.OrdinalIgnoreCase));
 
                     if (existingVariant != null)
                     {
