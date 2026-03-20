@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import LoginPage from "./LoginPage";
 import Dashboard from "./Dashboard";
 import VehicleDetails from "./VehicleDetails";
+import Modules from "./Modules";
 
 function App() {
   return (
@@ -9,6 +10,7 @@ function App() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/vehicle/:id" element={<VehicleDetails />} />
+      <Route path="/modules" element={<Modules />} />
     </Routes>
   );
 }

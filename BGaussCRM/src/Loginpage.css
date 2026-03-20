@@ -10,6 +10,7 @@ html, body, #root {
   font-family: Arial;
 }
 
+/* PAGE BACKGROUND */
 .page {
   min-height: 100vh;
   width: 100%;
@@ -21,7 +22,7 @@ html, body, #root {
   flex-direction: column;
 }
 
-/* ===== Professional Navbar (shared) ===== */
+/* NAVBAR */
 .pro-navbar {
   position: sticky;
   top: 0;
@@ -75,6 +76,7 @@ html, body, #root {
   font-weight: 500;
 }
 
+/* CENTER LOGIN */
 .login-container {
   flex: 1;
   display: flex;
@@ -82,54 +84,98 @@ html, body, #root {
   align-items: center;
 }
 
+/* ✨ GRADIENT LOGIN CARD */
 .login-card {
   width: 380px;
-  padding: 35px;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.12);
+  padding: 36px;
+
+  background: linear-gradient(145deg, #ffffff, #f1f5f9);
+
+  border-radius: 16px;
+  box-shadow: 
+    0 20px 50px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
   text-align: center;
+  transition: transform 0.2s ease;
 }
 
+.login-card:hover {
+  transform: translateY(-2px);
+}
+
+/* TITLE */
 .login-card h2 {
   font-size: 26px;
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  color: #0f172a;
 }
 
+/* INPUT GROUP */
 .input-group {
-  margin-top: 15px;
+  margin-top: 16px;
   text-align: left;
 }
 
+/* LABEL ABOVE INPUT */
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+/* INPUT */
 .input-group input {
   width: 100%;
   padding: 14px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid #e5e7eb;
   background: #f9fafb;
   font-size: 14px;
+  transition: all 0.2s ease;
 }
 
-.input-group label {
-  font-size: 12px;
-  color: #4b5563;
+/* INPUT FOCUS */
+.input-group input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
+/* LOGIN BUTTON */
 .login-btn {
-  margin-top: 20px;
+  margin-top: 22px;
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  font-size: 14px;
+  font-weight: 600;
+
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 999px;
+
+  background: linear-gradient(135deg, #0f766e 0%, #0f172a 100%);
+
   cursor: pointer;
+
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.16);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .login-btn:hover {
-  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(15, 23, 42, 0.2);
 }
 
+.login-btn:active {
+  transform: translateY(0);
+}
+
+/* RESPONSIVE */
 @media (max-width: 768px) {
   .login-card {
     width: 90%;

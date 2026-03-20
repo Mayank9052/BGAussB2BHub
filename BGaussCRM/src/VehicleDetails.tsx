@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "https://localhost:7181";
+// Default to local API; override via VITE_API_BASE if provided
+const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "http://localhost:5181";
 
 interface VehicleDetailsResponse {
   scootyId: number;
@@ -277,6 +278,40 @@ export default function VehicleDetails() {
                     </article>
                   ))}
                 </div>
+
+                <section className="vehicle-details-variants-block">
+                  <div className="vehicle-details-sidebar-head">
+                    <h3>Variants</h3>
+                    <p>{availableModels.length} option(s)</p>
+                  </div>
+
+                  <div className="vehicle-details-option-grid">
+                    {availableModels.map((item) => {
+                      const isSelected = item.scootyId === vehicle.scootyId;
+
+                      return (
+                        <button
+                          key={item.scootyId}
+                          type="button"
+                          className={
+                            isSelected
+                              ? "vehicle-details-option-card vehicle-details-option-card-active"
+                              : "vehicle-details-option-card"
+                          }
+                          onClick={() => navigate(`/vehicle/${item.scootyId}`)}
+                        >
+                          <strong>{item.variantName}</strong>
+                          <span>{formatCurrency(item.price)}</span>
+                          <small>
+                            {item.stockAvailable
+                              ? "Available now"
+                              : "Currently unavailable"}
+                          </small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
               </div>
 
               <aside className="vehicle-details-sidebar">
@@ -327,40 +362,6 @@ export default function VehicleDetails() {
                           {vehicle.stockAvailable ? "Available Now" : "Currently Unavailable"}
                         </strong>
                       </div>
-                    </div>
-                  </section>
-
-                  <section className="vehicle-details-sidebar-block">
-                    <div className="vehicle-details-sidebar-head">
-                      <h3>Variants</h3>
-                      <p>{availableModels.length} option(s)</p>
-                    </div>
-
-                    <div className="vehicle-details-option-grid">
-                      {availableModels.map((item) => {
-                        const isSelected = item.scootyId === vehicle.scootyId;
-
-                        return (
-                          <button
-                            key={item.scootyId}
-                            type="button"
-                            className={
-                              isSelected
-                                ? "vehicle-details-option-card vehicle-details-option-card-active"
-                                : "vehicle-details-option-card"
-                            }
-                            onClick={() => navigate(`/vehicle/${item.scootyId}`)}
-                          >
-                            <strong>{item.variantName}</strong>
-                            <span>{formatCurrency(item.price)}</span>
-                            <small>
-                              {item.stockAvailable
-                                ? "Available now"
-                                : "Currently unavailable"}
-                            </small>
-                          </button>
-                        );
-                      })}
                     </div>
                   </section>
                 </div>

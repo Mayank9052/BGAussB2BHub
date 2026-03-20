@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "https://localhost:7181";
+// Default API origin set to local backend; override with VITE_API_BASE when needed
+const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "http://localhost:5181";
 
 interface Vehicle {
   scootyId: number;
@@ -85,7 +86,7 @@ export default function Dashboard() {
   return (
     <div className="dashboard">
 
-      {/* ✅ NAVBAR */}
+      {/* NAVBAR */}
       <header className="pro-navbar">
         <div className="pro-left">
           <img src={logo} className="pro-logo" />
@@ -98,6 +99,15 @@ export default function Dashboard() {
 
         <div className="pro-right">
           <span className="user-name">Welcome, Admin</span>
+
+          {/* ✅ NEW MODULES BUTTON */}
+          <button
+            className="module-btn"
+            onClick={() => navigate("/modules")}
+          >
+            Modules
+          </button>
+
           <button className="logout-btn" onClick={handleLogout}>
             Logout
           </button>
@@ -112,7 +122,7 @@ export default function Dashboard() {
 
         <div className="vehicle-grid">
 
-          {/* 🔄 Skeleton Loader */}
+          {/* Skeleton Loader */}
           {loading &&
             Array.from({ length: 6 }).map((_, i) => (
               <div className="vehicle-card skeleton" key={i}>
@@ -120,10 +130,9 @@ export default function Dashboard() {
                 <div className="skeleton-text"></div>
                 <div className="skeleton-text small"></div>
               </div>
-            ))
-          }
+            ))}
 
-          {/* 🚗 Actual Vehicles */}
+          {/* Vehicles */}
           {vehicles.map((v) => (
             <div
               className="vehicle-card"

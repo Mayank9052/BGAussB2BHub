@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
-
 import logo from "./assets/logo.jpg";
 
 const LoginPage = () => {
@@ -14,8 +13,17 @@ const LoginPage = () => {
     e.preventDefault();
 
     if (identifier && password) {
-      // Set a simple session flag; replace with real auth token when backend is ready
+      // 🔐 TEMP ROLE LOGIC (replace with backend later)
+      let role = "user";
+
+      if (identifier.toLowerCase() === "admin") {
+        role = "admin";
+      }
+
       localStorage.setItem("token", "session");
+      localStorage.setItem("role", role);
+      localStorage.setItem("username", identifier);
+
       navigate("/dashboard");
     } else {
       alert("Enter credentials");
@@ -43,23 +51,23 @@ const LoginPage = () => {
           <h2>Dealer Login</h2>
 
           <div className="input-group">
+            <label>Username</label>
             <input
               type="text"
-              required
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
+              required
             />
-            <label>Email</label>
           </div>
 
           <div className="input-group">
+            <label>Password</label>
             <input
               type="password"
-              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              required
             />
-            <label>Password</label>
           </div>
 
           <button className="login-btn">Login</button>

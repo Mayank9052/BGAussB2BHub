@@ -28,7 +28,8 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactDev",
         policy => policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins( 
+              "http://localhost:5173") // React dev server URL
             .AllowAnyHeader()
             .AllowAnyMethod()
     );
@@ -45,8 +46,7 @@ if (app.Environment.IsDevelopment())
 
 // ⚠️ Keep HTTPS only if needed (IIS handles HTTPS usually)
 app.UseHttpsRedirection();
-
-// Serve React build
+//Serve React build
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
