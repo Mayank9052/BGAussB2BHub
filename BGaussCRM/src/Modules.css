@@ -1,4 +1,4 @@
-/* page background (optional match dashboard) */
+/* ===== PAGE ===== */
 .modules-page {
   min-height: 100vh;
   background:
@@ -6,7 +6,111 @@
     linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
 }
 
-/* content spacing */
+/* ===== CONTAINER ===== */
 .modules-container {
   padding: 30px;
+}
+
+.modules-container h1 {
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #0f172a;
+  text-align: center;
+}
+
+/* ===== GRID ===== */
+.modules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 22px;
+  margin-top: 20px;
+}
+
+/* ===== CARD ===== */
+.module-card {
+  background: linear-gradient(135deg, #ffffff, #f1f5f9);
+  padding: 26px;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+
+  transition: all 0.3s ease;
+
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  text-align: center;
+}
+
+/* HOVER EFFECT */
+.module-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 22px 45px rgba(15, 23, 42, 0.15);
+  border-color: #2563eb;
+}
+
+/* ===== ICON ===== */
+.icon-circle {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 28px;
+  color: white;
+
+  transition: all 0.3s ease;
+}
+
+/* ICON ANIMATION */
+.module-card:hover .icon-circle {
+  transform: scale(1.1) rotate(6deg);
+}
+
+/* ===== TEXT ===== */
+.module-card h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+  color: #111827;
+}
+
+.module-card p {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* ===== GRADIENT ICON COLORS ===== */
+
+/* B2B */
+.b2b-icon {
+  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+}
+
+/* INVENTORY */
+.inventory-icon {
+  background: linear-gradient(135deg, #10b981, #065f46);
+}
+
+/* VEHICLE */
+.vehicle-icon {
+  background: linear-gradient(135deg, #f59e0b, #92400e);
+}
+
+/* REPORT */
+.report-icon {
+  background: linear-gradient(135deg, #6366f1, #312e81);
+}
+
+/* ===== DISABLED ===== */
+.module-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.module-card.disabled:hover {
+  transform: none;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  border-color: #e5e7eb;
 }
