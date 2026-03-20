@@ -7,7 +7,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
 // Default to local API; override via VITE_API_BASE if provided
-const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "http://localhost:5181";
+const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "";
 
 interface VehicleDetailsResponse {
   scootyId: number;

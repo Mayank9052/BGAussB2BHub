@@ -7,7 +7,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 // Default API origin set to local backend; override with VITE_API_BASE when needed
-const API_ORIGIN = "";
+const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "";
 
 interface Vehicle {
   scootyId: number;
