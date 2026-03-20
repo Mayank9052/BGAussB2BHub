@@ -11,17 +11,17 @@ namespace BGaussCRM.API.Controllers
     public class ScootyInventoryController : ControllerBase
     {
         private readonly AppDbContext _context;
-        private readonly IWebHostEnvironment _environment;
+        private readonly IWebHostEnvironment _env;
 
-        public ScootyInventoryController(AppDbContext context, IWebHostEnvironment environment)
+        public ScootyInventoryController(AppDbContext context, IWebHostEnvironment env)
         {
             _context = context;
-            _environment = environment;
+            _env = env;
         }
 
-        // =============================
-        // GET ALL INVENTORY
-        // =============================
+        // ================================
+        // GET ALL
+        // ================================
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -29,88 +29,46 @@ namespace BGaussCRM.API.Controllers
                 .Include(x => x.Model)
                 .Include(x => x.Variant)
                 .Include(x => x.Colour)
-                .Select(x => new
-                {
-                    x.ScootyId,
-
-                    x.ModelId,
-                    ModelName = x.Model.ModelName,
-
-                    x.VariantId,
-                    VariantName = x.Variant.VariantName,
-
-                    x.ColourId,
-                    ColourName = x.Colour != null ? x.Colour.ColourName : null,
-
-                    x.Price,
-                    x.BatterySpecs,
-                    x.RangeKm,
-                    x.StockAvailable,
-                    x.ImageUrl
-                })
+                .Select(x => MapToDto(x))
                 .ToListAsync();
 
             return Ok(data);
         }
 
-        // =============================
-        // GET INVENTORY BY ID
-        // =============================
+        // ================================
+        // GET BY ID
+        // ================================
         [HttpGet("{id}")]
         public async Task<IActionResult> Get(int id)
         {
-            var data = await _context.ScootyInventories
+            var item = await _context.ScootyInventories
                 .Include(x => x.Model)
                 .Include(x => x.Variant)
                 .Include(x => x.Colour)
                 .FirstOrDefaultAsync(x => x.ScootyId == id);
 
-            if (data == null)
+            if (item == null)
                 return NotFound();
 
-            return Ok(data);
+            return Ok(item);
         }
 
-        // =============================
-        // POST INVENTORY
-        // =============================
-
+        // ================================
+        // ADD
+        // ================================
         [HttpPost("add-item")]
         public async Task<IActionResult> AddItem(
-            int modelId,
-            int variantId,
-            int? colourId,
-            decimal? price,
-            string? batterySpecs,
-            int? rangeKm,
-            bool stockAvailable,
-            IFormFile? image)
+            [FromForm] int modelId,
+            [FromForm] int variantId,
+            [FromForm] int? colourId,
+            [FromForm] decimal? price,
+            [FromForm] string? batterySpecs,
+            [FromForm] int? rangeKm,
+            [FromForm] bool stockAvailable,
+            [FromForm] IFormFile? image)
         {
             try
             {
-                string? imagePath = null;
-
-                if (image != null && image.Length > 0)
-                {
-                    var rootPath = _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-
-                    string folderPath = Path.Combine(rootPath, "ScootyInventoryImage");
-
-                    if (!Directory.Exists(folderPath))
-                        Directory.CreateDirectory(folderPath);
-
-                    string fileName = Guid.NewGuid() + Path.GetExtension(image.FileName);
-
-                    string filePath = Path.Combine(folderPath, fileName);
-
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await image.CopyToAsync(stream);
-                    }
-
-                    imagePath = "/ScootyInventoryImage/" + fileName;
-                }
-
                 var inventory = new ScootyInventory
                 {
                     ModelId = modelId,
@@ -120,368 +78,178 @@ namespace BGaussCRM.API.Controllers
                     BatterySpecs = batterySpecs,
                     RangeKm = rangeKm,
                     StockAvailable = stockAvailable,
-                    ImageUrl = imagePath
+                    ImageUrl = await SaveImageAsync(image)
                 };
 
                 _context.ScootyInventories.Add(inventory);
                 await _context.SaveChangesAsync();
 
-                return Ok(new
-                {
-                    message = "Scooty item added successfully",
-                    data = inventory
-                });
+                return Ok(inventory);
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(GetError(ex));
             }
         }
 
-        // =============================
-        // UPDATE INVENTORY
-        // =============================
+        // ================================
+        // UPDATE
+        // ================================
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromForm] ScootyInventory model, IFormFile? image)
+        public async Task<IActionResult> Update(
+            int id,
+            [FromForm] int modelId,
+            [FromForm] int variantId,
+            [FromForm] int? colourId,
+            [FromForm] decimal? price,
+            [FromForm] string? batterySpecs,
+            [FromForm] int? rangeKm,
+            [FromForm] bool stockAvailable,
+            [FromForm] IFormFile? image)
         {
-            var existing = await _context.ScootyInventories.FindAsync(id);
-
-            if (existing == null)
-                return NotFound();
-
-            existing.ModelId = model.ModelId;
-            existing.VariantId = model.VariantId;
-            existing.ColourId = model.ColourId;
-            existing.Price = model.Price;
-            existing.BatterySpecs = model.BatterySpecs;
-            existing.RangeKm = model.RangeKm;
-            existing.StockAvailable = model.StockAvailable;
-
-            if (image != null)
+            try
             {
-                var imagePath = SaveImage(image);
-                existing.ImageUrl = imagePath;
+                var existing = await _context.ScootyInventories.FindAsync(id);
+                if (existing == null) return NotFound();
+
+                existing.ModelId = modelId;
+                existing.VariantId = variantId;
+                existing.ColourId = colourId;
+                existing.Price = price;
+                existing.BatterySpecs = batterySpecs;
+                existing.RangeKm = rangeKm;
+                existing.StockAvailable = stockAvailable;
+
+                if (image != null)
+                    existing.ImageUrl = await SaveImageAsync(image);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(existing);
             }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(existing);
+            catch (Exception ex)
+            {
+                return BadRequest(GetError(ex));
+            }
         }
 
-        // =============================
-        // DELETE INVENTORY
-        // =============================
+        // ================================
+        // DELETE
+        // ================================
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var data = await _context.ScootyInventories.FindAsync(id);
-
-            if (data == null)
-                return NotFound();
-
-            _context.ScootyInventories.Remove(data);
-            await _context.SaveChangesAsync();
-
-            return Ok("Deleted successfully");
-        }
-
-        // =============================
-        // SAVE IMAGE
-        // =============================
-        private string SaveImage(IFormFile image)
-        {
-            string folderPath = Path.Combine(_environment.WebRootPath, "ScootyInventoryImage");
-
-            if (!Directory.Exists(folderPath))
-                Directory.CreateDirectory(folderPath);
-
-            string fileName = Guid.NewGuid() + Path.GetExtension(image.FileName);
-
-            string filePath = Path.Combine(folderPath, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            try
             {
-                image.CopyTo(stream);
-            }
+                var item = await _context.ScootyInventories.FindAsync(id);
+                if (item == null) return NotFound();
 
-            return "/ScootyInventoryImage/" + fileName;
+                _context.ScootyInventories.Remove(item);
+                await _context.SaveChangesAsync();
+
+                return Ok("Deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(GetError(ex));
+            }
         }
 
-        // =============================
-        // GET MODELS (DROPDOWN)
-        // =============================
+        // ================================
+        // DROPDOWNS
+        // ================================
         [HttpGet("models")]
         public async Task<IActionResult> GetModels()
         {
-            var models = await _context.VehicleModels
-                .Select(x => new
-                {
-                    x.Id,
-                    x.ModelName
-                })
-                .ToListAsync();
-
-            return Ok(models);
+            return Ok(await _context.VehicleModels
+                .Select(x => new { x.Id, x.ModelName })
+                .ToListAsync());
         }
 
-        // =============================
-        // GET VARIANTS BY MODEL
-        // =============================
         [HttpGet("variants/{modelId}")]
         public async Task<IActionResult> GetVariants(int modelId)
         {
-            var variants = await _context.VehicleVariants
+            return Ok(await _context.VehicleVariants
                 .Where(x => x.ModelId == modelId)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.VariantName
-                })
-                .ToListAsync();
-
-            return Ok(variants);
+                .Select(x => new { x.Id, x.VariantName })
+                .ToListAsync());
         }
 
-        // =============================
-        // GET COLOURS BY MODEL + VARIANT
-        // =============================
         [HttpGet("colours")]
         public async Task<IActionResult> GetColours(int modelId, int variantId)
         {
-            var colours = await _context.VehicleColours
+            return Ok(await _context.VehicleColours
                 .Where(x => x.ModelId == modelId && x.VariantId == variantId)
-                .Select(x => new
-                {
-                    x.Id,
-                    x.ColourName
-                })
-                .ToListAsync();
-
-            return Ok(colours);
+                .Select(x => new { x.Id, x.ColourName })
+                .ToListAsync());
         }
 
-        // =============================
-        // GET UNIQUE MODEL LIST (ONLY 1 IMAGE PER MODEL)
-        // =============================
-        [HttpGet("models-list")]
-        public async Task<IActionResult> GetUniqueModels()
-        {
-            var data = await _context.ScootyInventories
-                .Include(x => x.Model)
-                .Include(x => x.Variant)
-                .Where(x => x.ImageUrl != null) // only records with image
-                .GroupBy(x => x.ModelId)
-                .Select(g => g
-                    .OrderByDescending(x => x.ScootyId) // latest image
-                    .Select(x => new
-                    {
-                        ScootyId = x.ScootyId,   // IMPORTANT for click
-                        ModelId = x.ModelId,
-                        ModelName = x.Model.ModelName,
-                        VariantName = x.Variant.VariantName,
-                        ImageUrl = x.ImageUrl,
-                        StockAvailable = x.StockAvailable,
-                        Price = x.Price
-                    })
-                    .FirstOrDefault()
-                )
-                .ToListAsync();
-
-            return Ok(data);
-        }
-
-        // =============================
-        // GET DETAILS FOR CLICKED SCOOTY ONLY
-        // =============================
-        [HttpGet("details/{id}")]
-        public async Task<IActionResult> GetScootyDetails(int id)
-        {
-            var data = await _context.ScootyInventories
-                .Include(x => x.Model)
-                .Include(x => x.Variant)
-                .Include(x => x.Colour)
-                .Where(x => x.ScootyId == id)
-                .Select(x => new
-                {
-                    x.ImageUrl,
-                    x.ScootyId,
-
-                    ModelName = x.Model.ModelName,
-                    VariantName = x.Variant.VariantName,
-                    ColourName = x.Colour != null ? x.Colour.ColourName : null,
-
-                    x.Price,
-                    x.BatterySpecs,
-                    x.RangeKm,
-                    x.StockAvailable
-                    
-                })
-                .FirstOrDefaultAsync();
-
-            if (data == null)
-                return NotFound();
-
-            return Ok(data);
-        }
-
-        // =============================
-        // SHARE ACTIVE SCOOTY DETAILS
-        // =============================
-        [HttpGet("share/{id}")]
-        public async Task<IActionResult> ShareScooty(int id)
-        {
-            var data = await _context.ScootyInventories
-                .Include(x => x.Model)
-                .Include(x => x.Variant)
-                .Include(x => x.Colour)
-                .Where(x => x.ScootyId == id && x.StockAvailable == true) // ONLY ACTIVE
-                .Select(x => new
-                {
-                    Title = x.Model.ModelName + " " + x.Variant.VariantName,
-
-                    Model = x.Model.ModelName,
-                    Variant = x.Variant.VariantName,
-                    Colour = x.Colour != null ? x.Colour.ColourName : null,
-
-                    Price = x.Price,
-                    Range = x.RangeKm,
-                    Battery = x.BatterySpecs,
-
-                    ImageUrl = x.ImageUrl,
-
-                    // Share Text (READY TO USE)
-                    ShareText =
-                        "Scooty Details:\n" +
-                        "Model: " + x.Model.ModelName + "\n" +
-                        "Variant: " + x.Variant.VariantName + "\n" +
-                        "Price: ₹" + x.Price + "\n" +
-                        "Range: " + x.RangeKm + " km\n" +
-                        "Battery: " + x.BatterySpecs
-                })
-                .FirstOrDefaultAsync();
-
-            if (data == null)
-                return NotFound("Scooty not found or not active");
-
-            return Ok(data);
-        }
-
-        // =============================
-        // DOWNLOAD EXCEL TEMPLATE
-        // =============================
+        // ================================
+        // EXCEL TEMPLATE
+        // ================================
         [HttpGet("download-template")]
         public IActionResult DownloadTemplate()
         {
             using var package = new ExcelPackage();
-
             var sheet = package.Workbook.Worksheets.Add("ScootyInventory");
 
-            sheet.Cells[1, 1].Value = "ModelId";
-            sheet.Cells[1, 2].Value = "VariantId";
-            sheet.Cells[1, 3].Value = "ColourId";
-            sheet.Cells[1, 4].Value = "Price";
-            sheet.Cells[1, 5].Value = "BatterySpecs";
-            sheet.Cells[1, 6].Value = "RangeKm";
-            sheet.Cells[1, 7].Value = "StockAvailable";
+            string[] headers = {
+                "ModelId", "VariantId", "ColourId",
+                "Price", "BatterySpecs", "RangeKm", "StockAvailable"
+            };
 
-            var stream = new MemoryStream(package.GetAsByteArray());
+            for (int i = 0; i < headers.Length; i++)
+                sheet.Cells[1, i + 1].Value = headers[i];
 
-            return File(stream,
+            return File(
+                new MemoryStream(package.GetAsByteArray()),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "ScootyInventoryTemplate.xlsx");
+                "ScootyInventoryTemplate.xlsx"
+            );
         }
 
-        // =============================
-        // IMPORT EXCEL
-        // =============================
-        [HttpPost("import")]
-        public async Task<IActionResult> ImportExcel(IFormFile file)
+        // ================================
+        // HELPERS
+        // ================================
+        private object MapToDto(ScootyInventory x) => new
         {
-            if (file == null || file.Length == 0)
-                return BadRequest("No file uploaded.");
+            x.ScootyId,
+            x.ModelId,
+            ModelName = x.Model.ModelName,
+            x.VariantId,
+            VariantName = x.Variant.VariantName,
+            x.ColourId,
+            ColourName = x.Colour != null ? x.Colour.ColourName : null,
+            x.Price,
+            x.BatterySpecs,
+            x.RangeKm,
+            x.StockAvailable,
+            x.ImageUrl
+        };
 
-            var inventoryToInsert = new List<ScootyInventory>();
-            int updatedCount = 0;
-            var skippedRows = new List<int>();
+        private async Task<string?> SaveImageAsync(IFormFile? image)
+        {
+            if (image == null || image.Length == 0)
+                return null;
 
-            var existingInventory = await _context.ScootyInventories.ToListAsync();
+            var root = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var folder = Path.Combine(root, "ScootyInventoryImage");
 
-            using var stream = new MemoryStream();
-            await file.CopyToAsync(stream);
-            stream.Position = 0;
+            if (!Directory.Exists(folder))
+                Directory.CreateDirectory(folder);
 
-            using var package = new ExcelPackage(stream);
-            var sheet = package.Workbook.Worksheets.FirstOrDefault();
+            var fileName = Guid.NewGuid() + Path.GetExtension(image.FileName);
+            var path = Path.Combine(folder, fileName);
 
-            if (sheet == null)
-                return BadRequest("Invalid Excel file.");
+            using var stream = new FileStream(path, FileMode.Create);
+            await image.CopyToAsync(stream);
 
-            int rowCount = sheet.Dimension.Rows;
+            return "/ScootyInventoryImage/" + fileName;
+        }
 
-            for (int row = 2; row <= rowCount; row++)
-            {
-                var modelIdText = sheet.Cells[row, 1].Text;
-                var variantIdText = sheet.Cells[row, 2].Text;
-                var colourIdText = sheet.Cells[row, 3].Text;
-                var priceText = sheet.Cells[row, 4].Text;
-                var batterySpecs = sheet.Cells[row, 5].Text;
-                var rangeText = sheet.Cells[row, 6].Text;
-                var stockText = sheet.Cells[row, 7].Text;
-
-                if (!int.TryParse(modelIdText, out int modelId) ||
-                    !int.TryParse(variantIdText, out int variantId))
-                {
-                    skippedRows.Add(row);
-                    continue;
-                }
-
-                int? colourId = int.TryParse(colourIdText, out int cId) ? cId : null;
-                decimal? price = decimal.TryParse(priceText, out decimal p) ? p : null;
-                int? rangeKm = int.TryParse(rangeText, out int r) ? r : null;
-                bool stock = stockText == "1" || stockText.ToLower() == "true";
-
-                var existing = existingInventory.FirstOrDefault(x =>
-                    x.ModelId == modelId &&
-                    x.VariantId == variantId &&
-                    x.ColourId == colourId);
-
-                if (existing != null)
-                {
-                    existing.Price = price;
-                    existing.BatterySpecs = batterySpecs;
-                    existing.RangeKm = rangeKm;
-                    existing.StockAvailable = stock;
-
-                    updatedCount++;
-                    continue;
-                }
-
-                var inventory = new ScootyInventory
-                {
-                    ModelId = modelId,
-                    VariantId = variantId,
-                    ColourId = colourId,
-                    Price = price,
-                    BatterySpecs = batterySpecs,
-                    RangeKm = rangeKm,
-                    StockAvailable = stock
-                };
-
-                inventoryToInsert.Add(inventory);
-            }
-
-            if (inventoryToInsert.Any())
-                await _context.ScootyInventories.AddRangeAsync(inventoryToInsert);
-
-            if (inventoryToInsert.Any() || updatedCount > 0)
-                await _context.SaveChangesAsync();
-
-            var message = $"{inventoryToInsert.Count} inserted, {updatedCount} updated.";
-
-            if (skippedRows.Any())
-                message += $" Skipped rows: {string.Join(",", skippedRows)}";
-
-            return Ok(message);
+        private string GetError(Exception ex)
+        {
+            return ex.InnerException?.Message ?? ex.Message;
         }
     }
 }
