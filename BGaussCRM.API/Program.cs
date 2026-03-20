@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using BGaussCRM.API.Data;
 using OfficeOpenXml;
 using BGaussCRM.API.ModelBinders;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,21 +22,28 @@ builder.Services.AddControllers(options =>
     options.ModelBinderProviders.Insert(0, new DateOnlyModelBinderProvider());
 });
 
+// JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"]!))
+        };
+    });
+
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// CORS (only for development)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReactDev",
-        policy => policy
-            .WithOrigins( 
-              "http://localhost:5173") // React dev server URL
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-    );
-});
+// NO CORS needed in production (React is served from same origin)
 
 var app = builder.Build();
 
@@ -44,18 +54,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// ⚠️ Keep HTTPS only if needed (IIS handles HTTPS usually)
-app.UseHttpsRedirection();
-//Serve React build
+// Serve React build from wwwroot
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// Use CORS only in development
+// Only use CORS in development
 if (app.Environment.IsDevelopment())
 {
     app.UseCors("AllowReactDev");
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
