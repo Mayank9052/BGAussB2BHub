@@ -50,72 +50,88 @@ export default function ScootyInventory() {
     fetchModels();
   }, []);
 
-  // ================= ADD / UPDATE =================
+  // ================= SUBMIT =================
   const handleSubmit = async () => {
-  try {
-    if (!form.modelId || !form.variantId) {
-      alert("Model & Variant required");
-      return;
+    try {
+      if (!form.modelId || !form.variantId) {
+        alert("Model & Variant required");
+        return;
+      }
+
+      if (!form.colourId) {
+        alert("Please select colour");
+        return;
+      }
+
+      const formData = new FormData();
+
+      formData.append("modelId", String(form.modelId));
+      formData.append("variantId", String(form.variantId));
+      formData.append("colourId", String(form.colourId));
+
+      if (form.price)
+        formData.append("price", String(Number(form.price)));
+
+      if (form.batterySpecs)
+        formData.append("batterySpecs", form.batterySpecs);
+
+      if (form.rangeKm)
+        formData.append("rangeKm", String(Number(form.rangeKm)));
+
+      formData.append(
+        "stockAvailable",
+        form.stockAvailable ? "true" : "false"
+      );
+
+      if (form.image) {
+        formData.append("image", form.image);
+      }
+
+      if (editingId) {
+        await axios.put(`${API}/${editingId}`, formData);
+      } else {
+        await axios.post(`${API}/add-item`, formData);
+      }
+
+      setForm({});
+      setEditingId(null);
+      fetchData();
+
+    } catch (err: any) {
+      console.error("SAVE ERROR 👉", err.response?.data || err.message);
+      alert(err.response?.data || "Save failed");
     }
-
-    const formData = new FormData();
-
-    formData.append("modelId", String(form.modelId));
-    formData.append("variantId", String(form.variantId));
-    formData.append("colourId", form.colourId ? String(form.colourId) : "");
-    formData.append("price", form.price ? String(form.price) : "");
-    formData.append("batterySpecs", form.batterySpecs || "");
-    formData.append("rangeKm", form.rangeKm ? String(form.rangeKm) : "");
-
-    // 🔥 FIX HERE
-    formData.append("stockAvailable", form.stockAvailable ? "true" : "false");
-
-    if (form.image) {
-      formData.append("image", form.image);
-    }
-
-    if (editingId) {
-      await axios.put(`${API}/${editingId}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-    } else {
-      await axios.post(`${API}/add-item`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
-    }
-
-    setForm({});
-    setEditingId(null);
-    fetchData();
-
-  } catch (err: any) {
-    console.error("SAVE ERROR 👉", err.response?.data || err.message);
-    alert(err.response?.data || "Save failed");
-  }
-};
+  };
 
   // ================= EDIT =================
   const handleEdit = (item: any) => {
-    setForm(item);
+    setForm({
+      ...item,
+      modelId: Number(item.modelId),
+      variantId: Number(item.variantId),
+      colourId: Number(item.colourId)
+    });
+
     setEditingId(item.scootyId);
 
     fetchVariants(item.modelId);
     fetchColours(item.modelId, item.variantId);
   };
 
+  // ================= DELETE =================
   const handleDelete = async (id: number) => {
-  try {
-    if (!window.confirm("Delete item?")) return;
+    try {
+      if (!window.confirm("Delete item?")) return;
 
-    await axios.delete(`${API}/${id}`);
+      await axios.delete(`${API}/${id}`);
+      fetchData();
 
-    fetchData(); // refresh table
+    } catch (err: any) {
+      console.error("DELETE ERROR 👉", err.response?.data || err.message);
+      alert(err.response?.data || "Delete failed");
+    }
+  };
 
-  } catch (err: any) {
-    console.error("DELETE ERROR 👉", err.response?.data || err.message);
-    alert(err.response?.data || "Delete failed");
-  }
-};
   // ================= IMPORT =================
   const handleImport = async (e: any) => {
     const file = e.target.files[0];
@@ -133,7 +149,7 @@ export default function ScootyInventory() {
   return (
     <div className="inv-page">
 
-      {/* ✅ NAVBAR */}
+      {/* NAVBAR */}
       <header className="pro-navbar">
         <div className="pro-left">
           <img src={logo} className="pro-logo" />
@@ -147,15 +163,15 @@ export default function ScootyInventory() {
         <div className="pro-right">
           <span className="user-name">Welcome, Admin</span>
 
-          <button className="module-btn" onClick={() => navigate("/modules")}>
+          <button onClick={() => navigate("/modules")} className="module-btn">
             Modules
           </button>
 
-          <button className="module-btn" onClick={() => navigate("/dashboard")}>
+          <button onClick={() => navigate("/dashboard")} className="module-btn">
             Dashboard
           </button>
 
-          <button className="logout-btn" onClick={handleLogout}>
+          <button onClick={handleLogout} className="logout-btn">
             Logout
           </button>
         </div>
@@ -167,11 +183,21 @@ export default function ScootyInventory() {
         {/* FORM */}
         <div className="form-card">
 
+          {/* MODEL */}
           <select
             value={form.modelId || ""}
             onChange={(e) => {
-              setForm({ ...form, modelId: e.target.value });
-              fetchVariants(Number(e.target.value));
+              const modelId = Number(e.target.value);
+
+              setForm({
+                modelId,
+                variantId: "",
+                colourId: ""
+              });
+
+              fetchVariants(modelId);
+              setVariants([]);
+              setColours([]);
             }}
           >
             <option value="">Model</option>
@@ -182,11 +208,19 @@ export default function ScootyInventory() {
             ))}
           </select>
 
+          {/* VARIANT */}
           <select
             value={form.variantId || ""}
             onChange={(e) => {
-              setForm({ ...form, variantId: e.target.value });
-              fetchColours(form.modelId, Number(e.target.value));
+              const variantId = Number(e.target.value);
+
+              setForm({
+                ...form,
+                variantId,
+                colourId: ""
+              });
+
+              fetchColours(Number(form.modelId), variantId);
             }}
           >
             <option value="">Variant</option>
@@ -197,10 +231,11 @@ export default function ScootyInventory() {
             ))}
           </select>
 
+          {/* COLOUR */}
           <select
             value={form.colourId || ""}
             onChange={(e) =>
-              setForm({ ...form, colourId: e.target.value })
+              setForm({ ...form, colourId: Number(e.target.value) })
             }
           >
             <option value="">Colour</option>
@@ -211,22 +246,33 @@ export default function ScootyInventory() {
             ))}
           </select>
 
-          <input placeholder="Price"
+          {/* INPUTS */}
+          <input
+            placeholder="Price"
             value={form.price || ""}
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, price: e.target.value })
+            }
           />
 
-          <input placeholder="Battery"
+          <input
+            placeholder="Battery"
             value={form.batterySpecs || ""}
-            onChange={(e) => setForm({ ...form, batterySpecs: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, batterySpecs: e.target.value })
+            }
           />
 
-          <input placeholder="Range KM"
+          <input
+            placeholder="Range KM"
             value={form.rangeKm || ""}
-            onChange={(e) => setForm({ ...form, rangeKm: e.target.value })}
+            onChange={(e) =>
+              setForm({ ...form, rangeKm: e.target.value })
+            }
           />
 
-          <input type="file"
+          <input
+            type="file"
             onChange={(e: any) =>
               setForm({ ...form, image: e.target.files[0] })
             }
