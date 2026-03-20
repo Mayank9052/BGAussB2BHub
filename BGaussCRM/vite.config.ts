@@ -5,22 +5,24 @@ import babel from '@rolldown/plugin-babel';
 export default defineConfig({
   plugins: [
     react(),
-    babel({ presets: [reactCompilerPreset()] }),
+    babel({ presets: [reactCompilerPreset()] })
   ],
   server: {
-    host: 'localhost',
     port: 5173,
-    open: 'http://localhost:5173',
-    hmr: {
-      host: 'localhost',
-      port: 5173,
-    },
+    open: true,
     proxy: {
       '/api': {
         target: 'http://localhost:5181',
         changeOrigin: true,
         secure: false,
       },
+
+      // ✅ ADD THIS BLOCK (VERY IMPORTANT)
+      '/ScootyInventoryImage': {
+        target: 'http://localhost:5181',
+        changeOrigin: true,
+        secure: false,
+      }
     },
   },
 });

@@ -7,7 +7,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 // Default API origin set to local backend; override with VITE_API_BASE when needed
-const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "http://localhost:5181";
+const API_ORIGIN = "";
 
 interface Vehicle {
   scootyId: number;
@@ -64,6 +64,9 @@ export default function Dashboard() {
   }, [navigate]);
 
   const fetchVehicles = async () => {
+  let retries = 5;
+
+  while (retries > 0) {
     try {
       const res = await axios.get<VehicleApi[]>("/api/ScootyInventory/models-list");
 
@@ -74,14 +77,25 @@ export default function Dashboard() {
 
       setVehicles(normalized);
 
-      // 💾 Save to cache
+      // 💾 Cache
       localStorage.setItem("vehicles", JSON.stringify(normalized));
-    } catch {
-      setError("Failed to load vehicles");
-    } finally {
-      setLoading(false);
+
+      return; // ✅ success → exit loop
+
+    } catch (err) {
+      console.log("Retrying API...", retries);
+
+      // wait 1 second before retry
+      await new Promise((res) => setTimeout(res, 1000));
+
+      retries--;
     }
-  };
+  }
+
+  // ❌ after retries failed
+  setError("Failed to load vehicles");
+  setLoading(false);
+};
 
   return (
     <div className="dashboard">
