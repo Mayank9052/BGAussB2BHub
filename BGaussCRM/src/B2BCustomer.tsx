@@ -119,7 +119,9 @@ export default function B2BCustomer() {
         </div>
 
         <div className="pro-right">
-           Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+           <span className="user-name">
+              Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+            </span>
           <button className="module-btn" onClick={() => navigate("/modules")}>
             Modules
           </button>

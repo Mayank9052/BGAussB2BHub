@@ -192,8 +192,9 @@ export default function ScootyInventory() {
         </div>
 
         <div className="pro-right">
-           Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
-
+            <span className="user-name">
+                Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+            </span>
           <button onClick={() => navigate("/modules")} className="module-btn">
             Modules
           </button>

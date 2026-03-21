@@ -25,7 +25,9 @@ export default function VehicleConfig() {
         </div>
 
         <div className="pro-right">
-          <span className="user-name">Welcome, Admin</span>
+          <span className="user-name">
+              Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+          </span>
 
           <button
             className="module-btn"

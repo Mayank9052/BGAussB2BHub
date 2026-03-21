@@ -227,8 +227,17 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="pro-right">
-          <span className="user-name">Welcome, Admin</span>
-          <button className="module-btn" onClick={() => navigate("/modules")}>Modules</button>
+          <span className="user-name">
+              Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+          </span>
+          {localStorage.getItem("role") === "admin" && (
+            <button
+              className="module-btn"
+              onClick={() => navigate("/modules")}
+            >
+            Modules
+            </button>
+          )}
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </header>
@@ -236,7 +245,7 @@ export default function Dashboard() {
       {/* CONTENT */}
       <div className="main-content">
         <div className="dashboard-title-row">
-          <h1>Vehicle Collection</h1>
+          <h1>Scooty Inventory</h1>
 
           {/* ➕ ADD BUTTON */}
           <button className="add-fab" onClick={openSheet} title="Add Item">
@@ -331,7 +340,7 @@ export default function Dashboard() {
 
           {/* Colour */}
           <div className="form-group">
-            <label>Colour</label>
+            <label>Colour<span className="required">*</span></label>
             <select
               value={colourId}
               onChange={(e) => setColourId(e.target.value === "" ? "" : Number(e.target.value))}
