@@ -2,6 +2,11 @@
 bin/
 obj/
 
+# Ignore DLLs and executables
+*.dll
+*.exe
+*.pdb
+
 # Visual Studio
 .vs/
 *.user
