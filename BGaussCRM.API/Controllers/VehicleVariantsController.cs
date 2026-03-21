@@ -3,6 +3,7 @@ using BGaussCRM.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using BGaussCRM.API.DTOs;
 
 namespace BGaussCRM.API.Controllers
 {
@@ -54,28 +55,65 @@ namespace BGaussCRM.API.Controllers
         // ==========================
         // CREATE VARIANT
         // ==========================
-        [HttpPost]
-        public async Task<IActionResult> CreateVariant(VehicleVariant variant)
+        [HttpPost("CreateVariant")]
+        public async Task<IActionResult> CreateVariant([FromBody] CreateVariantDto dto)
         {
-            _context.VehicleVariants.Add(variant);
-            await _context.SaveChangesAsync();
+            try
+            {
+                if (dto == null)
+                    return BadRequest("Data is null");
 
-            return Ok(variant);
+                if (string.IsNullOrWhiteSpace(dto.VariantName))
+                    return BadRequest("VariantName is required");
+
+                if (dto.ModelId == 0)
+                    return BadRequest("ModelId is required");
+
+                var variant = new VehicleVariant
+                {
+                    VariantName = dto.VariantName.Trim(),
+                    ModelId     = dto.ModelId
+                };
+
+                _context.VehicleVariants.Add(variant);
+                await _context.SaveChangesAsync();
+
+                return Ok(variant);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
         }
+
 
         // ==========================
         // UPDATE VARIANT
         // ==========================
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateVariant(int id, VehicleVariant variant)
+        public async Task<IActionResult> UpdateVariant(int id, [FromBody] UpdateVariantDto dto)
         {
-            if (id != variant.Id)
-                return BadRequest();
+            try
+            {
+                if (id != dto.Id)
+                    return BadRequest("ID mismatch");
 
-            _context.Entry(variant).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+                var existing = await _context.VehicleVariants.FindAsync(id);
 
-            return Ok(variant);
+                if (existing == null)
+                    return NotFound();
+
+                existing.VariantName = dto.VariantName.Trim();
+                existing.ModelId     = dto.ModelId;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(existing);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
         }
 
         // ==========================

@@ -23,7 +23,7 @@ type VehicleApi = Vehicle & {
   imagePath?: string | null;
 };
 
-interface ModelOption  { id: number; modelName: string; }
+interface ModelOption   { id: number; modelName: string; }
 interface VariantOption { id: number; variantName: string; }
 interface ColourOption  { id: number; colourName: string; }
 
@@ -38,6 +38,22 @@ export default function Dashboard() {
   const [vehicles, setVehicles]     = useState<Vehicle[]>([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
+
+  // ── Search ──────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtered vehicles — purely local, no API calls
+  const filteredVehicles = vehicles.filter((v) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      v.modelName?.toLowerCase().includes(q) ||
+      v.variantName?.toLowerCase().includes(q) ||
+      v.colourName?.toLowerCase().includes(q) ||
+      String(v.price ?? "").includes(q) ||
+      String(v.rangeKm ?? "").includes(q)
+    );
+  });
 
   // Bottom sheet state
   const [sheetOpen, setSheetOpen]   = useState(false);
@@ -100,6 +116,7 @@ export default function Dashboard() {
         setVehicles(normalized);
         localStorage.setItem("vehicles", JSON.stringify(normalized));
         setLoading(false);
+        setError("");
         return;
       } catch {
         await new Promise((r) => setTimeout(r, 1000));
@@ -192,10 +209,7 @@ export default function Dashboard() {
 
       setSubmitMsg("✅ Item added successfully!");
       fetchVehicles();
-
-      setTimeout(() => {
-        closeSheet();
-      }, 1200);
+      setTimeout(() => closeSheet(), 1200);
     } catch (err: unknown) {
       const message =
         axios.isAxiosError(err) && err.response?.data
@@ -228,14 +242,11 @@ export default function Dashboard() {
         </div>
         <div className="pro-right">
           <span className="user-name">
-              Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+            Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
           </span>
           {localStorage.getItem("role") === "admin" && (
-            <button
-              className="module-btn"
-              onClick={() => navigate("/modules")}
-            >
-            Modules
+            <button className="module-btn" onClick={() => navigate("/modules")}>
+              Modules
             </button>
           )}
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
@@ -244,18 +255,50 @@ export default function Dashboard() {
 
       {/* CONTENT */}
       <div className="main-content">
+
+        {/* Title Row */}
         <div className="dashboard-title-row">
           <h1>Scooty Inventory</h1>
+          <button className="add-fab" onClick={openSheet} title="Add Item">+</button>
+        </div>
 
-          {/* ➕ ADD BUTTON */}
-          <button className="add-fab" onClick={openSheet} title="Add Item">
-            +
-          </button>
+        {/* ── SEARCH BAR ────────────────────────────────────── */}
+        <div className="search-wrapper">
+          <div className="search-bar">
+            <span className="search-icon">
+              <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
+              </svg>
+            </span>
+            <input
+              className="search-input"
+              type="text"
+              placeholder="Search by model, variant, colour, price..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button className="search-clear" onClick={() => setSearchQuery("")}>✕</button>
+            )}
+          </div>
+
+          {/* Result count shown only while searching */}
+          {searchQuery && (
+            <p className="search-count">
+              {filteredVehicles.length === 0
+                ? "No results found"
+                : `${filteredVehicles.length} result${filteredVehicles.length > 1 ? "s" : ""} found`}
+            </p>
+          )}
         </div>
 
         {error && <p className="error">{error}</p>}
 
+        {/* VEHICLE GRID */}
         <div className="vehicle-grid">
+
+          {/* Skeleton Loader */}
           {loading && Array.from({ length: 6 }).map((_, i) => (
             <div className="vehicle-card skeleton" key={i}>
               <div className="skeleton-img"></div>
@@ -264,7 +307,17 @@ export default function Dashboard() {
             </div>
           ))}
 
-          {vehicles.map((v) => (
+          {/* No results state */}
+          {!loading && searchQuery && filteredVehicles.length === 0 && (
+            <div className="no-results">
+              <span>🔍</span>
+              <p>No vehicles match "<strong>{searchQuery}</strong>"</p>
+              <button onClick={() => setSearchQuery("")}>Clear search</button>
+            </div>
+          )}
+
+          {/* Vehicle Cards */}
+          {filteredVehicles.map((v) => (
             <div
               className="vehicle-card"
               key={v.scootyId}
@@ -340,7 +393,7 @@ export default function Dashboard() {
 
           {/* Colour */}
           <div className="form-group">
-            <label>Colour<span className="required">*</span></label>
+            <label>Colour <span className="required">*</span></label>
             <select
               value={colourId}
               onChange={(e) => setColourId(e.target.value === "" ? "" : Number(e.target.value))}
@@ -386,7 +439,7 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Stock */}
+          {/* Stock Toggle */}
           <div className="form-group form-toggle">
             <label>Stock Available</label>
             <label className="toggle-switch">
@@ -440,8 +493,8 @@ export default function Dashboard() {
             </button>
           </div>
 
-        </div>{/* end sheet-body */}
-      </div>{/* end bottom-sheet */}
+        </div>
+      </div>
 
     </div>
   );

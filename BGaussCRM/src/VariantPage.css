@@ -115,3 +115,82 @@
   background: #ef4444;
   color: white;
 }
+
+/* Add these to your VariantPage.css */
+
+.form-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 14px;
+}
+
+.form-error {
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.form-success {
+  color: #166534;
+  background: #dcfce7;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.cancel-edit-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1.5px solid #e5e7eb;
+  background: white;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cancel-edit-btn:hover {
+  background: #f3f4f6;
+}
+
+.edit-btn {
+  margin-right: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-btn:hover {
+  background: #bfdbfe;
+}
+
+.delete-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #fecaca;
+}
+
+/* Highlight row being edited */
+.row-editing {
+  background: #eff6ff;
+}
