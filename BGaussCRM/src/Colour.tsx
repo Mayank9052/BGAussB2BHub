@@ -96,6 +96,9 @@ export default function ColourPage() {
         </div>
 
         <div className="pro-right">
+          <span className="user-name">
+              Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+          </span>
           <button className="module-btn" onClick={() => navigate("/vehicle-config")}>
             Back
           </button>
