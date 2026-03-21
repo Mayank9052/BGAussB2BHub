@@ -92,7 +92,8 @@ namespace BGaussCRM.API.Controllers
 
                 if (image != null && image.Length > 0)
                 {
-                    var rootPath = _environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                    var rootPath = _environment.WebRootPath
+                        ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
 
                     string folderPath = Path.Combine(rootPath, "ScootyInventoryImage");
 
@@ -100,7 +101,6 @@ namespace BGaussCRM.API.Controllers
                         Directory.CreateDirectory(folderPath);
 
                     string fileName = Guid.NewGuid() + Path.GetExtension(image.FileName);
-
                     string filePath = Path.Combine(folderPath, fileName);
 
                     using (var stream = new FileStream(filePath, FileMode.Create))
@@ -111,30 +111,45 @@ namespace BGaussCRM.API.Controllers
                     imagePath = "/ScootyInventoryImage/" + fileName;
                 }
 
+                // ── Validate FK references exist ──────────────────
+                var modelExists   = await _context.VehicleModels.AnyAsync(x => x.Id == modelId);
+                var variantExists = await _context.VehicleVariants.AnyAsync(x => x.Id == variantId);
+
+                if (!modelExists)
+                    return BadRequest($"Model ID {modelId} does not exist.");
+
+                if (!variantExists)
+                    return BadRequest($"Variant ID {variantId} does not exist.");
+
+                if (colourId.HasValue)
+                {
+                    var colourExists = await _context.VehicleColours.AnyAsync(x => x.Id == colourId.Value);
+                    if (!colourExists)
+                        return BadRequest($"Colour ID {colourId} does not exist.");
+                }
+
                 var inventory = new ScootyInventory
                 {
-                    ModelId = modelId,
-                    VariantId = variantId,
-                    ColourId = colourId,
-                    Price = price,
-                    BatterySpecs = batterySpecs,
-                    RangeKm = rangeKm,
+                    ModelId        = modelId,
+                    VariantId      = variantId,
+                    ColourId       = colourId,
+                    Price          = price,
+                    BatterySpecs   = batterySpecs,
+                    RangeKm        = rangeKm,
                     StockAvailable = stockAvailable,
-                    ImageUrl = imagePath
+                    ImageUrl       = imagePath
                 };
 
                 _context.ScootyInventories.Add(inventory);
                 await _context.SaveChangesAsync();
 
-                return Ok(new
-                {
-                    message = "Scooty item added successfully",
-                    data = inventory
-                });
+                return Ok(new { message = "Scooty item added successfully", data = inventory });
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                // Return full inner exception so we can see real DB error
+                var innerMsg = ex.InnerException?.Message ?? ex.Message;
+                return BadRequest($"DB Error: {innerMsg}");
             }
         }
 
@@ -142,40 +157,40 @@ namespace BGaussCRM.API.Controllers
         // UPDATE INVENTORY
         // =============================
         [HttpPut("{id}")]
-public async Task<IActionResult> Update(
-    int id,
-    [FromForm] int modelId,
-    [FromForm] int variantId,
-    [FromForm] int? colourId,
-    [FromForm] decimal? price,
-    [FromForm] string? batterySpecs,
-    [FromForm] int? rangeKm,
-    [FromForm] bool stockAvailable,
-    [FromForm] IFormFile? image)
-{
-    var existing = await _context.ScootyInventories.FindAsync(id);
+        public async Task<IActionResult> Update(
+            int id,
+            [FromForm] int modelId,
+            [FromForm] int variantId,
+            [FromForm] int? colourId,
+            [FromForm] decimal? price,
+            [FromForm] string? batterySpecs,
+            [FromForm] int? rangeKm,
+            [FromForm] bool stockAvailable,
+            [FromForm] IFormFile? image)
+        {
+            var existing = await _context.ScootyInventories.FindAsync(id);
 
-    if (existing == null)
-        return NotFound();
+            if (existing == null)
+                return NotFound();
 
-    existing.ModelId = modelId;
-    existing.VariantId = variantId;
-    existing.ColourId = colourId;
-    existing.Price = price;
-    existing.BatterySpecs = batterySpecs;
-    existing.RangeKm = rangeKm;
-    existing.StockAvailable = stockAvailable;
+            existing.ModelId = modelId;
+            existing.VariantId = variantId;
+            existing.ColourId = colourId;
+            existing.Price = price;
+            existing.BatterySpecs = batterySpecs;
+            existing.RangeKm = rangeKm;
+            existing.StockAvailable = stockAvailable;
 
-    if (image != null)
-    {
-        var imagePath = SaveImage(image);
-        existing.ImageUrl = imagePath;
-    }
+            if (image != null)
+            {
+                var imagePath = SaveImage(image);
+                existing.ImageUrl = imagePath;
+            }
 
-    await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
-    return Ok(existing);
-}
+            return Ok(existing);
+        }
 
         // =============================
         // DELETE INVENTORY

@@ -11,7 +11,7 @@ public partial class VehicleVariant
 
     public int? ModelId { get; set; }
 
-    public VehicleModel Model { get; set; }
+    public virtual VehicleModel Model { get; set; } = null!;
 
     public virtual ICollection<PriceMaster> PriceMasters { get; set; } = new List<PriceMaster>();
 

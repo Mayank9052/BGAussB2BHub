@@ -40,16 +40,26 @@ export default function ModelPage() {
 
     try {
       if (editingId) {
-        await axios.put(`/api/VehicleModels/${editingId}`, { modelName });
+        // FIX: send id in body
+        await axios.put(`/api/VehicleModels/${editingId}`, {
+          id:        editingId,   // ← ADD THIS
+          modelName: modelName.trim(),
+        });
       } else {
-        await axios.post("/api/VehicleModels", { modelName });
+        // FIX: use CreateModel route
+        await axios.post("/api/VehicleModels/CreateModel", {
+          modelName: modelName.trim(),
+        });
       }
 
       setModelName("");
       setEditingId(null);
       fetchModels();
-    } catch {
-      alert("Save failed");
+    } catch (err: unknown) {
+      const msg = axios.isAxiosError(err) && err.response?.data
+        ? String(err.response.data)
+        : "Save failed";
+      alert(msg);
     }
   };
 
@@ -73,7 +83,7 @@ export default function ModelPage() {
 
   // ===== EXPORT =====
   const handleExport = () => {
-    window.open("/api/VehicleModels/export");
+    window.open("/api/VehicleModels/download-template");
   };
 
   // ===== IMPORT =====

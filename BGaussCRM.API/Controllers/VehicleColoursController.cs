@@ -3,6 +3,7 @@ using BGaussCRM.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using BGaussCRM.API.DTOs;
 
 namespace BGaussCRM.API.Controllers
 {
@@ -41,31 +42,56 @@ namespace BGaussCRM.API.Controllers
             return Ok(colour);
         }
 
-        // ==========================
-        // CREATE COLOUR
-        // ==========================
-        [HttpPost]
-        public async Task<IActionResult> CreateColour(VehicleColour colour)
+        // CREATE
+        [HttpPost("CreateColour")]
+        public async Task<IActionResult> CreateColour([FromBody] CreateColourDto dto)
         {
-            _context.VehicleColours.Add(colour);
-            await _context.SaveChangesAsync();
+            try
+            {
+                if (dto == null) return BadRequest("Data is null");
+                if (string.IsNullOrWhiteSpace(dto.ColourName)) return BadRequest("ColourName required");
+                if (dto.ModelId == 0)   return BadRequest("ModelId required");
+                if (dto.VariantId == 0) return BadRequest("VariantId required");
 
-            return Ok(colour);
+                var colour = new VehicleColour
+                {
+                    ColourName = dto.ColourName.Trim(),
+                    ModelId    = dto.ModelId,
+                    VariantId  = dto.VariantId
+                };
+
+                _context.VehicleColours.Add(colour);
+                await _context.SaveChangesAsync();
+                return Ok(colour);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
         }
 
-        // ==========================
-        // UPDATE COLOUR
-        // ==========================
+        // UPDATE
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateColour(int id, VehicleColour colour)
+        public async Task<IActionResult> UpdateColour(int id, [FromBody] UpdateColourDto dto)
         {
-            if (id != colour.Id)
-                return BadRequest();
+            try
+            {
+                if (id != dto.Id) return BadRequest("ID mismatch");
 
-            _context.Entry(colour).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
+                var existing = await _context.VehicleColours.FindAsync(id);
+                if (existing == null) return NotFound();
 
-            return Ok(colour);
+                existing.ColourName = dto.ColourName.Trim();
+                existing.ModelId    = dto.ModelId;
+                existing.VariantId  = dto.VariantId;
+
+                await _context.SaveChangesAsync();
+                return Ok(existing);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
         }
 
         // ==========================

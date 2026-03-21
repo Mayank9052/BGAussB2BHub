@@ -3,6 +3,7 @@ using BGaussCRM.API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using BGaussCRM.API.DTOs;
 
 namespace BGaussCRM.API.Controllers
 {
@@ -41,31 +42,43 @@ namespace BGaussCRM.API.Controllers
             return Ok(model);
         }
 
-        // ==========================
         // CREATE
-        // ==========================
-        [HttpPost]
-        public async Task<IActionResult> CreateModel(VehicleModel model)
+        [HttpPost("CreateModel")]
+        public async Task<IActionResult> CreateModel([FromBody] CreateModelDto dto)
         {
-            _context.VehicleModels.Add(model);
-            await _context.SaveChangesAsync();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dto.ModelName))
+                    return BadRequest("ModelName is required");
 
-            return Ok(model);
+                var model = new VehicleModel { ModelName = dto.ModelName.Trim() };
+                _context.VehicleModels.Add(model);
+                await _context.SaveChangesAsync();
+                return Ok(model);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
         }
 
-        // ==========================
         // UPDATE
-        // ==========================
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateModel(int id, VehicleModel model)
+        public async Task<IActionResult> UpdateModel(int id, [FromBody] UpdateModelDto dto)
         {
-            if (id != model.Id)
-                return BadRequest();
+            try
+            {
+                var existing = await _context.VehicleModels.FindAsync(id);
+                if (existing == null) return NotFound();
 
-            _context.Entry(model).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-
-            return Ok(model);
+                existing.ModelName = dto.ModelName.Trim();
+                await _context.SaveChangesAsync();
+                return Ok(existing);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.InnerException?.Message ?? ex.Message);
+            }
         }
 
         // ==========================
