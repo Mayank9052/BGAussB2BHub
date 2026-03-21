@@ -59,7 +59,7 @@ export default function Modules() {
           {/* INVENTORY */}
           <div
             className="module-card"
-            onClick={() => navigate("/inventory")}
+            onClick={() => navigate("/scootyInventory")}
           >
             <div className="icon-circle inventory-icon">📦</div>
             <h3>Scooty Inventory</h3>

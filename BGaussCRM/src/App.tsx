@@ -4,6 +4,7 @@ import Dashboard from "./Dashboard";
 import VehicleDetails from "./VehicleDetails";
 import Modules from "./Modules";
 import B2BCustomer from "./B2BCustomer";
+import ScootyInventory from "./ScootyInventory"
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <Route path="/vehicle/:id" element={<VehicleDetails />} />
       <Route path="/modules" element={<Modules />} />
       <Route path="/b2b-customers" element={<B2BCustomer />} />
+      <Route path ="/scootyInventory" element={<ScootyInventory/>}/>
     </Routes>
   );
 }

@@ -1,17 +1,35 @@
-# Build folders (root + subfolders)
+# ===== .NET =====
 bin/
 obj/
-**/bin/
-**/obj/
-
-# Visual Studio
-.vs/
 *.user
 *.suo
+*.cache
+*.dll
+*.exe
+*.pdb
 
-# Logs
+# ===== Logs =====
 *.log
 
-# OS files
+# ===== Node =====
+node_modules/
+dist/
+build/
+.vite/
+
+# ===== Env =====
+.env
+.env.*
+
+# ===== VS / VSCode =====
+.vscode/
+.idea/
+*.vs/
+
+# ===== OS =====
 .DS_Store
 Thumbs.db
+
+# ===== IIS / Publish =====
+wwwroot/ScootyInventoryImage/*
+!wwwroot/ScootyInventoryImage/.gitkeep

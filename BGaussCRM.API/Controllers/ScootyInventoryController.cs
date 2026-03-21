@@ -77,14 +77,14 @@ namespace BGaussCRM.API.Controllers
 
         [HttpPost("add-item")]
         public async Task<IActionResult> AddItem(
-            int modelId,
-            int variantId,
-            int? colourId,
-            decimal? price,
-            string? batterySpecs,
-            int? rangeKm,
-            bool stockAvailable,
-            IFormFile? image)
+            [FromForm] int modelId,
+            [FromForm] int variantId,
+            [FromForm] int? colourId,
+            [FromForm] decimal? price,
+            [FromForm] string? batterySpecs,
+            [FromForm] int? rangeKm,
+            [FromForm] bool stockAvailable,
+            [FromForm] IFormFile? image)
         {
             try
             {
@@ -142,31 +142,40 @@ namespace BGaussCRM.API.Controllers
         // UPDATE INVENTORY
         // =============================
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromForm] ScootyInventory model, IFormFile? image)
-        {
-            var existing = await _context.ScootyInventories.FindAsync(id);
+public async Task<IActionResult> Update(
+    int id,
+    [FromForm] int modelId,
+    [FromForm] int variantId,
+    [FromForm] int? colourId,
+    [FromForm] decimal? price,
+    [FromForm] string? batterySpecs,
+    [FromForm] int? rangeKm,
+    [FromForm] bool stockAvailable,
+    [FromForm] IFormFile? image)
+{
+    var existing = await _context.ScootyInventories.FindAsync(id);
 
-            if (existing == null)
-                return NotFound();
+    if (existing == null)
+        return NotFound();
 
-            existing.ModelId = model.ModelId;
-            existing.VariantId = model.VariantId;
-            existing.ColourId = model.ColourId;
-            existing.Price = model.Price;
-            existing.BatterySpecs = model.BatterySpecs;
-            existing.RangeKm = model.RangeKm;
-            existing.StockAvailable = model.StockAvailable;
+    existing.ModelId = modelId;
+    existing.VariantId = variantId;
+    existing.ColourId = colourId;
+    existing.Price = price;
+    existing.BatterySpecs = batterySpecs;
+    existing.RangeKm = rangeKm;
+    existing.StockAvailable = stockAvailable;
 
-            if (image != null)
-            {
-                var imagePath = SaveImage(image);
-                existing.ImageUrl = imagePath;
-            }
+    if (image != null)
+    {
+        var imagePath = SaveImage(image);
+        existing.ImageUrl = imagePath;
+    }
 
-            await _context.SaveChangesAsync();
+    await _context.SaveChangesAsync();
 
-            return Ok(existing);
-        }
+    return Ok(existing);
+}
 
         // =============================
         // DELETE INVENTORY
