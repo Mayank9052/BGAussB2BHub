@@ -147,6 +147,7 @@ export default function Dashboard() {
   // ── Open / close sheet ───────────────────────────────────────
   const openSheet = () => {
     resetForm();
+    fetchModels();
     setSheetOpen(true);
   };
 
