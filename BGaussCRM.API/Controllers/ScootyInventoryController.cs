@@ -383,6 +383,7 @@ namespace BGaussCRM.API.Controllers
             sheet.Cells[1, 5].Value = "BatterySpecs";
             sheet.Cells[1, 6].Value = "RangeKm";
             sheet.Cells[1, 7].Value = "StockAvailable";
+            sheet.Cells[1, 8].Value = "ImageUrl";
 
             var stream = new MemoryStream(package.GetAsByteArray());
 
@@ -427,6 +428,9 @@ namespace BGaussCRM.API.Controllers
                 var batterySpecs = sheet.Cells[row, 5].Text;
                 var rangeText = sheet.Cells[row, 6].Text;
                 var stockText = sheet.Cells[row, 7].Text;
+                var imageUrl = string.IsNullOrWhiteSpace(sheet.Cells[row, 8].Text)
+                    ? null
+                    : sheet.Cells[row, 8].Text.Trim();
 
                 if (!int.TryParse(modelIdText, out int modelId) ||
                     !int.TryParse(variantIdText, out int variantId))
@@ -451,6 +455,7 @@ namespace BGaussCRM.API.Controllers
                     existing.BatterySpecs = batterySpecs;
                     existing.RangeKm = rangeKm;
                     existing.StockAvailable = stock;
+                    existing.ImageUrl = imageUrl;
 
                     updatedCount++;
                     continue;
@@ -464,7 +469,8 @@ namespace BGaussCRM.API.Controllers
                     Price = price,
                     BatterySpecs = batterySpecs,
                     RangeKm = rangeKm,
-                    StockAvailable = stock
+                    StockAvailable = stock,
+                    ImageUrl = imageUrl
                 };
 
                 inventoryToInsert.Add(inventory);
