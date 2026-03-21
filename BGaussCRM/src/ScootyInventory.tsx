@@ -14,7 +14,17 @@ export default function ScootyInventory() {
   const [variants, setVariants] = useState<any[]>([]);
   const [colours, setColours] = useState<any[]>([]);
 
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<any>({
+    modelId: "",
+    variantId: "",
+    colourId: "",
+    price: "",
+    batterySpecs: "",
+    rangeKm: "",
+    stockAvailable: false,
+    image: null
+  });
+
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const handleLogout = () => {
@@ -52,70 +62,95 @@ export default function ScootyInventory() {
 
   // ================= SUBMIT =================
   const handleSubmit = async () => {
-    try {
-      if (!form.modelId || !form.variantId) {
-        alert("Model & Variant required");
-        return;
-      }
-
-      if (!form.colourId) {
-        alert("Please select colour");
-        return;
-      }
-
-      const formData = new FormData();
-
-      formData.append("modelId", String(form.modelId));
-      formData.append("variantId", String(form.variantId));
-      formData.append("colourId", String(form.colourId));
-
-      if (form.price)
-        formData.append("price", String(Number(form.price)));
-
-      if (form.batterySpecs)
-        formData.append("batterySpecs", form.batterySpecs);
-
-      if (form.rangeKm)
-        formData.append("rangeKm", String(Number(form.rangeKm)));
-
-      formData.append(
-        "stockAvailable",
-        form.stockAvailable ? "true" : "false"
-      );
-
-      if (form.image) {
-        formData.append("image", form.image);
-      }
-
-      if (editingId) {
-        await axios.put(`${API}/${editingId}`, formData);
-      } else {
-        await axios.post(`${API}/add-item`, formData);
-      }
-
-      setForm({});
-      setEditingId(null);
-      fetchData();
-
-    } catch (err: any) {
-      console.error("SAVE ERROR 👉", err.response?.data || err.message);
-      alert(err.response?.data || "Save failed");
+  try {
+    if (!form.modelId || !form.variantId || !form.colourId) {
+      alert("Please select Model, Variant and Colour");
+      return;
     }
-  };
 
+    // 🔥 CHECK DUPLICATE
+    const exists = data.some(
+      (item) =>
+        Number(item.modelId) === Number(form.modelId) &&
+        Number(item.variantId) === Number(form.variantId) &&
+        Number(item.colourId) === Number(form.colourId) &&
+        item.scootyId !== editingId // allow edit
+    );
+
+    if (exists) {
+      alert("⚠️ This combination already exists!");
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("modelId", String(form.modelId));
+    formData.append("variantId", String(form.variantId));
+    formData.append("colourId", String(form.colourId));
+
+    if (form.price)
+      formData.append("price", String(Number(form.price)));
+
+    if (form.batterySpecs)
+      formData.append("batterySpecs", form.batterySpecs);
+
+    if (form.rangeKm)
+      formData.append("rangeKm", String(Number(form.rangeKm)));
+
+    formData.append(
+      "stockAvailable",
+      form.stockAvailable ? "true" : "false"
+    );
+
+    if (form.image) {
+      formData.append("image", form.image);
+    }
+
+    if (editingId) {
+      await axios.put(`${API}/${editingId}`, formData);
+    } else {
+      await axios.post(`${API}/add-item`, formData);
+    }
+
+    // reset
+    setForm({
+      modelId: "",
+      variantId: "",
+      colourId: "",
+      price: "",
+      batterySpecs: "",
+      rangeKm: "",
+      stockAvailable: false,
+      image: null
+    });
+
+    setEditingId(null);
+    setVariants([]);
+    setColours([]);
+
+    fetchData();
+
+  } catch (err: any) {
+    console.error("SAVE ERROR 👉", err.response?.data || err.message);
+    alert(err.response?.data || "Save failed");
+  }
+};
   // ================= EDIT =================
   const handleEdit = (item: any) => {
+    const modelId = Number(item.modelId);
+    const variantId = Number(item.variantId);
+
     setForm({
       ...item,
-      modelId: Number(item.modelId),
-      variantId: Number(item.variantId),
+      modelId,
+      variantId,
       colourId: Number(item.colourId)
     });
 
     setEditingId(item.scootyId);
 
-    fetchVariants(item.modelId);
-    fetchColours(item.modelId, item.variantId);
+    fetchVariants(modelId);
+    fetchColours(modelId, variantId);
   };
 
   // ================= DELETE =================
@@ -153,7 +188,6 @@ export default function ScootyInventory() {
       <header className="pro-navbar">
         <div className="pro-left">
           <img src={logo} className="pro-logo" />
-
           <div className="pro-text">
             <span className="pro-brand">BGauss Portal</span>
             <span className="pro-page">Scooty Inventory</span>
@@ -185,18 +219,22 @@ export default function ScootyInventory() {
 
           {/* MODEL */}
           <select
-            value={form.modelId || ""}
+            value={form.modelId}
             onChange={(e) => {
               const modelId = Number(e.target.value);
 
               setForm({
                 modelId,
                 variantId: "",
-                colourId: ""
+                colourId: "",
+                price: "",
+                batterySpecs: "",
+                rangeKm: "",
+                stockAvailable: false,
+                image: null
               });
 
               fetchVariants(modelId);
-              setVariants([]);
               setColours([]);
             }}
           >
@@ -210,17 +248,18 @@ export default function ScootyInventory() {
 
           {/* VARIANT */}
           <select
-            value={form.variantId || ""}
+            value={form.variantId}
             onChange={(e) => {
               const variantId = Number(e.target.value);
+              const modelId = Number(form.modelId);
 
-              setForm({
-                ...form,
+              setForm((prev: any) => ({
+                ...prev,
                 variantId,
                 colourId: ""
-              });
+              }));
 
-              fetchColours(Number(form.modelId), variantId);
+              fetchColours(modelId, variantId);
             }}
           >
             <option value="">Variant</option>
@@ -233,7 +272,7 @@ export default function ScootyInventory() {
 
           {/* COLOUR */}
           <select
-            value={form.colourId || ""}
+            value={form.colourId}
             onChange={(e) =>
               setForm({ ...form, colourId: Number(e.target.value) })
             }
@@ -249,7 +288,7 @@ export default function ScootyInventory() {
           {/* INPUTS */}
           <input
             placeholder="Price"
-            value={form.price || ""}
+            value={form.price}
             onChange={(e) =>
               setForm({ ...form, price: e.target.value })
             }
@@ -257,7 +296,7 @@ export default function ScootyInventory() {
 
           <input
             placeholder="Battery"
-            value={form.batterySpecs || ""}
+            value={form.batterySpecs}
             onChange={(e) =>
               setForm({ ...form, batterySpecs: e.target.value })
             }
@@ -265,7 +304,7 @@ export default function ScootyInventory() {
 
           <input
             placeholder="Range KM"
-            value={form.rangeKm || ""}
+            value={form.rangeKm}
             onChange={(e) =>
               setForm({ ...form, rangeKm: e.target.value })
             }
@@ -281,7 +320,7 @@ export default function ScootyInventory() {
           <label>
             <input
               type="checkbox"
-              checked={form.stockAvailable || false}
+              checked={form.stockAvailable}
               onChange={(e) =>
                 setForm({ ...form, stockAvailable: e.target.checked })
               }
