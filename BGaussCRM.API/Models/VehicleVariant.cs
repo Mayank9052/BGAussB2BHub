@@ -11,6 +11,8 @@ public partial class VehicleVariant
 
     public int? ModelId { get; set; }
 
+    public VehicleModel Model { get; set; }
+
     public virtual ICollection<PriceMaster> PriceMasters { get; set; } = new List<PriceMaster>();
 
     public virtual ICollection<ScootyInventory> ScootyInventories { get; set; } = new List<ScootyInventory>();

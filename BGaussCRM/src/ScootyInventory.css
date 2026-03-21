@@ -19,10 +19,8 @@
   text-align: center;
   font-size: 32px;
   font-weight: 700;
-
-  margin-top: 0;        /* 🔥 FIX: removes top gap */
+  margin-top: 0;
   margin-bottom: 25px;
-
   background: linear-gradient(90deg, #0f172a, #2563eb);
   -webkit-text-fill-color: transparent;
 }
@@ -36,7 +34,6 @@
   align-items: center;
 }
 
-/* INPUT + SELECT */
 .form-card input,
 .form-card select {
   padding: 10px;
@@ -52,13 +49,11 @@
   border-color: #3b82f6;
 }
 
-/* FILE INPUT */
 .form-card input[type="file"] {
   padding: 6px;
   font-size: 12px;
 }
 
-/* CHECKBOX */
 .form-card label {
   display: flex;
   align-items: center;
@@ -119,14 +114,12 @@
   margin-top: 20px;
 }
 
-/* TABLE */
 .table table {
   width: 100%;
   border-collapse: collapse;
   font-family: "Segoe UI", Tahoma, sans-serif;
 }
 
-/* HEADER */
 .table th {
   background: #f1f5f9;
   color: #0f172a;
@@ -139,12 +132,10 @@
   border-right: 1px solid #e5e7eb;
 }
 
-/* REMOVE LAST BORDER */
 .table th:last-child {
   border-right: none;
 }
 
-/* ROW */
 .table td {
   padding: 14px;
   font-size: 13px;
@@ -154,23 +145,19 @@
   border-right: 1px solid #e5e7eb;
 }
 
-/* REMOVE LAST COLUMN BORDER */
 .table td:last-child {
   border-right: none;
 }
 
-/* ZEBRA */
 .table tbody tr:nth-child(even) {
   background: #f9fafb;
 }
 
-/* HOVER */
 .table tbody tr:hover {
   background: #eef6ff;
   transition: 0.2s;
 }
 
-/* ACTION BUTTONS */
 .table td button {
   margin: 0 4px;
   padding: 6px 12px;
@@ -180,7 +167,6 @@
   cursor: pointer;
 }
 
-/* EDIT */
 .table td button:first-child {
   background: #3b82f6;
   color: white;
@@ -190,7 +176,6 @@
   background: #2563eb;
 }
 
-/* DELETE */
 .table td button:last-child {
   background: #ef4444;
   color: white;
@@ -200,14 +185,65 @@
   background: #dc2626;
 }
 
-/* ID COLUMN */
 .table td:first-child {
   font-weight: 600;
   color: #0f172a;
 }
 
-/* CENTER ACTION COLUMN */
 .table th:last-child,
 .table td:last-child {
   text-align: center;
+}
+
+/* ===================================================== */
+/* 🔥 NEW GRID LAYOUT (NO EXISTING CODE CHANGED) */
+/* ===================================================== */
+
+.section-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* LEFT SIDE (FORM) */
+.form-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+}
+
+/* RIGHT SIDE (ACTIONS / EXCEL) */
+.actions-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* STACK ACTIONS */
+.actions-wrapper .actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* OPTIONAL HOVER */
+.form-wrapper:hover,
+.actions-wrapper:hover {
+  transform: translateY(-2px);
+  transition: 0.2s;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .section-grid {
+    grid-template-columns: 1fr;
+  }
 }

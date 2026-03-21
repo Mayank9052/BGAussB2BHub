@@ -25,7 +25,7 @@ export default function Modules() {
         </div>
 
         <div className="pro-right">
-          <span className="user-name">Welcome, Admin</span>
+          Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
 
           <button
             className="module-btn"

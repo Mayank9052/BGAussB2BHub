@@ -24,7 +24,14 @@ namespace BGaussCRM.API.Controllers
         public async Task<IActionResult> GetVariants()
         {
             var variants = await _context.VehicleVariants
-                .Include(v => v.ModelId)
+                .Include(v => v.Model) // ✅ correct
+                .Select(v => new
+                {
+                    v.Id,
+                    v.VariantName,
+                    v.ModelId,
+                    ModelName = v.Model.ModelName // 🔥 send model name
+                })
                 .ToListAsync();
 
             return Ok(variants);

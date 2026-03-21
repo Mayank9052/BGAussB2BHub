@@ -62,79 +62,77 @@ export default function ScootyInventory() {
 
   // ================= SUBMIT =================
   const handleSubmit = async () => {
-  try {
-    if (!form.modelId || !form.variantId || !form.colourId) {
-      alert("Please select Model, Variant and Colour");
-      return;
+    try {
+      if (!form.modelId || !form.variantId || !form.colourId) {
+        alert("Please select Model, Variant and Colour");
+        return;
+      }
+
+      const exists = data.some(
+        (item) =>
+          Number(item.modelId) === Number(form.modelId) &&
+          Number(item.variantId) === Number(form.variantId) &&
+          Number(item.colourId) === Number(form.colourId) &&
+          item.scootyId !== editingId
+      );
+
+      if (exists) {
+        alert("⚠️ This combination already exists!");
+        return;
+      }
+
+      const formData = new FormData();
+
+      formData.append("modelId", String(form.modelId));
+      formData.append("variantId", String(form.variantId));
+      formData.append("colourId", String(form.colourId));
+
+      if (form.price)
+        formData.append("price", String(Number(form.price)));
+
+      if (form.batterySpecs)
+        formData.append("batterySpecs", form.batterySpecs);
+
+      if (form.rangeKm)
+        formData.append("rangeKm", String(Number(form.rangeKm)));
+
+      formData.append(
+        "stockAvailable",
+        form.stockAvailable ? "true" : "false"
+      );
+
+      if (form.image) {
+        formData.append("image", form.image);
+      }
+
+      if (editingId) {
+        await axios.put(`${API}/${editingId}`, formData);
+      } else {
+        await axios.post(`${API}/add-item`, formData);
+      }
+
+      setForm({
+        modelId: "",
+        variantId: "",
+        colourId: "",
+        price: "",
+        batterySpecs: "",
+        rangeKm: "",
+        stockAvailable: false,
+        image: null
+      });
+
+      setEditingId(null);
+      setVariants([]);
+      setColours([]);
+
+      fetchData();
+    } catch (err: any) {
+      console.error("SAVE ERROR 👉", err.response?.data || err.message);
+      alert(err.response?.data || "Save failed");
     }
+  };
 
-    // 🔥 CHECK DUPLICATE
-    const exists = data.some(
-      (item) =>
-        Number(item.modelId) === Number(form.modelId) &&
-        Number(item.variantId) === Number(form.variantId) &&
-        Number(item.colourId) === Number(form.colourId) &&
-        item.scootyId !== editingId // allow edit
-    );
-
-    if (exists) {
-      alert("⚠️ This combination already exists!");
-      return;
-    }
-
-    const formData = new FormData();
-
-    formData.append("modelId", String(form.modelId));
-    formData.append("variantId", String(form.variantId));
-    formData.append("colourId", String(form.colourId));
-
-    if (form.price)
-      formData.append("price", String(Number(form.price)));
-
-    if (form.batterySpecs)
-      formData.append("batterySpecs", form.batterySpecs);
-
-    if (form.rangeKm)
-      formData.append("rangeKm", String(Number(form.rangeKm)));
-
-    formData.append(
-      "stockAvailable",
-      form.stockAvailable ? "true" : "false"
-    );
-
-    if (form.image) {
-      formData.append("image", form.image);
-    }
-
-    if (editingId) {
-      await axios.put(`${API}/${editingId}`, formData);
-    } else {
-      await axios.post(`${API}/add-item`, formData);
-    }
-
-    // reset
-    setForm({
-      modelId: "",
-      variantId: "",
-      colourId: "",
-      price: "",
-      batterySpecs: "",
-      rangeKm: "",
-      stockAvailable: false,
-      image: null
-    });
-
-    setEditingId(null);
-    setVariants([]);
-    setColours([]);
-
-    fetchData();
-
-  } catch (err: any) {
-    console.error("SAVE ERROR 👉", err.response?.data || err.message);
-    alert(err.response?.data || "Save failed");
-  }
-};
   // ================= EDIT =================
   const handleEdit = (item: any) => {
     const modelId = Number(item.modelId);
@@ -160,7 +158,6 @@ export default function ScootyInventory() {
 
       await axios.delete(`${API}/${id}`);
       fetchData();
-
     } catch (err: any) {
       console.error("DELETE ERROR 👉", err.response?.data || err.message);
       alert(err.response?.data || "Delete failed");
@@ -195,7 +192,7 @@ export default function ScootyInventory() {
         </div>
 
         <div className="pro-right">
-          <span className="user-name">Welcome, Admin</span>
+           Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
 
           <button onClick={() => navigate("/modules")} className="module-btn">
             Modules
@@ -214,136 +211,98 @@ export default function ScootyInventory() {
       {/* CONTENT */}
       <div className="inv-container">
 
-        {/* FORM */}
-        <div className="form-card">
+        {/* ===== GRID WRAPPER ===== */}
+        <div className="section-grid">
 
-          {/* MODEL */}
-          <select
-            value={form.modelId}
-            onChange={(e) => {
-              const modelId = Number(e.target.value);
+          {/* FORM */}
+          <div className="form-wrapper">
+            <div className="form-card">
 
-              setForm({
-                modelId,
-                variantId: "",
-                colourId: "",
-                price: "",
-                batterySpecs: "",
-                rangeKm: "",
-                stockAvailable: false,
-                image: null
-              });
+              {/* ALL YOUR EXISTING FORM CODE (UNCHANGED) */}
+              {/* MODEL */}
+              <select value={form.modelId} onChange={(e) => {
+                const modelId = Number(e.target.value);
+                setForm({
+                  modelId,
+                  variantId: "",
+                  colourId: "",
+                  price: "",
+                  batterySpecs: "",
+                  rangeKm: "",
+                  stockAvailable: false,
+                  image: null
+                });
+                fetchVariants(modelId);
+                setColours([]);
+              }}>
+                <option value="">Model</option>
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>{m.modelName}</option>
+                ))}
+              </select>
 
-              fetchVariants(modelId);
-              setColours([]);
-            }}
-          >
-            <option value="">Model</option>
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.modelName}
-              </option>
-            ))}
-          </select>
+              {/* VARIANT */}
+              <select value={form.variantId} onChange={(e) => {
+                const variantId = Number(e.target.value);
+                const modelId = Number(form.modelId);
+                setForm((prev: any) => ({ ...prev, variantId, colourId: "" }));
+                fetchColours(modelId, variantId);
+              }}>
+                <option value="">Variant</option>
+                {variants.map((v) => (
+                  <option key={v.id} value={v.id}>{v.variantName}</option>
+                ))}
+              </select>
 
-          {/* VARIANT */}
-          <select
-            value={form.variantId}
-            onChange={(e) => {
-              const variantId = Number(e.target.value);
-              const modelId = Number(form.modelId);
+              {/* COLOUR */}
+              <select value={form.colourId} onChange={(e) =>
+                setForm({ ...form, colourId: Number(e.target.value) })
+              }>
+                <option value="">Colour</option>
+                {colours.map((c) => (
+                  <option key={c.id} value={c.id}>{c.colourName}</option>
+                ))}
+              </select>
 
-              setForm((prev: any) => ({
-                ...prev,
-                variantId,
-                colourId: ""
-              }));
+              <input placeholder="Price" value={form.price}
+                onChange={(e) => setForm({ ...form, price: e.target.value })} />
 
-              fetchColours(modelId, variantId);
-            }}
-          >
-            <option value="">Variant</option>
-            {variants.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.variantName}
-              </option>
-            ))}
-          </select>
+              <input placeholder="Battery" value={form.batterySpecs}
+                onChange={(e) => setForm({ ...form, batterySpecs: e.target.value })} />
 
-          {/* COLOUR */}
-          <select
-            value={form.colourId}
-            onChange={(e) =>
-              setForm({ ...form, colourId: Number(e.target.value) })
-            }
-          >
-            <option value="">Colour</option>
-            {colours.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.colourName}
-              </option>
-            ))}
-          </select>
+              <input placeholder="Range KM" value={form.rangeKm}
+                onChange={(e) => setForm({ ...form, rangeKm: e.target.value })} />
 
-          {/* INPUTS */}
-          <input
-            placeholder="Price"
-            value={form.price}
-            onChange={(e) =>
-              setForm({ ...form, price: e.target.value })
-            }
-          />
+              <input type="file"
+                onChange={(e: any) => setForm({ ...form, image: e.target.files[0] })} />
 
-          <input
-            placeholder="Battery"
-            value={form.batterySpecs}
-            onChange={(e) =>
-              setForm({ ...form, batterySpecs: e.target.value })
-            }
-          />
+              <label>
+                <input type="checkbox" checked={form.stockAvailable}
+                  onChange={(e) => setForm({ ...form, stockAvailable: e.target.checked })} />
+                In Stock
+              </label>
 
-          <input
-            placeholder="Range KM"
-            value={form.rangeKm}
-            onChange={(e) =>
-              setForm({ ...form, rangeKm: e.target.value })
-            }
-          />
+              <button className="add-btn" onClick={handleSubmit}>
+                {editingId ? "Update" : "Add"}
+              </button>
 
-          <input
-            type="file"
-            onChange={(e: any) =>
-              setForm({ ...form, image: e.target.files[0] })
-            }
-          />
+            </div>
+          </div>
 
-          <label>
-            <input
-              type="checkbox"
-              checked={form.stockAvailable}
-              onChange={(e) =>
-                setForm({ ...form, stockAvailable: e.target.checked })
-              }
-            />
-            In Stock
-          </label>
+          {/* ACTIONS */}
+          <div className="actions-wrapper">
+            <div className="actions">
+              <button className="action-btn" onClick={downloadTemplate}>
+                Download Template
+              </button>
 
-          <button className="add-btn" onClick={handleSubmit}>
-            {editingId ? "Update" : "Add"}
-          </button>
+              <input type="file" onChange={handleImport} />
+            </div>
+          </div>
 
         </div>
 
-        {/* ACTIONS */}
-        <div className="actions">
-          <button className="action-btn" onClick={downloadTemplate}>
-            Download Template
-          </button>
-
-          <input type="file" onChange={handleImport} />
-        </div>
-
-        {/* TABLE */}
+        {/* TABLE (UNCHANGED) */}
         <div className="table">
           <table>
             <thead>

@@ -26,10 +26,17 @@ type VehicleApi = Vehicle & {
 
 const resolveImageSrc = (path: string | null) => {
   if (!path) return noImage;
+
+  // already full URL
   if (/^https?:\/\//i.test(path)) return path;
 
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${API_ORIGIN}${normalizedPath}`;
+  // ensure proper slash
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
+  // fallback if env missing
+  const base = API_ORIGIN || window.location.origin;
+
+  return `${base}${cleanPath}`;
 };
 
 export default function Dashboard() {
@@ -112,7 +119,7 @@ export default function Dashboard() {
         </div>
 
         <div className="pro-right">
-          <span className="user-name">Welcome, Admin</span>
+           Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
 
           {/* ✅ NEW MODULES BUTTON */}
           <button
@@ -130,7 +137,6 @@ export default function Dashboard() {
 
       {/* CONTENT */}
       <div className="main-content">
-        <h1>Vehicle Collection</h1>
 
         {error && <p className="error">{error}</p>}
 
