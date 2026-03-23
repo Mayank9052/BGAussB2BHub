@@ -34,38 +34,44 @@ const resolveImageSrc = (path: string | null) => {
   return `${API_ORIGIN}${normalizedPath}`;
 };
 
+const getInitials = (name: string | null): string => {
+  if (!name) return "?";
+  const parts = name.trim().split(" ").filter(Boolean);
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+};
+
 export default function Dashboard() {
-  const [vehicles, setVehicles]     = useState<Vehicle[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState("");
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState("");
 
   // ── Search ──────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filtered vehicles — purely local, no API calls
   const filteredVehicles = vehicles.filter((v) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
-      v.modelName?.toLowerCase().includes(q) ||
+      v.modelName?.toLowerCase().includes(q)  ||
       v.variantName?.toLowerCase().includes(q) ||
-      v.colourName?.toLowerCase().includes(q) ||
-      String(v.price ?? "").includes(q) ||
+      v.colourName?.toLowerCase().includes(q)  ||
+      String(v.price   ?? "").includes(q)      ||
       String(v.rangeKm ?? "").includes(q)
     );
   });
 
-  // Bottom sheet state
-  const [sheetOpen, setSheetOpen]   = useState(false);
+  // ── Sheet ────────────────────────────────────────────────────
+  const [sheetOpen,  setSheetOpen]  = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitMsg, setSubmitMsg]   = useState("");
+  const [submitMsg,  setSubmitMsg]  = useState("");
 
-  // Dropdown options
+  // ── Dropdown options ─────────────────────────────────────────
   const [models,   setModels]   = useState<ModelOption[]>([]);
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [colours,  setColours]  = useState<ColourOption[]>([]);
 
-  // Form fields
+  // ── Form fields ──────────────────────────────────────────────
   const [modelId,        setModelId]        = useState<number | "">("");
   const [variantId,      setVariantId]      = useState<number | "">("");
   const [colourId,       setColourId]       = useState<number | "">("");
@@ -76,20 +82,46 @@ export default function Dashboard() {
   const [imageFile,      setImageFile]      = useState<File | null>(null);
   const [imagePreview,   setImagePreview]   = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const navigate     = useNavigate();
+  // ── Menu open state ──────────────────────────────────────────
+  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
+  const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
+
+  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const desktopMenuRef  = useRef<HTMLDivElement>(null);
+  const mobileMenuRef   = useRef<HTMLDivElement>(null);
+  const navigate        = useNavigate();
 
   // ── Auth guard ──────────────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { navigate("/", { replace: true }); return; }
-
     const cached = localStorage.getItem("vehicles");
     if (cached) { setVehicles(JSON.parse(cached)); setLoading(false); }
-
     fetchVehicles();
     fetchModels();
   }, [navigate]);
+
+  // ── Outside-click: desktop menu ──────────────────────────────
+  useEffect(() => {
+    if (!desktopMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (desktopMenuRef.current && !desktopMenuRef.current.contains(e.target as Node))
+        setDesktopMenuOpen(false);
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", close), 50);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
+  }, [desktopMenuOpen]);
+
+  // ── Outside-click: mobile menu ───────────────────────────────
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node))
+        setMobileMenuOpen(false);
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", close), 50);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
+  }, [mobileMenuOpen]);
 
   // ── Cascade dropdowns ────────────────────────────────────────
   useEffect(() => {
@@ -103,7 +135,7 @@ export default function Dashboard() {
     else { setColours([]); setColourId(""); }
   }, [variantId]);
 
-  // ── Data fetchers ────────────────────────────────────────────
+  // ── Fetchers ─────────────────────────────────────────────────
   const fetchVehicles = async () => {
     let retries = 5;
     while (retries > 0) {
@@ -161,24 +193,15 @@ export default function Dashboard() {
     }
   };
 
-  // ── Open / close sheet ───────────────────────────────────────
-  const openSheet = () => {
-    resetForm();
-    fetchModels();
-    setSheetOpen(true);
-  };
-
-  const closeSheet = () => {
-    setSheetOpen(false);
-    setSubmitMsg("");
-  };
+  // ── Sheet helpers ────────────────────────────────────────────
+  const openSheet = () => { resetForm(); fetchModels(); setSheetOpen(true); };
+  const closeSheet = () => { setSheetOpen(false); setSubmitMsg(""); };
 
   const resetForm = () => {
     setModelId(""); setVariantId(""); setColourId("");
     setPrice(""); setBatterySpecs(""); setRangeKm("");
     setStockAvailable(true);
-    setImageFile(null); setImagePreview(null);
-    setSubmitMsg("");
+    setImageFile(null); setImagePreview(null); setSubmitMsg("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -188,25 +211,22 @@ export default function Dashboard() {
       setSubmitMsg("Model and Variant are required.");
       return;
     }
-
     setSubmitting(true);
     setSubmitMsg("");
-
     try {
       const form = new FormData();
-      form.append("modelId",        String(modelId));
-      form.append("variantId",      String(variantId));
-      if (colourId !== "") form.append("colourId", String(colourId));
-      if (price)           form.append("price",    price);
-      if (batterySpecs)    form.append("batterySpecs", batterySpecs);
-      if (rangeKm)         form.append("rangeKm",  rangeKm);
+      form.append("modelId",   String(modelId));
+      form.append("variantId", String(variantId));
+      if (colourId !== "") form.append("colourId",      String(colourId));
+      if (price)           form.append("price",         price);
+      if (batterySpecs)    form.append("batterySpecs",  batterySpecs);
+      if (rangeKm)         form.append("rangeKm",       rangeKm);
       form.append("stockAvailable", String(stockAvailable));
-      if (imageFile)       form.append("image", imageFile);
+      if (imageFile) form.append("image", imageFile);
 
       await axios.post("/api/ScootyInventory/add-item", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-
       setSubmitMsg("✅ Item added successfully!");
       fetchVehicles();
       setTimeout(() => closeSheet(), 1200);
@@ -227,12 +247,48 @@ export default function Dashboard() {
     navigate("/", { replace: true });
   };
 
-  // ── Render ───────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────
+  const username = localStorage.getItem("username") ?? "";
+  const role     = localStorage.getItem("role")     ?? "";
+  const initials = getInitials(username);
+
+  // ── Shared dropdown items renderer ───────────────────────────
+  const renderDropdownItems = (onClose: () => void) => (
+    <>
+      {role === "admin" && (
+        <button
+          className="desktop-dd-item"
+          onClick={() => { onClose(); navigate("/modules"); }}
+        >
+          <div className="desktop-dd-icon blue">⊞</div>
+          <div className="desktop-dd-text">
+            <span className="desktop-dd-title">Modules</span>
+            <span className="desktop-dd-sub">Manage modules</span>
+          </div>
+        </button>
+      )}
+      <div className="desktop-dd-divider" />
+      <button
+        className="desktop-dd-item danger"
+        onClick={() => { onClose(); handleLogout(); }}
+      >
+        <div className="desktop-dd-icon red">⏻</div>
+        <div className="desktop-dd-text">
+          <span className="desktop-dd-title">Logout</span>
+          <span className="desktop-dd-sub">Sign out of account</span>
+        </div>
+      </button>
+    </>
+  );
+
+  // ────────────────────────────────────────────────────────────
   return (
     <div className="dashboard">
 
-      {/* NAVBAR */}
+      {/* ═══ NAVBAR ═══════════════════════════════════════════ */}
       <header className="pro-navbar">
+
+        {/* LEFT */}
         <div className="pro-left">
           <img src={logo} className="pro-logo" alt="logo" />
           <div className="pro-text">
@@ -240,30 +296,192 @@ export default function Dashboard() {
             <span className="pro-page">Dashboard</span>
           </div>
         </div>
-        <div className="pro-right">
-          <span className="user-name">
-            Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
-          </span>
-          {localStorage.getItem("role") === "admin" && (
-            <button className="module-btn" onClick={() => navigate("/modules")}>
-              Modules
-            </button>
-          )}
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
+
+        {/* CENTER — search (hidden ≤640px via CSS) */}
+        <div className="pro-center">
+          <div className="nav-search-wrapper">
+            <div className="nav-search-bar">
+              <span className="nav-search-icon">
+                <svg width="15" height="15" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+              </span>
+              <input
+                className="nav-search-input"
+                type="text"
+                placeholder="Search model, variant, colour..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button className="nav-search-clear" onClick={() => setSearchQuery("")}>✕</button>
+              )}
+            </div>
+            {searchQuery && (
+              <span className="nav-search-count">
+                {filteredVehicles.length === 0
+                  ? "No results"
+                  : `${filteredVehicles.length} result${filteredVehicles.length > 1 ? "s" : ""}`}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* RIGHT */}
+        <div className="pro-right">
+
+          {/* ── DESKTOP dropdown (> 768px) ── */}
+          <div className="desktop-user-wrapper" ref={desktopMenuRef}>
+            <button
+              className={`desktop-user-trigger${desktopMenuOpen ? " open" : ""}`}
+              onClick={() => setDesktopMenuOpen((p) => !p)}
+              aria-label="User menu"
+              aria-expanded={desktopMenuOpen}
+            >
+              <div className="desktop-avatar">{initials}</div>
+              <div className="desktop-user-info">
+                <span className="desktop-user-name">{username}</span>
+                <span className="desktop-user-role">{role}</span>
+              </div>
+              <span className="desktop-chevron">▾</span>
+            </button>
+
+            {/* Desktop dropdown panel */}
+            <div className={`desktop-dropdown${desktopMenuOpen ? " is-open" : ""}`}>
+
+              {/* Header card */}
+              <div className="desktop-dd-header">
+                <div className="desktop-dd-avatar">{initials}</div>
+                <div>
+                  <span className="desktop-dd-name">{username}</span>
+                  <span className="desktop-dd-role-badge">{role}</span>
+                </div>
+              </div>
+
+              <div className="desktop-dd-divider" />
+              <div className="desktop-dd-label">Actions</div>
+
+              {renderDropdownItems(() => setDesktopMenuOpen(false))}
+            </div>
+          </div>
+
+          {/* ── MOBILE / TABLET ⋮ (≤ 768px) ── */}
+          <div className="mobile-nav-wrapper" ref={mobileMenuRef}>
+            <button
+              className={`mobile-menu-btn${mobileMenuOpen ? " open" : ""}`}
+              onClick={() => setMobileMenuOpen((p) => !p)}
+              aria-label="Open menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              ⋮
+            </button>
+
+            <div className={`mobile-icon-dropdown${mobileMenuOpen ? " is-open" : ""}`}>
+
+              {/* User info row */}
+              <div className="mobile-dd-user">
+                <div className="mobile-dd-avatar">{initials}</div>
+                <div>
+                  <div className="mobile-dd-username">{username}</div>
+                  <div className="mobile-dd-role">{role}</div>
+                </div>
+              </div>
+
+              <div className="mobile-dropdown-divider" />
+              <div className="mobile-dropdown-label">Actions</div>
+
+              {role === "admin" && (
+                <button
+                  className="mobile-dropdown-item"
+                  onClick={() => { setMobileMenuOpen(false); navigate("/modules"); }}
+                >
+                  <div className="mobile-dd-icon blue">⊞</div>
+                  <div className="mobile-dd-text">
+                    <span className="mobile-dd-title">Modules</span>
+                    <span className="mobile-dd-sub">Manage modules</span>
+                  </div>
+                </button>
+              )}
+
+              <div className="mobile-dropdown-divider" />
+
+              <button
+                className="mobile-dropdown-item danger"
+                onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
+              >
+                <div className="mobile-dd-icon red">⏻</div>
+                <div className="mobile-dd-text">
+                  <span className="mobile-dd-title">Logout</span>
+                  <span className="mobile-dd-sub">Sign out of account</span>
+                </div>
+              </button>
+
+            </div>
+          </div>
+
+          {/* ── USERNAME DISPLAY ── */}
+          <div className="nav-user-info">
+            <div className="nav-user-avatar">{initials}</div>
+            <div className="nav-user-text">
+              <span className="nav-user-name">{username}</span>
+              <span className="nav-user-role">{role}</span>
+            </div>
+          </div>
+
+          {/* ── NAV ICON BUTTONS — visible via CSS, dropdowns hidden ── */}
+          <div className="nav-icon-group">
+
+            {/* Modules — admin only */}
+            {role === "admin" && (
+              <button
+                className="nav-icon-btn btn-modules"
+                data-tip="Modules"
+                aria-label="Modules"
+                onClick={() => navigate("/modules")}
+              >
+                <span className="btn-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1"/>
+                    <rect x="14" y="3" width="7" height="7" rx="1"/>
+                    <rect x="3" y="14" width="7" height="7" rx="1"/>
+                    <rect x="14" y="14" width="7" height="7" rx="1"/>
+                  </svg>
+                </span>
+              </button>
+            )}
+
+            {/* Logout */}
+            <button
+              className="nav-icon-btn btn-logout"
+              data-tip="Logout"
+              aria-label="Logout"
+              onClick={handleLogout}
+            >
+              <span className="btn-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </span>
+            </button>
+
+          </div>{/* /nav-icon-group */}
+
+        </div>{/* /pro-right */}
       </header>
 
-      {/* CONTENT */}
+      {/* ═══ CONTENT ══════════════════════════════════════════ */}
       <div className="main-content">
 
-        {/* Title Row */}
         <div className="dashboard-title-row">
           <h1>Scooty Inventory</h1>
           <button className="add-fab" onClick={openSheet} title="Add Item">+</button>
         </div>
 
-        {/* ── SEARCH BAR ────────────────────────────────────── */}
-        <div className="search-wrapper">
+        {/* Mobile-only search — visible only on ≤640px */}
+        <div className="search-wrapper mobile-search-only">
           <div className="search-bar">
             <span className="search-icon">
               <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
@@ -282,8 +500,6 @@ export default function Dashboard() {
               <button className="search-clear" onClick={() => setSearchQuery("")}>✕</button>
             )}
           </div>
-
-          {/* Result count shown only while searching */}
           {searchQuery && (
             <p className="search-count">
               {filteredVehicles.length === 0
@@ -298,16 +514,14 @@ export default function Dashboard() {
         {/* VEHICLE GRID */}
         <div className="vehicle-grid">
 
-          {/* Skeleton Loader */}
           {loading && Array.from({ length: 6 }).map((_, i) => (
             <div className="vehicle-card skeleton" key={i}>
-              <div className="skeleton-img"></div>
-              <div className="skeleton-text"></div>
-              <div className="skeleton-text small"></div>
+              <div className="skeleton-img" />
+              <div className="skeleton-text" />
+              <div className="skeleton-text small" />
             </div>
           ))}
 
-          {/* No results state */}
           {!loading && searchQuery && filteredVehicles.length === 0 && (
             <div className="no-results">
               <span>🔍</span>
@@ -316,7 +530,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Vehicle Cards */}
           {filteredVehicles.map((v) => (
             <div
               className="vehicle-card"
@@ -342,27 +555,19 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── BOTTOM SHEET OVERLAY ─────────────────────────────── */}
-      {sheetOpen && (
-        <div className="sheet-overlay" onClick={closeSheet} />
-      )}
+      {/* ═══ BOTTOM SHEET ═════════════════════════════════════ */}
+      {sheetOpen && <div className="sheet-overlay" onClick={closeSheet} />}
 
-      {/* ── BOTTOM SHEET PANEL ───────────────────────────────── */}
-      <div className={`bottom-sheet ${sheetOpen ? "sheet-visible" : ""}`}>
-
-        {/* Sheet handle */}
+      <div className={`bottom-sheet${sheetOpen ? " sheet-visible" : ""}`}>
         <div className="sheet-handle" />
 
-        {/* Sheet header */}
         <div className="sheet-header">
           <span className="sheet-title">Add Item</span>
           <button className="sheet-close" onClick={closeSheet}>✕</button>
         </div>
 
-        {/* Sheet body — scrollable */}
         <div className="sheet-body">
 
-          {/* Model */}
           <div className="form-group">
             <label>Model <span className="required">*</span></label>
             <select
@@ -370,13 +575,10 @@ export default function Dashboard() {
               onChange={(e) => setModelId(e.target.value === "" ? "" : Number(e.target.value))}
             >
               <option value="">Select Model</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>{m.modelName}</option>
-              ))}
+              {models.map((m) => <option key={m.id} value={m.id}>{m.modelName}</option>)}
             </select>
           </div>
 
-          {/* Variant */}
           <div className="form-group">
             <label>Variant <span className="required">*</span></label>
             <select
@@ -385,13 +587,10 @@ export default function Dashboard() {
               disabled={variants.length === 0}
             >
               <option value="">Select Variant</option>
-              {variants.map((v) => (
-                <option key={v.id} value={v.id}>{v.variantName}</option>
-              ))}
+              {variants.map((v) => <option key={v.id} value={v.id}>{v.variantName}</option>)}
             </select>
           </div>
 
-          {/* Colour */}
           <div className="form-group">
             <label>Colour <span className="required">*</span></label>
             <select
@@ -400,46 +599,25 @@ export default function Dashboard() {
               disabled={colours.length === 0}
             >
               <option value="">Select Colour</option>
-              {colours.map((c) => (
-                <option key={c.id} value={c.id}>{c.colourName}</option>
-              ))}
+              {colours.map((c) => <option key={c.id} value={c.id}>{c.colourName}</option>)}
             </select>
           </div>
 
-          {/* Price */}
           <div className="form-group">
             <label>Price (₹)</label>
-            <input
-              type="number"
-              placeholder="e.g. 120000"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-            />
+            <input type="number" placeholder="e.g. 120000" value={price} onChange={(e) => setPrice(e.target.value)} />
           </div>
 
-          {/* Battery Specs */}
           <div className="form-group">
             <label>Battery Specs</label>
-            <input
-              type="text"
-              placeholder="e.g. 3.0 kWh Li-ion"
-              value={batterySpecs}
-              onChange={(e) => setBatterySpecs(e.target.value)}
-            />
+            <input type="text" placeholder="e.g. 3.0 kWh Li-ion" value={batterySpecs} onChange={(e) => setBatterySpecs(e.target.value)} />
           </div>
 
-          {/* Range Km */}
           <div className="form-group">
             <label>Range (km)</label>
-            <input
-              type="number"
-              placeholder="e.g. 120"
-              value={rangeKm}
-              onChange={(e) => setRangeKm(e.target.value)}
-            />
+            <input type="number" placeholder="e.g. 120" value={rangeKm} onChange={(e) => setRangeKm(e.target.value)} />
           </div>
 
-          {/* Stock Toggle */}
           <div className="form-group form-toggle">
             <label>Stock Available</label>
             <label className="toggle-switch">
@@ -452,18 +630,12 @@ export default function Dashboard() {
             </label>
           </div>
 
-          {/* Image Upload */}
           <div className="form-group">
             <label>Image</label>
-            <div
-              className="image-upload-box"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {imagePreview ? (
-                <img src={imagePreview} className="image-preview" alt="preview" />
-              ) : (
-                <span className="upload-placeholder">📷 Tap to upload image</span>
-              )}
+            <div className="image-upload-box" onClick={() => fileInputRef.current?.click()}>
+              {imagePreview
+                ? <img src={imagePreview} className="image-preview" alt="preview" />
+                : <span className="upload-placeholder">📷 Tap to upload image</span>}
             </div>
             <input
               ref={fileInputRef}
@@ -474,21 +646,15 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Message */}
           {submitMsg && (
             <p className={`submit-msg ${submitMsg.startsWith("✅") ? "success" : "fail"}`}>
               {submitMsg}
             </p>
           )}
 
-          {/* Actions */}
           <div className="sheet-actions">
             <button className="btn-cancel" onClick={closeSheet}>Cancel</button>
-            <button
-              className="btn-submit"
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
+            <button className="btn-submit" onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Submitting…" : "Submit"}
             </button>
           </div>
