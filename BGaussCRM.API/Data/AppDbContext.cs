@@ -22,14 +22,13 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<UserLike> UserLikes { get; set; }
+
     public virtual DbSet<VehicleColour> VehicleColours { get; set; }
 
     public virtual DbSet<VehicleModel> VehicleModels { get; set; }
 
     public virtual DbSet<VehicleVariant> VehicleVariants { get; set; }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseSqlServer("Name=ConnectionStrings:DefaultConnection");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -139,6 +138,79 @@ public partial class AppDbContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("ImageURL");
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+
+            entity.HasOne(d => d.Colour).WithMany(p => p.ScootyInventories)
+                .HasForeignKey(d => d.ColourId)
+                .HasConstraintName("FK__ScootyInv__Colou__5DCAEF64");
+
+            entity.HasOne(d => d.Model).WithMany(p => p.ScootyInventories)
+                .HasForeignKey(d => d.ModelId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ScootyInv__Model__5BE2A6F2");
+
+            entity.HasOne(d => d.Variant).WithMany(p => p.ScootyInventories)
+                .HasForeignKey(d => d.VariantId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ScootyInv__Varia__5CD6CB2B");
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C00566E98");
+
+            entity.HasIndex(e => e.Username, "UQ__Users__536C85E4728F9661").IsUnique();
+
+            entity.HasIndex(e => e.Email, "UQ__Users__A9D105342C1BA1EB").IsUnique();
+
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Department).HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.EmployeeId).HasMaxLength(50);
+            entity.Property(e => e.FullName).HasMaxLength(200);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.PasswordHash).HasMaxLength(500);
+            entity.Property(e => e.PasswordResetToken).HasMaxLength(200);
+            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
+            entity.Property(e => e.Role).HasMaxLength(50);
+            entity.Property(e => e.Username).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<UserLike>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__UserLike__3214EC0756A4D506");
+
+            entity.HasIndex(e => new { e.UserId, e.ScootyId }, "UQ_UserLikes_User_Scooty").IsUnique();
+
+            entity.Property(e => e.LikedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ScootyId).HasColumnName("ScootyID");
+            entity.Property(e => e.UserId).HasMaxLength(100);
+
+            entity.HasOne(d => d.Scooty).WithMany(p => p.UserLikes)
+                .HasForeignKey(d => d.ScootyId)
+                .HasConstraintName("FK_UserLikes_ScootyInventory");
+        });
+
+        modelBuilder.Entity<VehicleColour>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__VehicleC__3214EC07F189FD2A");
+
+            entity.Property(e => e.ColourName).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<VehicleModel>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__VehicleM__3214EC070A7DD962");
+
+            entity.Property(e => e.ModelName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<VehicleVariant>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__VehicleV__3214EC0778F2FB2C");
+
+            entity.Property(e => e.VariantName).HasMaxLength(100);
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -29,5 +29,7 @@ public partial class ScootyInventory
 
     public virtual ICollection<SalesOrder> SalesOrders { get; set; } = new List<SalesOrder>();
 
+    public virtual ICollection<UserLike> UserLikes { get; set; } = new List<UserLike>();
+
     public virtual VehicleVariant Variant { get; set; } = null!;
 }

@@ -43,6 +43,11 @@ type InventoryItemApi = InventoryItem & {
   imagePath?: string | null;
 };
 
+interface LikeResponse {
+  liked: boolean;
+  count: number;
+}
+
 const resolveImageSrc = (path: string | null) => {
   if (!path) return noImage;
   if (/^https?:\/\//i.test(path)) return path;
@@ -50,23 +55,33 @@ const resolveImageSrc = (path: string | null) => {
   return `${API_ORIGIN}${normalizedPath}`;
 };
 
-// ── Zoom config ───────────────────────────────────────────────
-const ZOOM_LEVEL = 2.5; // magnification factor
+const ZOOM_LEVEL = 2.5;
 
 export default function VehicleDetails() {
-  const { id } = useParams();
+  const { id }   = useParams();
   const navigate = useNavigate();
 
-  const [vehicle, setVehicle]             = useState<VehicleDetailsResponse | null>(null);
+  const [vehicle,         setVehicle]         = useState<VehicleDetailsResponse | null>(null);
   const [availableModels, setAvailableModels] = useState<InventoryItem[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState("");
 
-  // ── Zoom state ────────────────────────────────────────────
-  const [zoomActive, setZoomActive]       = useState(false);
-  const [zoomStyle, setZoomStyle]         = useState<React.CSSProperties>({});
-  const imgRef                            = useRef<HTMLImageElement>(null);
-  const zoomPaneRef                       = useRef<HTMLDivElement>(null);
+  // ── Zoom ─────────────────────────────────────────────────
+  const [zoomActive, setZoomActive] = useState(false);
+  const [zoomStyle,  setZoomStyle]  = useState<React.CSSProperties>({});
+  const imgRef      = useRef<HTMLImageElement>(null);
+  const zoomPaneRef = useRef<HTMLDivElement>(null);
+
+  // ── Like / Share ─────────────────────────────────────────
+  const [isLiked,         setIsLiked]         = useState(false);
+  const [likeCount,       setLikeCount]       = useState(0);
+  const [likeLoading,     setLikeLoading]     = useState(false);
+  const [shareMsg,        setShareMsg]        = useState("");
+  const [totalLikedCount, setTotalLikedCount] = useState(0); // ← navbar heart count
+
+  const username = localStorage.getItem("username") ?? "";
+  const role     = localStorage.getItem("role")     ?? "";
+  const initial  = username.trim().charAt(0).toUpperCase() || "?";
 
   const normalizeImageField = <T extends { imageUrl?: string | null; imagePath?: string | null }>(
     item: T
@@ -75,7 +90,30 @@ export default function VehicleDetails() {
     imageUrl: item.imageUrl ?? item.imagePath ?? null,
   });
 
-  // ── Fetch data ────────────────────────────────────────────
+  // ── Fetch total liked count (for navbar badge) ────────────
+  const fetchTotalLikes = useCallback(async () => {
+    if (!username) return;
+    try {
+      const res = await axios.get<number[]>(
+        `/api/UserLikes/my?userId=${encodeURIComponent(username)}`
+      );
+      setTotalLikedCount(res.data.length);
+    } catch { /* silent */ }
+  }, [username]);
+
+  // ── Fetch like status for current vehicle ─────────────────
+  const fetchLikeStatus = useCallback(async (scootyId: number) => {
+    if (!username) return;
+    try {
+      const res = await axios.get<LikeResponse>(
+        `/api/UserLikes/${scootyId}?userId=${encodeURIComponent(username)}`
+      );
+      setIsLiked(res.data.liked);
+      setLikeCount(res.data.count);
+    } catch { /* silent */ }
+  }, [username]);
+
+  // ── Fetch page data ───────────────────────────────────────
   useEffect(() => {
     if (!id) { setError("Vehicle not found."); setLoading(false); return; }
 
@@ -83,6 +121,8 @@ export default function VehicleDetails() {
       setLoading(true);
       setError("");
       setZoomActive(false);
+      setIsLiked(false);
+      setLikeCount(0);
 
       try {
         const [detailsRes, inventoryListRes] = await Promise.all([
@@ -111,6 +151,11 @@ export default function VehicleDetails() {
         setVehicle(vehicleDetails);
         setAvailableModels(relatedModels);
         window.scrollTo(0, 0);
+
+        // Fetch like status for this vehicle + total liked count for navbar
+        void fetchLikeStatus(vehicleDetails.scootyId);
+        void fetchTotalLikes();
+
       } catch (fetchError) {
         console.error(fetchError);
         setError("Unable to load vehicle details.");
@@ -121,40 +166,92 @@ export default function VehicleDetails() {
       }
     };
 
-    fetchVehiclePage();
-  }, [id]);
+    void fetchVehiclePage();
+  }, [id, fetchLikeStatus, fetchTotalLikes]);
+
+  // ── Auto-refresh likes badge every 30 seconds ─────────────
+useEffect(() => {
+  if (!username) return;
+
+  // Refresh immediately on mount
+  void fetchTotalLikes();
+
+  // Then every 30 seconds
+  const interval = setInterval(() => {
+    void fetchTotalLikes();
+  }, 30_000);
+
+  return () => clearInterval(interval); // cleanup on unmount
+}, [fetchTotalLikes, username]);
+
+// ── Refresh when user returns to tab ─────────────────────
+useEffect(() => {
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "visible") {
+      void fetchTotalLikes();
+      if (vehicle) void fetchLikeStatus(vehicle.scootyId);
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+}, [fetchTotalLikes, fetchLikeStatus, vehicle]);
+
+  // ── Like handler ──────────────────────────────────────────
+  const handleLike = async () => {
+    if (!vehicle || !username || likeLoading) return;
+    setLikeLoading(true);
+    try {
+      const res = await axios.post<LikeResponse>(
+        `/api/UserLikes/${vehicle.scootyId}?userId=${encodeURIComponent(username)}`
+      );
+      setIsLiked(res.data.liked);
+      setLikeCount(res.data.count);
+      // Update navbar badge instantly without extra API call
+      setTotalLikedCount((prev) => res.data.liked ? prev + 1 : Math.max(0, prev - 1));
+    } catch { /* silent */ }
+    finally { setLikeLoading(false); }
+  };
+
+  // ── Share handler ─────────────────────────────────────────
+  const handleShare = async () => {
+    if (!vehicle) return;
+    const shareData = {
+      title: `${vehicle.modelName} ${vehicle.variantName}`,
+      text:  `Check out ${vehicle.modelName} ${vehicle.variantName}${vehicle.price ? ` — ₹${vehicle.price.toLocaleString("en-IN")}` : ""}`,
+      url:   window.location.href,
+    };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setShareMsg("Link copied!");
+        setTimeout(() => setShareMsg(""), 2500);
+      }
+    } catch { /* user cancelled */ }
+  };
 
   // ── Zoom handlers ─────────────────────────────────────────
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const img = imgRef.current;
     if (!img || !vehicle) return;
-
     const rect = img.getBoundingClientRect();
-
-    const xPct = Math.max(0, Math.min(1, (e.clientX - rect.left)  / rect.width));
-    const yPct = Math.max(0, Math.min(1, (e.clientY - rect.top)   / rect.height));
-
-    const bgX = xPct * 100;
-    const bgY = yPct * 100;
-
-    // ── Use the same src the <img> tag is actually displaying ──
-    const imageSrc = img.currentSrc || img.src;  // ← get real URL from img element
-
+    const xPct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const yPct = Math.max(0, Math.min(1, (e.clientY - rect.top)  / rect.height));
+    const imageSrc = img.currentSrc || img.src;
     setZoomStyle({
-      backgroundImage:    `url("${imageSrc}")`,   // ← use img.src not resolveImageSrc
+      backgroundImage:    `url("${imageSrc}")`,
       backgroundSize:     `${ZOOM_LEVEL * 100}%`,
-      backgroundPosition: `${bgX}% ${bgY}%`,
+      backgroundPosition: `${xPct * 100}% ${yPct * 100}%`,
       backgroundRepeat:   "no-repeat",
     });
-
     setZoomActive(true);
   }, [vehicle]);
 
-  const handleMouseLeave = useCallback(() => {
-    setZoomActive(false);
-}, []);
+  const handleMouseLeave = useCallback(() => setZoomActive(false), []);
 
-  // ── Navigation helpers ────────────────────────────────────
+  // ── Navigation ────────────────────────────────────────────
   const goToDashboard = () => navigate("/dashboard");
 
   const goToPrevious = () => {
@@ -176,9 +273,13 @@ export default function VehicleDetails() {
     }).format(value);
   };
 
+  const currentIdx     = vehicle ? availableModels.findIndex((x) => x.scootyId === vehicle.scootyId) : -1;
+  const isPrevDisabled = !vehicle || currentIdx <= 0;
+  const isNextDisabled = !vehicle || currentIdx >= availableModels.length - 1;
+
   const specificationItems = vehicle ? [
-    { label: "Make",    value: vehicle.modelName },
-    { label: "Model",   value: vehicle.variantName },
+    { label: "Model",    value: vehicle.modelName },
+    { label: "Variant",   value: vehicle.variantName },
     { label: "Colour",  value: vehicle.colourName ?? "Not specified" },
     { label: "Range",   value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available" },
     { label: "Battery", value: vehicle.batterySpecs ?? "Not available" },
@@ -192,18 +293,11 @@ export default function VehicleDetails() {
     { label: "Stock",   value: vehicle.stockAvailable ? "In Stock" : "Out of Stock",         detail: "Current inventory status" },
   ] : [];
 
-  const currentIdx = vehicle
-    ? availableModels.findIndex((x) => x.scootyId === vehicle.scootyId)
-    : -1;
-  
-  const isPrevDisabled = !vehicle || currentIdx <= 0;
-  const isNextDisabled = !vehicle || currentIdx >= availableModels.length - 1;
-
   // ── Render ────────────────────────────────────────────────
   return (
     <div className="vehicle-details-page">
 
-      {/* NAVBAR */}
+      {/* ═══ NAVBAR ══════════════════════════════════════════ */}
       <header className="pro-navbar vehicle-details-pro-navbar">
         <div className="pro-left">
           <img src={logo} className="pro-logo" alt="BGauss logo" />
@@ -215,27 +309,46 @@ export default function VehicleDetails() {
 
         <div className="pro-right vehicle-details-nav-buttons">
 
-          {/* User pill */}
-          <div className="vd-user-pill">
-            <div className="desktop-avatar">
-              {(localStorage.getItem("username") ?? "?").charAt(0).toUpperCase()}
+          {/* ── Navbar Likes Heart ── */}
+          {username && (
+            <div
+              className="vd-nav-likes"
+              title={`${totalLikedCount} liked vehicle${totalLikedCount !== 1 ? "s" : ""}`}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill={totalLikedCount > 0 ? "currentColor" : "none"}
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              {totalLikedCount > 0 && (
+                <span className="vd-nav-likes-badge">{totalLikedCount}</span>
+              )}
             </div>
+          )}
+
+          {/* ── User pill ── */}
+          <div className="vd-user-pill">
+            <div className="desktop-avatar">{initial}</div>
             <div className="desktop-user-info">
-              <span className="desktop-user-name">{localStorage.getItem("username") ?? ""}</span>
-              <span className="desktop-user-role">{localStorage.getItem("role") ?? ""}</span>
+              <span className="desktop-user-name">{username}</span>
+              <span className="desktop-user-role">{role}</span>
             </div>
           </div>
 
-          {/* Dashboard */}
+          {/* ── Dashboard ── */}
           <button className="vd-icon-btn vd-btn-dashboard"
             onClick={goToDashboard} aria-label="Dashboard" data-tip="Dashboard">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12L12 3l9 9"/>
-              <path d="M9 21V12h6v9"/>
+              <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
             </svg>
           </button>
 
-          {/* Prev */}
+          {/* ── Prev ── */}
           <button className="vd-icon-btn vd-btn-prev"
             onClick={goToPrevious} disabled={isPrevDisabled}
             aria-label="Previous Vehicle" data-tip="Prev Vehicle">
@@ -244,7 +357,7 @@ export default function VehicleDetails() {
             </svg>
           </button>
 
-          {/* Next */}
+          {/* ── Next ── */}
           <button className="vd-icon-btn vd-btn-next"
             onClick={goToNext} disabled={isNextDisabled}
             aria-label="Next Vehicle" data-tip="Next Vehicle">
@@ -256,7 +369,7 @@ export default function VehicleDetails() {
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* ═══ MAIN ════════════════════════════════════════════ */}
       <main className="vehicle-details-main">
 
         {loading ? (
@@ -281,10 +394,51 @@ export default function VehicleDetails() {
                 Home / Vehicles / BGauss / {vehicle.modelName} / {vehicle.variantName}
               </p>
 
+              {/* ── LIKE + SHARE BUTTONS ── */}
+              <div className="vd-action-buttons">
+
+                <button
+                  className={`vd-like-btn${isLiked ? " liked" : ""}`}
+                  onClick={handleLike}
+                  disabled={likeLoading || !username}
+                  aria-label="Like this vehicle"
+                  title={!username ? "Login to like" : isLiked ? "Unlike" : "Like"}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill={isLiked ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                  </svg>
+                  {likeCount > 0 && <span className="vd-like-count">{likeCount}</span>}
+                </button>
+
+                <button
+                  className="vd-share-btn"
+                  onClick={handleShare}
+                  aria-label="Share this vehicle"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3"/>
+                    <circle cx="6" cy="12" r="3"/>
+                    <circle cx="18" cy="19" r="3"/>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                  </svg>
+                  <span>Share</span>
+                </button>
+
+                {shareMsg && <span className="vd-share-msg">✓ {shareMsg}</span>}
+
+              </div>
+
               {/* ── IMAGE + ZOOM WRAPPER ── */}
               <div className="vd-zoom-wrapper">
 
-                {/* Source image — mouse events here */}
                 <div
                   className="vd-zoom-source"
                   onMouseMove={handleMouseMove}
@@ -296,15 +450,11 @@ export default function VehicleDetails() {
                     alt={`${vehicle.modelName} ${vehicle.variantName}`}
                     className="vd-main-image"
                     onError={(e) => { e.currentTarget.src = noImage; }}
-                    onLoad={() => console.log("Image loaded:", imgRef.current?.src)} // ← temp debug
                     draggable={false}
                   />
-
-                  {/* Crosshair cursor indicator */}
                   {zoomActive && <div className="vd-zoom-cursor-hint">🔍</div>}
                 </div>
 
-                {/* Zoom pane — shows magnified area */}
                 <div
                   ref={zoomPaneRef}
                   className={`vd-zoom-pane ${zoomActive ? "vd-zoom-pane-active" : ""}`}
@@ -318,7 +468,7 @@ export default function VehicleDetails() {
                   )}
                 </div>
 
-              </div>{/* end vd-zoom-wrapper */}
+              </div>
 
               {/* Gallery highlights */}
               <div className="vehicle-details-gallery-grid vd-highlights-grid">
@@ -372,7 +522,7 @@ export default function VehicleDetails() {
                 <section className="vehicle-details-sidebar-block">
                   <h2>{vehicle.modelName}</h2>
                   <p className="vehicle-details-sidebar-subtitle">
-                    {vehicle.modelName} {vehicle.variantName}
+                    Variant : {vehicle.variantName}
                   </p>
 
                   <div className="vehicle-details-sidebar-rating">
