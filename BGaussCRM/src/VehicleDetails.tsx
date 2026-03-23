@@ -2,11 +2,10 @@ import "./vehicleDetails.css";
 import logo from "./assets/logo.jpg";
 import noImage from "./assets/No-Image.jpg";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 
-// Default to local API; override via VITE_API_BASE if provided
 const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "";
 
 interface VehicleDetailsResponse {
@@ -47,19 +46,27 @@ type InventoryItemApi = InventoryItem & {
 const resolveImageSrc = (path: string | null) => {
   if (!path) return noImage;
   if (/^https?:\/\//i.test(path)) return path;
-
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   return `${API_ORIGIN}${normalizedPath}`;
 };
+
+// ── Zoom config ───────────────────────────────────────────────
+const ZOOM_LEVEL = 2.5; // magnification factor
 
 export default function VehicleDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [vehicle, setVehicle] = useState<VehicleDetailsResponse | null>(null);
+  const [vehicle, setVehicle]             = useState<VehicleDetailsResponse | null>(null);
   const [availableModels, setAvailableModels] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState("");
+
+  // ── Zoom state ────────────────────────────────────────────
+  const [zoomActive, setZoomActive]       = useState(false);
+  const [zoomStyle, setZoomStyle]         = useState<React.CSSProperties>({});
+  const imgRef                            = useRef<HTMLImageElement>(null);
+  const zoomPaneRef                       = useRef<HTMLDivElement>(null);
 
   const normalizeImageField = <T extends { imageUrl?: string | null; imagePath?: string | null }>(
     item: T
@@ -68,16 +75,14 @@ export default function VehicleDetails() {
     imageUrl: item.imageUrl ?? item.imagePath ?? null,
   });
 
+  // ── Fetch data ────────────────────────────────────────────
   useEffect(() => {
-    if (!id) {
-      setError("Vehicle not found.");
-      setLoading(false);
-      return;
-    }
+    if (!id) { setError("Vehicle not found."); setLoading(false); return; }
 
     const fetchVehiclePage = async () => {
       setLoading(true);
       setError("");
+      setZoomActive(false);
 
       try {
         const [detailsRes, inventoryListRes] = await Promise.all([
@@ -86,27 +91,22 @@ export default function VehicleDetails() {
         ]);
 
         const vehicleDetails = normalizeImageField(detailsRes.data);
-        const inventoryList = inventoryListRes.data.map(normalizeImageField);
+        const inventoryList  = inventoryListRes.data.map(normalizeImageField);
 
         const currentInventory = inventoryList.find(
           (item) => item.scootyId === Number(id)
         );
 
         const relatedModels = inventoryList
-        .filter((item) =>
-          currentInventory
-            ? item.modelId === currentInventory.modelId
-            : item.modelName === vehicleDetails.modelName
-        )
-        .sort((a, b) => {
-          // First: stock available
-          if (a.stockAvailable !== b.stockAvailable) {
-            return a.stockAvailable ? -1 : 1;
-          }
-
-          // Second: price high → low
-          return (b.price ?? 0) - (a.price ?? 0);
-        });
+          .filter((item) =>
+            currentInventory
+              ? item.modelId === currentInventory.modelId
+              : item.modelName === vehicleDetails.modelName
+          )
+          .sort((a, b) => {
+            if (a.stockAvailable !== b.stockAvailable) return a.stockAvailable ? -1 : 1;
+            return (b.price ?? 0) - (a.price ?? 0);
+          });
 
         setVehicle(vehicleDetails);
         setAvailableModels(relatedModels);
@@ -124,84 +124,83 @@ export default function VehicleDetails() {
     fetchVehiclePage();
   }, [id]);
 
-  const goToDashboard = () => {
-    navigate("/dashboard");
-  };
+  // ── Zoom handlers ─────────────────────────────────────────
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const img = imgRef.current;
+    if (!img || !vehicle) return;
+
+    const rect = img.getBoundingClientRect();
+
+    const xPct = Math.max(0, Math.min(1, (e.clientX - rect.left)  / rect.width));
+    const yPct = Math.max(0, Math.min(1, (e.clientY - rect.top)   / rect.height));
+
+    const bgX = xPct * 100;
+    const bgY = yPct * 100;
+
+    // ── Use the same src the <img> tag is actually displaying ──
+    const imageSrc = img.currentSrc || img.src;  // ← get real URL from img element
+
+    setZoomStyle({
+      backgroundImage:    `url("${imageSrc}")`,   // ← use img.src not resolveImageSrc
+      backgroundSize:     `${ZOOM_LEVEL * 100}%`,
+      backgroundPosition: `${bgX}% ${bgY}%`,
+      backgroundRepeat:   "no-repeat",
+    });
+
+    setZoomActive(true);
+  }, [vehicle]);
+
+  const handleMouseLeave = useCallback(() => {
+    setZoomActive(false);
+}, []);
+
+  // ── Navigation helpers ────────────────────────────────────
+  const goToDashboard = () => navigate("/dashboard");
 
   const goToPrevious = () => {
     if (!availableModels.length || !vehicle) return;
-
-    const currentIndex = availableModels.findIndex(
-      (x) => x.scootyId === vehicle.scootyId
-    );
-
-    if (currentIndex > 0) {
-      navigate(`/vehicle/${availableModels[currentIndex - 1].scootyId}`);
-    }
+    const idx = availableModels.findIndex((x) => x.scootyId === vehicle.scootyId);
+    if (idx > 0) navigate(`/vehicle/${availableModels[idx - 1].scootyId}`);
   };
 
   const goToNext = () => {
     if (!availableModels.length || !vehicle) return;
-
-    const currentIndex = availableModels.findIndex(
-      (x) => x.scootyId === vehicle.scootyId
-    );
-
-    if (currentIndex < availableModels.length - 1) {
-      navigate(`/vehicle/${availableModels[currentIndex + 1].scootyId}`);
-    }
+    const idx = availableModels.findIndex((x) => x.scootyId === vehicle.scootyId);
+    if (idx < availableModels.length - 1) navigate(`/vehicle/${availableModels[idx + 1].scootyId}`);
   };
 
   const formatCurrency = (value: number | null) => {
-    if (typeof value !== "number") {
-      return "Price on request";
-    }
-
+    if (typeof value !== "number") return "Price on request";
     return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
+      style: "currency", currency: "INR", maximumFractionDigits: 0,
     }).format(value);
   };
 
-  const specificationItems = vehicle
-    ? [
-        { label: "Make", value: vehicle.modelName },
-        { label: "Model", value: vehicle.variantName },
-        { label: "Colour", value: vehicle.colourName ?? "Not specified" },
-        { label: "Range", value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available" },
-        { label: "Battery", value: vehicle.batterySpecs ?? "Not available" },
-        { label: "Price", value: formatCurrency(vehicle.price) },
-      ]
-    : [];
+  const specificationItems = vehicle ? [
+    { label: "Make",    value: vehicle.modelName },
+    { label: "Model",   value: vehicle.variantName },
+    { label: "Colour",  value: vehicle.colourName ?? "Not specified" },
+    { label: "Range",   value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available" },
+    { label: "Battery", value: vehicle.batterySpecs ?? "Not available" },
+    { label: "Price",   value: formatCurrency(vehicle.price) },
+  ] : [];
 
-  const galleryHighlights = vehicle
-    ? [
-        {
-          label: "Range",
-          value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available",
-          detail: "Certified riding distance",
-        },
-        {
-          label: "Battery",
-          value: vehicle.batterySpecs ?? "Not available",
-          detail: "Current battery specification",
-        },
-        {
-          label: "Colour",
-          value: vehicle.colourName ?? "Not specified",
-          detail: "Selected vehicle finish",
-        },
-        {
-          label: "Stock",
-          value: vehicle.stockAvailable ? "In Stock" : "Out of Stock",
-          detail: "Current inventory status",
-        },
-      ]
-    : [];
+  const galleryHighlights = vehicle ? [
+    { label: "Range",   value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available", detail: "Certified riding distance" },
+    { label: "Battery", value: vehicle.batterySpecs ?? "Not available",                      detail: "Current battery specification" },
+    { label: "Colour",  value: vehicle.colourName ?? "Not specified",                        detail: "Selected vehicle finish" },
+    { label: "Stock",   value: vehicle.stockAvailable ? "In Stock" : "Out of Stock",         detail: "Current inventory status" },
+  ] : [];
 
+  const currentIdx = vehicle
+    ? availableModels.findIndex((x) => x.scootyId === vehicle.scootyId)
+    : -1;
+
+  // ── Render ────────────────────────────────────────────────
   return (
     <div className="vehicle-details-page">
+
+      {/* NAVBAR */}
       <header className="pro-navbar vehicle-details-pro-navbar">
         <div className="pro-left">
           <img src={logo} className="pro-logo" alt="BGauss logo" />
@@ -212,162 +211,174 @@ export default function VehicleDetails() {
         </div>
 
         <div className="pro-right vehicle-details-nav-buttons">
-          <button className="vehicle-details-back-btn" onClick={goToDashboard}>
-            Dashboard
+          <button className="vehicle-details-back-btn" onClick={goToDashboard}>Dashboard</button>
+          <button className="vehicle-details-back-btn" onClick={goToPrevious} disabled={currentIdx <= 0}>
+            ⬅ Prev
           </button>
-
-          <button
-            className="vehicle-details-back-btn"
-            onClick={goToPrevious}
-            disabled={
-              !vehicle ||
-              availableModels.findIndex(x => x.scootyId === vehicle?.scootyId) === 0
-            }
-          >
-            ⬅ Prev Vehicle
-          </button>
-
-          <button
-            className="vehicle-details-back-btn"
-            onClick={goToNext}
-            disabled={
-              !vehicle ||
-              availableModels.findIndex(x => x.scootyId === vehicle?.scootyId) === availableModels.length - 1
-            }
-          >
-            Next Vehicle ➡
+          <button className="vehicle-details-back-btn" onClick={goToNext} disabled={currentIdx >= availableModels.length - 1}>
+            Next ➡
           </button>
         </div>
       </header>
 
+      {/* MAIN */}
       <main className="vehicle-details-main">
+
         {loading ? (
           <section className="vehicle-details-state-card">
             <h2>Loading vehicle information...</h2>
             <p>Please wait while we fetch specifications and related models.</p>
           </section>
+
         ) : error ? (
           <section className="vehicle-details-state-card vehicle-details-state-card-error">
             <h2>{error}</h2>
             <p>The selected vehicle could not be loaded from the current inventory.</p>
           </section>
+
         ) : vehicle ? (
-          <>
-            <section className="vehicle-details-layout">
-              <div className="vehicle-details-gallery-column">
-                <p className="vehicle-details-breadcrumbs">
-                  Home / Vehicles / BGauss / {vehicle.modelName} / {vehicle.variantName}
-                </p>
+          <section className="vehicle-details-layout">
 
-                <div className="vehicle-details-gallery-grid">
-                  <article className="vehicle-details-gallery-card vehicle-details-gallery-card-main">
-                    <img
-                      src={resolveImageSrc(vehicle.imageUrl)}
-                      alt={`${vehicle.modelName} ${vehicle.variantName}`}
-                      onError={(event) => {
-                        event.currentTarget.src = noImage;
-                      }}
-                    />
-                  </article>
+            {/* ── LEFT COLUMN ── */}
+            <div className="vehicle-details-gallery-column">
 
-                  {galleryHighlights.map((item) => (
-                    <article className="vehicle-details-gallery-card" key={item.label}>
-                      <span>{item.label}</span>
-                      <strong>{item.value}</strong>
-                      <p>{item.detail}</p>
-                    </article>
-                  ))}
+              <p className="vehicle-details-breadcrumbs">
+                Home / Vehicles / BGauss / {vehicle.modelName} / {vehicle.variantName}
+              </p>
+
+              {/* ── IMAGE + ZOOM WRAPPER ── */}
+              <div className="vd-zoom-wrapper">
+
+                {/* Source image — mouse events here */}
+                <div
+                  className="vd-zoom-source"
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
+                >
+                  <img
+                    ref={imgRef}
+                    src={resolveImageSrc(vehicle.imageUrl)}
+                    alt={`${vehicle.modelName} ${vehicle.variantName}`}
+                    className="vd-main-image"
+                    onError={(e) => { e.currentTarget.src = noImage; }}
+                    onLoad={() => console.log("Image loaded:", imgRef.current?.src)} // ← temp debug
+                    draggable={false}
+                  />
+
+                  {/* Crosshair cursor indicator */}
+                  {zoomActive && <div className="vd-zoom-cursor-hint">🔍</div>}
                 </div>
 
-                <section className="vehicle-details-variants-block">
-                  <div className="vehicle-details-sidebar-head">
-                    <h3>Variants</h3>
-                    <p>{availableModels.length} option(s)</p>
-                  </div>
+                {/* Zoom pane — shows magnified area */}
+                <div
+                  ref={zoomPaneRef}
+                  className={`vd-zoom-pane ${zoomActive ? "vd-zoom-pane-active" : ""}`}
+                  style={zoomActive ? zoomStyle : {}}
+                >
+                  {!zoomActive && (
+                    <div className="vd-zoom-placeholder">
+                      <span>🔍</span>
+                      <p>Hover over image to zoom</p>
+                    </div>
+                  )}
+                </div>
 
-                  <div className="vehicle-details-option-grid">
-                    {availableModels.map((item) => {
-                      const isSelected = item.scootyId === vehicle.scootyId;
+              </div>{/* end vd-zoom-wrapper */}
 
-                      return (
-                        <button
-                          key={item.scootyId}
-                          type="button"
-                          className={
-                            isSelected
-                              ? "vehicle-details-option-card vehicle-details-option-card-active"
-                              : "vehicle-details-option-card"
-                          }
-                          onClick={() => navigate(`/vehicle/${item.scootyId}`)}
-                        >
-                          <strong>{item.variantName}</strong>
-                          <span>{formatCurrency(item.price)}</span>
-                          <small>
-                            {item.stockAvailable
-                              ? "Available now"
-                              : "Currently unavailable"}
-                          </small>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
+              {/* Gallery highlights */}
+              <div className="vehicle-details-gallery-grid vd-highlights-grid">
+                {galleryHighlights.map((item) => (
+                  <article className="vehicle-details-gallery-card" key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.value}</strong>
+                    <p>{item.detail}</p>
+                  </article>
+                ))}
               </div>
 
-              <aside className="vehicle-details-sidebar">
-                <div className="vehicle-details-sidebar-scroll">
-                  <p className="vehicle-details-sidebar-title">
-                    Selected Colour: <strong>{vehicle.colourName ?? "Not specified"}</strong>
+              {/* Variants */}
+              <section className="vehicle-details-variants-block">
+                <div className="vehicle-details-sidebar-head">
+                  <h3>Variants</h3>
+                  <p>{availableModels.length} option(s)</p>
+                </div>
+
+                <div className="vehicle-details-option-grid">
+                  {availableModels.map((item) => {
+                    const isSelected = item.scootyId === vehicle.scootyId;
+                    return (
+                      <button
+                        key={item.scootyId}
+                        type="button"
+                        className={isSelected
+                          ? "vehicle-details-option-card vehicle-details-option-card-active"
+                          : "vehicle-details-option-card"}
+                        onClick={() => navigate(`/vehicle/${item.scootyId}`)}
+                      >
+                        <strong>{item.variantName}</strong>
+                        <span>{formatCurrency(item.price)}</span>
+                        <small>{item.stockAvailable ? "Available now" : "Currently unavailable"}</small>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+            </div>{/* end left column */}
+
+            {/* ── RIGHT SIDEBAR ── */}
+            <aside className="vehicle-details-sidebar">
+              <div className="vehicle-details-sidebar-scroll">
+
+                <p className="vehicle-details-sidebar-title">
+                  Selected Colour: <strong>{vehicle.colourName ?? "Not specified"}</strong>
+                </p>
+
+                <section className="vehicle-details-sidebar-block">
+                  <h2>{vehicle.modelName}</h2>
+                  <p className="vehicle-details-sidebar-subtitle">
+                    {vehicle.modelName} {vehicle.variantName}
                   </p>
 
-                  <section className="vehicle-details-sidebar-block">
-                    <h2>{vehicle.modelName}</h2>
-                    <p className="vehicle-details-sidebar-subtitle">
-                      {vehicle.modelName} {vehicle.variantName}
-                    </p>
+                  <div className="vehicle-details-sidebar-rating">
+                    <span>{vehicle.stockAvailable ? "In Stock" : "Out of Stock"}</span>
+                    <span>{vehicle.rangeKm ? `${vehicle.rangeKm} km range` : "Range on request"}</span>
+                  </div>
 
-                    <div className="vehicle-details-sidebar-rating">
-                      <span>{vehicle.stockAvailable ? "In Stock" : "Out of Stock"}</span>
-                      <span>{vehicle.rangeKm ? `${vehicle.rangeKm} km range` : "Range on request"}</span>
-                    </div>
+                  <div className="vehicle-details-sidebar-price">
+                    <strong>{formatCurrency(vehicle.price)}</strong>
+                    <p>{vehicle.batterySpecs ?? "Battery details unavailable"}</p>
+                  </div>
+                </section>
 
-                    <div className="vehicle-details-sidebar-price">
-                      <strong>{formatCurrency(vehicle.price)}</strong>
-                      <p>{vehicle.batterySpecs ?? "Battery details unavailable"}</p>
-                    </div>
-                  </section>
+                <section className="vehicle-details-sidebar-block">
+                  <div className="vehicle-details-sidebar-head">
+                    <h3>Specifications</h3>
+                  </div>
 
-                  <section className="vehicle-details-sidebar-block">
-                    <div className="vehicle-details-sidebar-head">
-                      <h3>Specifications</h3>
-                    </div>
-
-                    <div className="vehicle-details-spec-list">
-                      {specificationItems.map((item) => (
-                        <div className="vehicle-details-spec-row" key={item.label}>
-                          <span>{item.label}</span>
-                          <strong>{item.value}</strong>
-                        </div>
-                      ))}
-
-                      <div className="vehicle-details-spec-row">
-                        <span>Availability</span>
-                        <strong
-                          className={
-                            vehicle.stockAvailable
-                              ? "vehicle-details-stock-text vehicle-details-stock-text-in"
-                              : "vehicle-details-stock-text vehicle-details-stock-text-out"
-                          }
-                        >
-                          {vehicle.stockAvailable ? "Available Now" : "Currently Unavailable"}
-                        </strong>
+                  <div className="vehicle-details-spec-list">
+                    {specificationItems.map((item) => (
+                      <div className="vehicle-details-spec-row" key={item.label}>
+                        <span>{item.label}</span>
+                        <strong>{item.value}</strong>
                       </div>
+                    ))}
+
+                    <div className="vehicle-details-spec-row">
+                      <span>Availability</span>
+                      <strong className={vehicle.stockAvailable
+                        ? "vehicle-details-stock-text vehicle-details-stock-text-in"
+                        : "vehicle-details-stock-text vehicle-details-stock-text-out"}>
+                        {vehicle.stockAvailable ? "Available Now" : "Currently Unavailable"}
+                      </strong>
                     </div>
-                  </section>
-                </div>
-              </aside>
-            </section>
-          </>
+                  </div>
+                </section>
+
+              </div>
+            </aside>
+
+          </section>
         ) : null}
       </main>
     </div>

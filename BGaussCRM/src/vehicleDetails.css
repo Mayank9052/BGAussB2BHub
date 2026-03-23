@@ -615,3 +615,100 @@
   background: #fee2e2;
   color: #991b1b;
 }
+
+/* Zoom wrapper — side by side: source image | zoom pane */
+.vd-zoom-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: stretch;
+}
+
+/* Source image container */
+.vd-zoom-source {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #e5e7eb;
+  cursor: crosshair;
+  background: #f9fafb;
+  aspect-ratio: 4 / 3;
+}
+
+/* The actual vehicle image */
+.vd-main-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+  pointer-events: none; /* let parent div handle mouse events */
+}
+
+/* Small zoom hint icon in corner */
+.vd-zoom-cursor-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 18px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Zoom pane — right side */
+.vd-zoom-pane {
+  border-radius: 14px;
+  border: 1.5px solid #e5e7eb;
+  background: #f9fafb;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s;
+}
+
+/* Active zoom pane — border highlight */
+.vd-zoom-pane-active {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background-color: white;  /* ← ADD THIS */
+}
+
+/* Placeholder when not zooming */
+.vd-zoom-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #9ca3af;
+}
+
+.vd-zoom-placeholder span {
+  font-size: 32px;
+  opacity: 0.5;
+}
+
+.vd-zoom-placeholder p {
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Highlights grid below zoom wrapper */
+.vd-highlights-grid {
+  margin-bottom: 20px;
+}
+
+/* ── Responsive: stack on mobile ── */
+@media (max-width: 640px) {
+  .vd-zoom-wrapper {
+    grid-template-columns: 1fr; /* stack vertically on mobile */
+  }
+
+  .vd-zoom-pane {
+    aspect-ratio: 4 / 3;
+  }
+}
+
