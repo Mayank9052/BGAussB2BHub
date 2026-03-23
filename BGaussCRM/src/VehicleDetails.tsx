@@ -195,6 +195,9 @@ export default function VehicleDetails() {
   const currentIdx = vehicle
     ? availableModels.findIndex((x) => x.scootyId === vehicle.scootyId)
     : -1;
+  
+  const isPrevDisabled = !vehicle || currentIdx <= 0;
+  const isNextDisabled = !vehicle || currentIdx >= availableModels.length - 1;
 
   // ── Render ────────────────────────────────────────────────
   return (
@@ -211,13 +214,45 @@ export default function VehicleDetails() {
         </div>
 
         <div className="pro-right vehicle-details-nav-buttons">
-          <button className="vehicle-details-back-btn" onClick={goToDashboard}>Dashboard</button>
-          <button className="vehicle-details-back-btn" onClick={goToPrevious} disabled={currentIdx <= 0}>
-            ⬅ Prev
+
+          {/* User pill */}
+          <div className="vd-user-pill">
+            <div className="desktop-avatar">
+              {(localStorage.getItem("username") ?? "?").charAt(0).toUpperCase()}
+            </div>
+            <div className="desktop-user-info">
+              <span className="desktop-user-name">{localStorage.getItem("username") ?? ""}</span>
+              <span className="desktop-user-role">{localStorage.getItem("role") ?? ""}</span>
+            </div>
+          </div>
+
+          {/* Dashboard */}
+          <button className="vd-icon-btn vd-btn-dashboard"
+            onClick={goToDashboard} aria-label="Dashboard" data-tip="Dashboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12L12 3l9 9"/>
+              <path d="M9 21V12h6v9"/>
+            </svg>
           </button>
-          <button className="vehicle-details-back-btn" onClick={goToNext} disabled={currentIdx >= availableModels.length - 1}>
-            Next ➡
+
+          {/* Prev */}
+          <button className="vd-icon-btn vd-btn-prev"
+            onClick={goToPrevious} disabled={isPrevDisabled}
+            aria-label="Previous Vehicle" data-tip="Prev Vehicle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
           </button>
+
+          {/* Next */}
+          <button className="vd-icon-btn vd-btn-next"
+            onClick={goToNext} disabled={isNextDisabled}
+            aria-label="Next Vehicle" data-tip="Next Vehicle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+
         </div>
       </header>
 
