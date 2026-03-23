@@ -90,6 +90,7 @@ namespace BGaussCRM.API.Controllers
             {
                 string? imagePath = null;
 
+                // ✅ Image Upload
                 if (image != null && image.Length > 0)
                 {
                     var rootPath = _environment.WebRootPath
@@ -111,8 +112,8 @@ namespace BGaussCRM.API.Controllers
                     imagePath = "/ScootyInventoryImage/" + fileName;
                 }
 
-                // ── Validate FK references exist ──────────────────
-                var modelExists   = await _context.VehicleModels.AnyAsync(x => x.Id == modelId);
+                // ✅ Validate FK references
+                var modelExists = await _context.VehicleModels.AnyAsync(x => x.Id == modelId);
                 var variantExists = await _context.VehicleVariants.AnyAsync(x => x.Id == variantId);
 
                 if (!modelExists)
@@ -128,28 +129,50 @@ namespace BGaussCRM.API.Controllers
                         return BadRequest($"Colour ID {colourId} does not exist.");
                 }
 
+                // ✅ Duplicate Check (IMPORTANT)
+                var alreadyExists = await _context.ScootyInventories
+                    .AnyAsync(x =>
+                        x.ModelId == modelId &&
+                        x.VariantId == variantId &&
+                        x.ColourId == colourId);
+
+                if (alreadyExists)
+                {
+                    return BadRequest("This item already exists. Duplicate entries are not allowed.");
+                }
+
+                // ✅ Create Object
                 var inventory = new ScootyInventory
                 {
-                    ModelId        = modelId,
-                    VariantId      = variantId,
-                    ColourId       = colourId,
-                    Price          = price,
-                    BatterySpecs   = batterySpecs,
-                    RangeKm        = rangeKm,
+                    ModelId = modelId,
+                    VariantId = variantId,
+                    ColourId = colourId,
+                    Price = price,
+                    BatterySpecs = batterySpecs,
+                    RangeKm = rangeKm,
                     StockAvailable = stockAvailable,
-                    ImageUrl       = imagePath
+                    ImageUrl = imagePath
                 };
 
+                // ✅ Save
                 _context.ScootyInventories.Add(inventory);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Scooty item added successfully", data = inventory });
+                return Ok(new
+                {
+                    message = "Scooty item added successfully",
+                    data = inventory
+                });
+            }
+            catch (DbUpdateException)
+            {
+                // ✅ Handles DB unique constraint error
+                return BadRequest("Duplicate entry not allowed for same Model, Variant, and Colour.");
             }
             catch (Exception ex)
             {
-                // Return full inner exception so we can see real DB error
                 var innerMsg = ex.InnerException?.Message ?? ex.Message;
-                return BadRequest($"DB Error: {innerMsg}");
+                return BadRequest($"Error: {innerMsg}");
             }
         }
 
