@@ -245,3 +245,901 @@
   border-radius: 20px;
   font-size: 11px;
 }
+
+
+/* =============================================
+   NAV ICON BUTTONS + USERNAME — B2B Page
+   Existing buttons hidden, icons take over
+   ============================================= */
+
+/* Hide existing plain buttons and user-name text */
+.b2b-page .module-btn,
+.b2b-page .logout-btn,
+.b2b-page .user-name {
+  display: none !important;
+}
+
+/* ── Username pill ── */
+.b2b-user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 14px 5px 6px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f9fafb;
+  margin-right: 6px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.b2b-user-info:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.b2b-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.b2b-user-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.b2b-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.2;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.b2b-user-role {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: capitalize;
+  line-height: 1.2;
+}
+
+/* ── Icon button group ── */
+.b2b-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+/* Base icon button */
+.b2b-icon-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.b2b-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  pointer-events: none;
+}
+
+.b2b-icon-btn:hover  { transform: translateY(-2px); }
+.b2b-icon-btn:active { transform: scale(0.93); }
+
+/* Modules — blue */
+.btn-b2b-modules {
+  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.35);
+}
+.btn-b2b-modules:hover { box-shadow: 0 10px 22px rgba(59, 130, 246, 0.45); filter: brightness(1.08); }
+
+/* Dashboard — indigo */
+.btn-b2b-dashboard {
+  background: linear-gradient(135deg, #6366f1, #312e81);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+.btn-b2b-dashboard:hover { box-shadow: 0 10px 22px rgba(99, 102, 241, 0.45); filter: brightness(1.08); }
+
+/* Logout — red */
+.btn-b2b-logout {
+  background: linear-gradient(135deg, #ef4444, #991b1b);
+  color: #ffffff;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+}
+.btn-b2b-logout:hover { box-shadow: 0 10px 22px rgba(239, 68, 68, 0.45); filter: brightness(1.08); }
+
+/* ── Tooltip below navbar ── */
+.b2b-icon-btn::after {
+  content: attr(data-tip);
+  position: fixed;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.85);
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: Arial, sans-serif;
+  padding: 5px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 800;
+}
+
+.b2b-icon-btn::before {
+  content: "";
+  position: fixed;
+  top: 68px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.85);
+  border: 5px solid transparent;
+  border-bottom-color: #0f172a;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 800;
+}
+
+.b2b-icon-btn:hover::after,
+.b2b-icon-btn:hover::before {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+
+/* =============================================
+   ENTERPRISE LAYOUT ENHANCEMENTS
+   All new classes — nothing existing changed
+   ============================================= */
+
+/* ─────────────────────────────────────────────
+   PAGE HEADER ROW
+───────────────────────────────────────────── */
+.b2b-header-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+  border: 1.5px solid #dbeafe;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.07);
+  flex-wrap: wrap;
+}
+
+.b2b-header-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.b2b-header-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.28);
+}
+
+.b2b-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.b2b-header-title h1 {
+  margin: 0 !important;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e3a8a;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.b2b-header-sub {
+  font-size: 12px;
+  color: #3b82f6;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-weight: 500;
+}
+
+/* Stat chips */
+.b2b-stat-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.b2b-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.b2b-chip strong {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.b2b-chip.chip-total    { background: #ffffff; color: #1d4ed8; border: 1.5px solid #bfdbfe; }
+.b2b-chip.chip-active   { background: #ffffff; color: #15803d; border: 1.5px solid #bbf7d0; }
+.b2b-chip.chip-inactive { background: #ffffff; color: #b91c1c; border: 1.5px solid #fecaca; }
+
+
+/* ─────────────────────────────────────────────
+   FORM CARD  — header CENTERED at top
+───────────────────────────────────────────── */
+.b2b-form-card {
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+}
+
+/* Centered gradient header banner */
+.b2b-form-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+  padding: 22px 24px 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+  border-bottom: 1.5px solid #dbeafe;
+}
+
+.b2b-form-header-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.b2b-form-header-text h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  letter-spacing: -0.2px;
+}
+
+.b2b-form-header-text p {
+  font-size: 12px;
+  color: #3b82f6;
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Form fields area */
+.b2b-form-body {
+  padding: 22px 24px 20px;
+}
+
+.b2b-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.b2b-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.b2b-form-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.b2b-form-field input {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  font-size: 13px;
+  color: #111827;
+  background: #f9fafb;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+
+.b2b-form-field input:focus {
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.b2b-form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.b2b-submit-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #10b981, #065f46);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.01em;
+}
+
+.b2b-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.4);
+}
+
+.b2b-cancel-btn {
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.b2b-cancel-btn:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+
+/* ─────────────────────────────────────────────
+   ACTION CARDS  — icon centered at top
+───────────────────────────────────────────── */
+.b2b-action-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.b2b-action-card {
+  background: #ffffff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.b2b-action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.10);
+}
+
+/* Centered icon header at top of card */
+.b2b-action-card-icon {
+  width: 100%;
+  padding: 22px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.b2b-action-card-icon-circle {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.b2b-action-card-icon-circle.green {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.b2b-action-card-icon-circle.blue {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.b2b-action-card-icon-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  letter-spacing: -0.1px;
+}
+
+/* Card body below header */
+.b2b-action-card-body {
+  width: 100%;
+  padding: 0 24px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.b2b-action-card-body p {
+  font-size: 12px;
+  color: #64748b;
+  margin: 8px 0 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.b2b-action-card-btn {
+  padding: 9px 22px;
+  border-radius: 999px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  letter-spacing: 0.01em;
+}
+
+.b2b-action-card-btn.green-btn {
+  background: linear-gradient(135deg, #10b981, #065f46);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.b2b-action-card-btn.blue-btn {
+  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.b2b-action-card-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+}
+
+.b2b-file-input {
+  font-size: 12px;
+  color: #64748b;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* ── Custom import button — mirrors Download Excel style ── */
+.b2b-upload-btn {
+  padding: 9px 22px;
+  border-radius: 999px;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  letter-spacing: 0.01em;
+  background: linear-gradient(135deg, #10b981, #065f46);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.b2b-upload-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(16, 185, 129, 0.4);
+}
+
+/* Native file input hidden — triggered via button */
+.b2b-file-hidden { display: none; }
+
+
+/* ─────────────────────────────────────────────
+   ENTERPRISE TABLE  — full borders + fonts
+───────────────────────────────────────────── */
+.b2b-table-enterprise {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.07);
+}
+
+/* Toolbar */
+.b2b-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-bottom: 1.5px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.b2b-table-toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.b2b-table-toolbar-title h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  letter-spacing: -0.2px;
+}
+
+.b2b-table-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: #dbeafe;
+  color: #1d4ed8;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid #bfdbfe;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.b2b-table-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 7px 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.b2b-table-search:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.b2b-table-search svg {
+  width: 14px;
+  height: 14px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.b2b-table-search input {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: #111827;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  outline: none;
+  min-width: 160px;
+}
+
+.b2b-table-search input::placeholder { color: #9ca3af; }
+
+/* Scroll wrapper */
+.b2b-table-scroll { overflow-x: auto; }
+
+/* Table */
+.b2b-enterprise-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Column widths */
+.b2b-enterprise-table th:nth-child(1) { width: 60px;  }   /* # */
+.b2b-enterprise-table th:nth-child(2) { width: 22%;   }   /* Company */
+.b2b-enterprise-table th:nth-child(3) { width: 22%;   }   /* Contact */
+.b2b-enterprise-table th:nth-child(4) { width: 14%;   }   /* Phone */
+.b2b-enterprise-table th:nth-child(5) { width: 18%;   }   /* GST */
+.b2b-enterprise-table th:nth-child(6) { width: 14%;   }   /* Actions */
+
+/* Header */
+.b2b-enterprise-table thead tr {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.b2b-enterprise-table th {
+  padding: 13px 16px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  white-space: nowrap;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.b2b-enterprise-table th:last-child {
+  border-right: none;
+  text-align: center;
+}
+
+/* Body cells */
+.b2b-enterprise-table td {
+  padding: 13px 16px;
+  color: #334155;
+  vertical-align: middle;
+  border-right: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.b2b-enterprise-table td:last-child {
+  border-right: none;
+  text-align: center;
+}
+
+/* Alternating rows */
+.b2b-enterprise-table tbody tr:nth-child(even) { background: #fafbfc; }
+.b2b-enterprise-table tbody tr:last-child td   { border-bottom: none; }
+.b2b-enterprise-table tbody tr:hover           { background: #eff6ff !important; }
+.b2b-enterprise-table tbody tr                 { transition: background 0.12s ease; }
+
+/* ID cell */
+.b2b-id-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 26px;
+  padding: 0 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Company cell */
+.b2b-company-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.b2b-company-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.b2b-company-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+/* Contact cell */
+.b2b-contact-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.b2b-contact-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.b2b-contact-email {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Phone cell */
+.b2b-phone-cell {
+  font-size: 13px;
+  color: #334155;
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+/* Action buttons */
+.b2b-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.b2b-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.b2b-edit-btn:hover {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  transform: translateY(-1px);
+}
+
+.b2b-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 13px;
+  border: 1.5px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.b2b-delete-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+/* Empty state */
+.b2b-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.b2b-empty-icon { font-size: 44px; opacity: 0.45; }
+
+.b2b-empty-state p {
+  font-size: 14px;
+  margin: 0;
+  color: #64748b;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+
+@media (max-width: 768px) {
+  .b2b-icon-btn { width: 36px; height: 36px; }
+  .b2b-icon-btn svg { width: 18px; height: 18px; }
+  .b2b-icon-group { gap: 6px; margin-left: 6px; }
+  .b2b-user-info { padding: 4px 10px 4px 5px; gap: 7px; margin-right: 4px; }
+  .b2b-user-avatar { width: 26px; height: 26px; font-size: 10px; }
+  .b2b-user-name { font-size: 12px; max-width: 80px; }
+  .b2b-icon-btn::after  { top: 68px; }
+  .b2b-icon-btn::before { top: 60px; }
+  .b2b-container { padding: 16px; }
+  .b2b-header-row { flex-direction: column; align-items: flex-start; }
+}
+
+@media (max-width: 640px) {
+  .b2b-icon-btn { width: 34px; height: 34px; }
+  .b2b-icon-btn svg { width: 16px; height: 16px; }
+  .b2b-icon-group { gap: 5px; margin-left: 4px; }
+  .b2b-user-text  { display: none; }
+  .b2b-user-info  { padding: 5px; border-radius: 50%; margin-right: 4px; }
+  .b2b-user-avatar { width: 30px; height: 30px; font-size: 11px; }
+  .b2b-icon-btn::after  { top: 64px; font-size: 10px; padding: 4px 10px; }
+  .b2b-icon-btn::before { top: 56px; }
+  .b2b-stat-chips { display: none; }
+  .b2b-form-grid { grid-template-columns: 1fr; }
+  .b2b-action-cards { grid-template-columns: 1fr; }
+  .b2b-table-toolbar { flex-direction: column; align-items: flex-start; }
+  .b2b-table-search input { min-width: 120px; }
+}
+
+@media (max-width: 400px) {
+  .b2b-icon-btn { width: 30px; height: 30px; }
+  .b2b-icon-btn svg { width: 14px; height: 14px; }
+  .b2b-icon-group { gap: 4px; margin-left: 2px; }
+  .b2b-user-avatar { width: 26px; height: 26px; font-size: 10px; }
+  .b2b-user-info { padding: 4px; margin-right: 2px; }
+  .b2b-icon-btn::after  { top: 60px; }
+  .b2b-icon-btn::before { top: 52px; }
+}

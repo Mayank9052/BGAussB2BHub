@@ -12,6 +12,10 @@ export default function ModelPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
+  const username = localStorage.getItem("username") ?? "";
+  const role = localStorage.getItem("role") ?? "";
+  const initial = username.trim().charAt(0).toUpperCase() || "?";
+
   const handleLogout = () => {
     localStorage.clear();
     navigate("/", { replace: true });
@@ -40,13 +44,11 @@ export default function ModelPage() {
 
     try {
       if (editingId) {
-        // FIX: send id in body
         await axios.put(`/api/VehicleModels/${editingId}`, {
-          id:        editingId,   // ← ADD THIS
+          id: editingId,
           modelName: modelName.trim(),
         });
       } else {
-        // FIX: use CreateModel route
         await axios.post("/api/VehicleModels/CreateModel", {
           modelName: modelName.trim(),
         });
@@ -117,93 +119,159 @@ export default function ModelPage() {
         </div>
 
         <div className="pro-right">
+          {/* EXISTING — hidden via CSS */}
           <span className="user-name">
-              Welcome, {localStorage.getItem("username")} ({localStorage.getItem("role")})
+            Welcome, {username} ({role})
           </span>
+          <button className="module-btn" onClick={() => navigate("/vehicle-config")}>Back</button>
+          <button className="module-btn" onClick={() => navigate("/dashboard")}>Dashboard</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
 
-          <button className="module-btn" onClick={() => navigate("/vehicle-config")}>
-            Back
-          </button>
+          {/* ── USERNAME PILL ── */}
+          <div className="vc-user-info">
+            <div className="vc-user-avatar">{initial}</div>
+            <div className="vc-user-text">
+              <span className="vc-user-name">{username}</span>
+              <span className="vc-user-role">{role}</span>
+            </div>
+          </div>
 
-          <button className="module-btn" onClick={() => navigate("/dashboard")}>
-            Dashboard
-          </button>
+          {/* ── NAV ICON BUTTONS ── */}
+          <div className="vc-icon-group">
+            <button className="vc-icon-btn btn-vc-dashboard" data-tip="Back" aria-label="Back" onClick={() => navigate("/vehicle-config")}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+            </button>
 
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
+            <button className="vc-icon-btn btn-vc-modules" data-tip="Dashboard" aria-label="Dashboard" onClick={() => navigate("/dashboard")}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12L12 3l9 9"/>
+                <path d="M9 21V12h6v9"/>
+              </svg>
+            </button>
+
+            <button className="vc-icon-btn btn-vc-logout" data-tip="Logout" aria-label="Logout" onClick={handleLogout}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </header>
 
       {/* ===== CONTENT ===== */}
       <div className="vc-container">
 
-        {/* ===== FORM ===== */}
-        <div className="section-card">
-          <h2>{editingId ? "Update Model" : "Add Model"}</h2>
+        {/* ── ENTERPRISE PAGE HEADER ── */}
+        <div className="vc-header-row">
+          <div className="vc-header-title">
+            <div className="vc-header-icon">🚗</div>
+            <div className="vc-header-text">
+              <h1>Vehicle Models</h1>
+              <span className="vc-header-sub">Manage vehicle model master records across the system</span>
+            </div>
+          </div>
+          <div className="vc-stat-chips">
+            <div className="vc-chip chip-models">
+              <strong>{models.length}</strong> Models
+            </div>
+          </div>
+        </div>
 
-          <div className="form-row">
+        {/* ── ADD MODEL FORM (COMPACT) ── */}
+        <div className="section-card" style={{ marginBottom: "20px" }}>
+          <div className="form-row" style={{ marginBottom: 0 }}>
             <input
               type="text"
-              placeholder="Enter Model Name"
+              placeholder={editingId ? "Update Model Name..." : "Add new model..."}
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
             />
-
             <button className="primary-btn" onClick={handleSave}>
               {editingId ? "Update" : "Add"}
             </button>
           </div>
         </div>
 
-        {/* ===== IMPORT / EXPORT ===== */}
+        {/* ── IMPORT / EXPORT GRID ── */}
         <div className="ie-grid">
-
           <div className="ie-card">
             <h3>📤 Export Models</h3>
-            <p>Download all models in Excel format</p>
-
+            <p>Download all vehicle models in Excel format for backup or external use</p>
             <button className="action-btn" onClick={handleExport}>
-              Export Excel
+              Download Excel
             </button>
           </div>
 
           <div className="ie-card">
-            <h3>📥 Import Models</h3>
-            <p>Upload Excel file to add/update models</p>
-
-            <input type="file" onChange={handleImport} />
+            <h3>📥 Bulk Import</h3>
+            <p>Upload Excel file to quickly add or update multiple models at once</p>
+            <input 
+              type="file" 
+              onChange={handleImport}
+              style={{
+                padding: "8px",
+                border: "1px solid #e5e7eb",
+                borderRadius: "6px",
+                fontSize: "12px",
+                cursor: "pointer"
+              }}
+            />
           </div>
-
         </div>
 
-        {/* ===== TABLE ===== */}
-        <div className="table">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Model Name</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {models.map((m) => (
-                <tr key={m.id}>
-                  <td>{m.id}</td>
-                  <td>{m.modelName}</td>
-                  <td>
-                    <button onClick={() => handleEdit(m)}>Edit</button>
-                    <button onClick={() => handleDelete(m.id)}>Delete</button>
-                  </td>
+        {/* ── MODELS TABLE (ENTERPRISE CARD) ── */}
+        <div className="section-card">
+          <div className="table">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Model Name</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+
+              <tbody>
+                {models.length > 0 ? (
+                  models.map((m) => (
+                    <tr key={m.id}>
+                      <td>{m.id}</td>
+                      <td>{m.modelName}</td>
+                      <td>
+                        <button onClick={() => handleEdit(m)}>Edit</button>
+                        <button onClick={() => handleDelete(m.id)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: "center", color: "#9ca3af", padding: "20px" }}>
+                      No models found. Add one to get started.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <div style={{
+            marginTop: "20px",
+            padding: "12px",
+            background: "#fee2e2",
+            color: "#991b1b",
+            borderRadius: "8px",
+            fontSize: "13px"
+          }}>
+            ⚠️ {error}
+          </div>
+        )}
+
       </div>
     </div>
   );
