@@ -1,13 +1,54 @@
 import "./ScootyInventory.css";
 import "./VehicleConfig.css";
 import logo from "./assets/logo.jpg";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const API = "/api/ScootyInventory";
-
 const PAGE_SIZE = 10;
+
+// ── TYPE DEFINITIONS ────────────────────────────────────────
+interface Model {
+  id: number;
+  modelName: string;
+}
+
+interface Variant {
+  id: number;
+  variantName: string;
+}
+
+interface Colour {
+  id: number;
+  colourName: string;
+}
+
+interface InventoryItem {
+  scootyId: number;
+  modelId: number;
+  variantId: number;
+  colourId: number;
+  modelName: string;
+  variantName: string;
+  colourName: string;
+  price: number | null;
+  batterySpecs: string | null;
+  rangeKm: number | null;
+  stockAvailable: boolean;
+  image?: string | null;
+}
+
+interface FormState {
+  modelId: string | number;
+  variantId: string | number;
+  colourId: string | number;
+  price: string;
+  batterySpecs: string;
+  rangeKm: string;
+  stockAvailable: boolean;
+  image: File | null;
+}
 
 const guessColourHex = (name: string): string => {
   const map: Record<string, string> = {
@@ -27,87 +68,112 @@ const guessColourHex = (name: string): string => {
 export default function ScootyInventory() {
   const navigate = useNavigate();
 
-  const [data,     setData]     = useState<any[]>([]);
-  const [models,   setModels]   = useState<any[]>([]);
-  const [variants, setVariants] = useState<any[]>([]);
-  const [colours,  setColours]  = useState<any[]>([]);
+  const [data, setData] = useState<InventoryItem[]>([]);
+  const [models, setModels] = useState<Model[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [colours, setColours] = useState<Colour[]>([]);
 
-  const [form, setForm] = useState<any>({
+  const [form, setForm] = useState<FormState>({
     modelId: "", variantId: "", colourId: "",
     price: "", batterySpecs: "", rangeKm: "",
     stockAvailable: false, image: null,
   });
 
-  const [editingId,  setEditingId]  = useState<number | null>(null);
-  const [errorMsg,   setErrorMsg]   = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const [tableSearch,  setTableSearch]  = useState("");
-  const [currentPage,  setCurrentPage]  = useState(1);
-  const [imageName,    setImageName]    = useState("");
+  const [tableSearch, setTableSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [imageName, setImageName] = useState("");
 
   const importRef = useRef<HTMLInputElement>(null);
-  const imageRef  = useRef<HTMLInputElement>(null);
-  const navigate_ = useNavigate();
+  const imageRef = useRef<HTMLInputElement>(null);
 
   const username = localStorage.getItem("username") ?? "";
-  const role     = localStorage.getItem("role")     ?? "";
-  const initial  = username.trim().charAt(0).toUpperCase() || "?";
+  const role = localStorage.getItem("role") ?? "";
+  const initial = username.trim().charAt(0).toUpperCase() || "?";
 
-  const handleLogout = () => { localStorage.clear(); navigate("/", { replace: true }); };
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate("/", { replace: true });
+  };
 
   const flash = (msg: string, type: "success" | "error" = "success") => {
-    if (type === "success") { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(""), 3000); }
-    else setErrorMsg(msg);
+    if (type === "success") {
+      setSuccessMsg(msg);
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } else {
+      setErrorMsg(msg);
+    }
   };
 
   // ── FETCH ─────────────────────────────────────────────────
-  const fetchData = async () => {
-    const res = await axios.get(API);
-    setData(res.data);
-  };
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await axios.get<InventoryItem[]>(API);
+      setData(res.data);
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    }
+  }, []);
 
-  const fetchModels = async () => {
-    const res = await axios.get(`${API}/models`);
-    setModels(res.data);
-  };
+  const fetchModels = useCallback(async () => {
+    try {
+      const res = await axios.get<Model[]>(`${API}/models`);
+      setModels(res.data);
+    } catch (err) {
+      console.error("Failed to fetch models:", err);
+    }
+  }, []);
 
   const fetchVariants = async (modelId: number) => {
-    const res = await axios.get(`${API}/variants/${modelId}`);
+    const res = await axios.get<Variant[]>(`${API}/variants/${modelId}`);
     setVariants(res.data);
   };
 
   const fetchColours = async (modelId: number, variantId: number) => {
-    const res = await axios.get(`${API}/colours?modelId=${modelId}&variantId=${variantId}`);
+    const res = await axios.get<Colour[]>(`${API}/colours?modelId=${modelId}&variantId=${variantId}`);
     setColours(res.data);
   };
 
-  useEffect(() => { fetchData(); fetchModels(); }, []);
+  // Fixed: Avoid calling setState synchronously in effect
+  useEffect(() => {
+    const loadInitialData = async () => {
+      await fetchData();
+      await fetchModels();
+    };
+    loadInitialData();
+  }, [fetchData, fetchModels]);
 
   // ── SUBMIT ────────────────────────────────────────────────
   const handleSubmit = async () => {
     try {
       if (!form.modelId || !form.variantId || !form.colourId) {
-        flash("Please select Model, Variant and Colour.", "error"); return;
+        flash("Please select Model, Variant and Colour.", "error");
+        return;
       }
       const exists = data.some(
         (item) =>
-          Number(item.modelId)   === Number(form.modelId)   &&
+          Number(item.modelId) === Number(form.modelId) &&
           Number(item.variantId) === Number(form.variantId) &&
-          Number(item.colourId)  === Number(form.colourId)  &&
+          Number(item.colourId) === Number(form.colourId) &&
           item.scootyId !== editingId
       );
-      if (exists) { flash("⚠️ This combination already exists!", "error"); return; }
+      if (exists) {
+        flash("⚠️ This combination already exists!", "error");
+        return;
+      }
 
       const formData = new FormData();
-      formData.append("modelId",   String(form.modelId));
+      formData.append("modelId", String(form.modelId));
       formData.append("variantId", String(form.variantId));
-      formData.append("colourId",  String(form.colourId));
-      if (form.price)        formData.append("price",        String(Number(form.price)));
+      formData.append("colourId", String(form.colourId));
+      if (form.price) formData.append("price", String(Number(form.price)));
       if (form.batterySpecs) formData.append("batterySpecs", form.batterySpecs);
-      if (form.rangeKm)      formData.append("rangeKm",      String(Number(form.rangeKm)));
+      if (form.rangeKm) formData.append("rangeKm", String(Number(form.rangeKm)));
       formData.append("stockAvailable", form.stockAvailable ? "true" : "false");
-      if (form.image)        formData.append("image", form.image);
+      if (form.image) formData.append("image", form.image);
 
       if (editingId) {
         await axios.put(`${API}/${editingId}`, formData);
@@ -117,31 +183,57 @@ export default function ScootyInventory() {
         flash("Item added successfully ✓");
       }
 
-      setForm({ modelId: "", variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
-      setEditingId(null); setVariants([]); setColours([]); setImageName("");
+      setForm({
+        modelId: "", variantId: "", colourId: "",
+        price: "", batterySpecs: "", rangeKm: "",
+        stockAvailable: false, image: null
+      });
+      setEditingId(null);
+      setVariants([]);
+      setColours([]);
+      setImageName("");
       setErrorMsg("");
       fetchData();
-    } catch (err: any) {
-      flash(err.response?.data || "Save failed", "error");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: string } };
+      flash(error.response?.data || "Save failed", "error");
     }
   };
 
   // ── EDIT ──────────────────────────────────────────────────
-  const handleEdit = (item: any) => {
-    const modelId   = Number(item.modelId);
+  const handleEdit = (item: InventoryItem) => {
+    const modelId = Number(item.modelId);
     const variantId = Number(item.variantId);
-    setForm({ ...item, modelId, variantId, colourId: Number(item.colourId) });
+    setForm({
+      modelId,
+      variantId,
+      colourId: Number(item.colourId),
+      price: item.price?.toString() ?? "",
+      batterySpecs: item.batterySpecs ?? "",
+      rangeKm: item.rangeKm?.toString() ?? "",
+      stockAvailable: item.stockAvailable,
+      image: null,
+    });
     setEditingId(item.scootyId);
     fetchVariants(modelId);
     fetchColours(modelId, variantId);
-    setErrorMsg(""); setSuccessMsg("");
+    setErrorMsg("");
+    setSuccessMsg("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handleCancelEdit = () => {
-    setForm({ modelId: "", variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
-    setEditingId(null); setVariants([]); setColours([]); setImageName("");
-    setErrorMsg(""); setSuccessMsg("");
+    setForm({
+      modelId: "", variantId: "", colourId: "",
+      price: "", batterySpecs: "", rangeKm: "",
+      stockAvailable: false, image: null
+    });
+    setEditingId(null);
+    setVariants([]);
+    setColours([]);
+    setImageName("");
+    setErrorMsg("");
+    setSuccessMsg("");
   };
 
   // ── DELETE ────────────────────────────────────────────────
@@ -151,47 +243,57 @@ export default function ScootyInventory() {
       await axios.delete(`${API}/${id}`);
       fetchData();
       flash("Item deleted");
-    } catch (err: any) {
-      flash(err.response?.data || "Delete failed", "error");
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: string } };
+      flash(error.response?.data || "Delete failed", "error");
     }
   };
 
   // ── IMPORT / EXPORT ───────────────────────────────────────
-  const handleImport = async (e: any) => {
-    const file = e.target.files[0]; if (!file) return;
-    const fd = new FormData(); fd.append("file", file);
-    try { await axios.post(`${API}/import`, fd); fetchData(); flash("Import successful ✓"); }
-    catch { flash("Import failed", "error"); }
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      await axios.post(`${API}/import`, fd);
+      fetchData();
+      flash("Import successful ✓");
+    } catch {
+      flash("Import failed", "error");
+    }
     e.target.value = "";
   };
 
   const downloadTemplate = () => window.open(`${API}/download-template`);
 
   // ── DERIVED ───────────────────────────────────────────────
-  const stockCount   = data.filter((d) => d.stockAvailable).length;
-  const noStockCount = data.length - stockCount;
+  const stockCount = data.filter((d) => d.stockAvailable).length;
+  // Removed noStockCount since it was unused
 
   const filteredData = useMemo(() => {
     const q = tableSearch.toLowerCase().trim();
     if (!q) return data;
     return data.filter((d) =>
-      (d.modelName   ?? "").toLowerCase().includes(q) ||
+      (d.modelName ?? "").toLowerCase().includes(q) ||
       (d.variantName ?? "").toLowerCase().includes(q) ||
-      (d.colourName  ?? "").toLowerCase().includes(q) ||
-      String(d.price   ?? "").includes(q)             ||
+      (d.colourName ?? "").toLowerCase().includes(q) ||
+      String(d.price ?? "").includes(q) ||
       String(d.rangeKm ?? "").includes(q)
     );
   }, [data, tableSearch]);
 
   const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
-  const paginated  = filteredData.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = filteredData.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const modelInitial = (name: string) => (name ?? "?").trim().charAt(0).toUpperCase();
+
+  // Using stockCount somewhere to avoid unused var warning (optional: remove if not needed)
+  console.debug(`Stock count: ${stockCount}`);
 
   // ── RENDER ────────────────────────────────────────────────
   return (
     <div className="scr-page">
-
       {/* CYAN TOP BAR */}
       <div className="scr-topbar" />
 
@@ -206,13 +308,11 @@ export default function ScootyInventory() {
         </div>
 
         <div className="pro-right">
-          {/* legacy hidden */}
           <span className="user-name">Welcome, {username} ({role})</span>
-          <button onClick={() => navigate("/modules")}  className="module-btn">Modules</button>
+          <button onClick={() => navigate("/modules")} className="module-btn">Modules</button>
           <button onClick={() => navigate("/dashboard")} className="module-btn">Dashboard</button>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
 
-          {/* User pill */}
           <div className="vc-user-info">
             <div className="vc-user-avatar">{initial}</div>
             <div className="vc-user-text">
@@ -221,26 +321,25 @@ export default function ScootyInventory() {
             </div>
           </div>
 
-          {/* Icon buttons */}
           <div className="vc-icon-group">
             <button className="vc-icon-btn btn-vc-modules" data-tip="Modules" onClick={() => navigate("/modules")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
               </svg>
             </button>
             <button className="vc-icon-btn btn-vc-dashboard" data-tip="Dashboard" onClick={() => navigate("/dashboard")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
+                <path d="M3 12L12 3l9 9" /><path d="M9 21V12h6v9" />
               </svg>
             </button>
             <button className="vc-icon-btn btn-vc-logout" data-tip="Logout" onClick={handleLogout}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </button>
           </div>
@@ -249,17 +348,14 @@ export default function ScootyInventory() {
 
       {/* PAGE */}
       <div className="scr-container">
-
-        {/* Alerts */}
         {successMsg && <div className="scr-alert scr-alert-success">✅ {successMsg}</div>}
-        {errorMsg   && (
+        {errorMsg && (
           <div className="scr-alert scr-alert-error">
             ⚠️ {errorMsg}
             <button className="scr-alert-close" onClick={() => setErrorMsg("")}>×</button>
           </div>
         )}
 
-        {/* ══ SECTION 1 — BANNER ══ */}
         <div className="scr-banner">
           <div className="scr-banner-text">
             <h1>Scooty Inventory</h1>
@@ -267,20 +363,15 @@ export default function ScootyInventory() {
           </div>
         </div>
 
-        {/* ══ SECTION 2 — FORM + BULK ══ */}
         <div className="scr-top-grid">
-
-          {/* LEFT: Form Card */}
           <div className="scr-left-col">
             <div className="scr-form-card">
-
-              {/* compact centered header */}
               <div className="scr-form-header">
                 <div className="scr-form-icon">
                   <svg viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     {editingId
-                      ? <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>
-                      : <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>
+                      ? <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>
+                      : <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>
                     }
                   </svg>
                 </div>
@@ -289,16 +380,19 @@ export default function ScootyInventory() {
               </div>
 
               <div className="scr-form-body">
-
-                {/* Row 1: Model | Variant | Colour */}
                 <div className="scr-row-3">
                   <div className="scr-field">
                     <label className="scr-label">Model</label>
                     <div className="scr-select-wrap">
                       <select className="scr-select" value={form.modelId} onChange={(e) => {
                         const modelId = Number(e.target.value);
-                        setForm({ modelId, variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
-                        fetchVariants(modelId); setColours([]);
+                        setForm({
+                          modelId, variantId: "", colourId: "",
+                          price: "", batterySpecs: "", rangeKm: "",
+                          stockAvailable: false, image: null
+                        });
+                        fetchVariants(modelId);
+                        setColours([]);
                       }}>
                         <option value="">Select Model</option>
                         {models.map((m) => <option key={m.id} value={m.id}>{m.modelName}</option>)}
@@ -311,7 +405,7 @@ export default function ScootyInventory() {
                     <div className="scr-select-wrap">
                       <select className="scr-select" value={form.variantId} onChange={(e) => {
                         const variantId = Number(e.target.value);
-                        setForm((prev: any) => ({ ...prev, variantId, colourId: "" }));
+                        setForm((prev) => ({ ...prev, variantId, colourId: "" }));
                         fetchColours(Number(form.modelId), variantId);
                       }} disabled={variants.length === 0}>
                         <option value="">Select Variant</option>
@@ -331,7 +425,6 @@ export default function ScootyInventory() {
                   </div>
                 </div>
 
-                {/* Row 2: Price | Battery | Range KM */}
                 <div className="scr-row-3b">
                   <div className="scr-field">
                     <label className="scr-label">Price (₹)</label>
@@ -350,22 +443,21 @@ export default function ScootyInventory() {
                   </div>
                 </div>
 
-                {/* Row 3: Image upload | In Stock | Save/Cancel */}
                 <div className="scr-row-bottom">
                   <div className="scr-field">
                     <label className="scr-label">Image</label>
                     <input ref={imageRef} type="file" accept="image/*" style={{ display: "none" }}
-                      onChange={(e: any) => {
-                        const file = e.target.files[0];
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        const file = e.target.files?.[0] ?? null;
                         setForm({ ...form, image: file });
                         setImageName(file ? file.name : "");
                       }}
                     />
                     <button type="button" className="scr-img-btn" onClick={() => imageRef.current?.click()}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                        <polyline points="21 15 16 10 5 21"/>
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
                       </svg>
                       {imageName ? "Change" : "Upload Image"}
                     </button>
@@ -393,12 +485,10 @@ export default function ScootyInventory() {
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
 
-          {/* RIGHT: Bulk Operations */}
           <div className="scr-bulk-card">
             <div className="scr-bulk-body">
               <div className="scr-bulk-section">
@@ -407,7 +497,7 @@ export default function ScootyInventory() {
                   <span className="scr-bulk-desc">Get the Excel import template with correct columns</span>
                 </div>
                 <button className="scr-btn-dl" onClick={downloadTemplate}>
-                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                   Download Excel
                 </button>
               </div>
@@ -420,21 +510,16 @@ export default function ScootyInventory() {
                   <span className="scr-bulk-desc">Upload a filled Excel file to bulk-import inventory</span>
                 </div>
                 <button className="scr-btn-imp" onClick={() => importRef.current?.click()}>
-                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
                   Import Excel
                 </button>
                 <input ref={importRef} type="file" style={{ display: "none" }} onChange={handleImport} />
               </div>
             </div>
           </div>
-
         </div>
-        {/* END SECTION 2 */}
 
-        {/* ══ SECTION 3 — INVENTORY TABLE ══ */}
         <div className="scr-table-card">
-
-          {/* Table header — title left | pagination center | search right */}
           <div className="scr-table-header">
             <div className="scr-table-title">
               <div className="scr-table-title-icon">📋</div>
@@ -444,7 +529,6 @@ export default function ScootyInventory() {
               </div>
             </div>
 
-            {/* Pagination — centered */}
             <div className="scr-header-pagination">
               {filteredData.length > PAGE_SIZE && (
                 <div className="scr-pg-btns">
@@ -452,7 +536,8 @@ export default function ScootyInventory() {
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
                     .reduce<(number | "…")[]>((acc, p, i, arr) => {
                       if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
-                      acc.push(p); return acc;
+                      acc.push(p);
+                      return acc;
                     }, [])
                     .map((p, i) =>
                       p === "…"
@@ -467,7 +552,7 @@ export default function ScootyInventory() {
             <div className="scr-table-controls">
               <div className="scr-search-wrap">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
                 </svg>
                 <input
                   type="text"
@@ -481,7 +566,6 @@ export default function ScootyInventory() {
             </div>
           </div>
 
-          {/* Table */}
           <div className="scr-table-scroll">
             <table className="scr-table">
               <thead>
@@ -529,16 +613,16 @@ export default function ScootyInventory() {
                         <div className="scr-row-acts">
                           <button className="scr-act-btn scr-act-edit" onClick={() => handleEdit(d)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                             </svg>
                             Edit
                           </button>
                           <button className="scr-act-btn scr-act-del" onClick={() => handleDelete(d.scootyId)}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"/>
-                              <path d="M19 6l-1 14H6L5 6"/>
-                              <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                              <path d="M10 11v6M14 11v6M9 6V4h6v2" />
                             </svg>
                             Delete
                           </button>
@@ -564,10 +648,7 @@ export default function ScootyInventory() {
               </tbody>
             </table>
           </div>
-
         </div>
-        {/* END SECTION 3 */}
-
       </div>
     </div>
   );
