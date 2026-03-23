@@ -2,7 +2,7 @@ import "./dashboard.css";
 import logo from "./assets/logo.jpg";
 import noImage from "./assets/No-Image.jpg";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
@@ -27,7 +27,10 @@ interface ModelOption   { id: number; modelName: string; }
 interface VariantOption { id: number; variantName: string; }
 interface ColourOption  { id: number; colourName: string; }
 
-const resolveImageSrc = (path: string | null) => {
+const CACHE_KEY     = "vehicles";
+const IMG_CACHE_KEY = "vehicle_img_urls";
+
+const resolveImageSrc = (path: string | null): string => {
   if (!path) return noImage;
   if (/^https?:\/\//i.test(path)) return path;
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -41,10 +44,42 @@ const getInitials = (name: string | null): string => {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
+// ── Preload a list of image URLs into browser cache ─────────
+const preloadImages = (urls: string[]) => {
+  urls.forEach((url) => {
+    if (!url || url === noImage) return;
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+  });
+};
+
+// ── Persist image URLs to localStorage for next session ─────
+const saveImageUrlsToCache = (vehicles: Vehicle[]) => {
+  try {
+    const map: Record<number, string> = {};
+    vehicles.forEach((v) => {
+      if (v.imageUrl) map[v.scootyId] = resolveImageSrc(v.imageUrl);
+    });
+    localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(map));
+  } catch { /* quota exceeded — skip */ }
+};
+
+// ── Read cached image URL map ─────────────────────────────────
+const loadCachedImageUrls = (): Record<number, string> => {
+  try {
+    const raw = localStorage.getItem(IMG_CACHE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+};
+
 export default function Dashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
+
+  // Image URL cache (resolved absolute URLs keyed by scootyId)
+  const [imgCache, setImgCache] = useState<Record<number, string>>(loadCachedImageUrls);
 
   // ── Search ──────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,17 +96,17 @@ export default function Dashboard() {
     );
   });
 
-  // ── Sheet ────────────────────────────────────────────────────
+  // ── Sheet ─────────────────────────────────────────────────
   const [sheetOpen,  setSheetOpen]  = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg,  setSubmitMsg]  = useState("");
 
-  // ── Dropdown options ─────────────────────────────────────────
+  // ── Dropdown options ──────────────────────────────────────
   const [models,   setModels]   = useState<ModelOption[]>([]);
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [colours,  setColours]  = useState<ColourOption[]>([]);
 
-  // ── Form fields ──────────────────────────────────────────────
+  // ── Form fields ───────────────────────────────────────────
   const [modelId,        setModelId]        = useState<number | "">("");
   const [variantId,      setVariantId]      = useState<number | "">("");
   const [colourId,       setColourId]       = useState<number | "">("");
@@ -82,26 +117,45 @@ export default function Dashboard() {
   const [imageFile,      setImageFile]      = useState<File | null>(null);
   const [imagePreview,   setImagePreview]   = useState<string | null>(null);
 
-  // ── Menu open state ──────────────────────────────────────────
+  // ── Menu state ────────────────────────────────────────────
   const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
   const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
 
-  const fileInputRef    = useRef<HTMLInputElement>(null);
-  const desktopMenuRef  = useRef<HTMLDivElement>(null);
-  const mobileMenuRef   = useRef<HTMLDivElement>(null);
-  const navigate        = useNavigate();
+  const fileInputRef   = useRef<HTMLInputElement>(null);
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef  = useRef<HTMLDivElement>(null);
+  const navigate       = useNavigate();
 
-  // ── Auth guard ──────────────────────────────────────────────
+  // ── Auth guard ────────────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { navigate("/", { replace: true }); return; }
-    const cached = localStorage.getItem("vehicles");
-    if (cached) { setVehicles(JSON.parse(cached)); setLoading(false); }
+
+    // 1. INSTANT: paint from localStorage cache immediately
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const parsed: Vehicle[] = JSON.parse(cached);
+        setVehicles(parsed);
+        setLoading(false);
+
+        // 2. INSTANT: preload images from persisted URL map so
+        //    browser fetches from its HTTP cache right away
+        const cachedUrls = loadCachedImageUrls();
+        if (Object.keys(cachedUrls).length > 0) {
+          preloadImages(Object.values(cachedUrls));
+        } else {
+          // Fallback: preload from parsed vehicle data
+          preloadImages(parsed.map((v) => resolveImageSrc(v.imageUrl)));
+        }
+      } catch { /* corrupt cache — ignore */ }
+    }
+
     fetchVehicles();
     fetchModels();
   }, [navigate]);
 
-  // ── Outside-click: desktop menu ──────────────────────────────
+  // ── Outside-click: desktop menu ──────────────────────────
   useEffect(() => {
     if (!desktopMenuOpen) return;
     const close = (e: MouseEvent) => {
@@ -112,7 +166,7 @@ export default function Dashboard() {
     return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
   }, [desktopMenuOpen]);
 
-  // ── Outside-click: mobile menu ───────────────────────────────
+  // ── Outside-click: mobile menu ───────────────────────────
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const close = (e: MouseEvent) => {
@@ -123,7 +177,7 @@ export default function Dashboard() {
     return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
   }, [mobileMenuOpen]);
 
-  // ── Cascade dropdowns ────────────────────────────────────────
+  // ── Cascade dropdowns ─────────────────────────────────────
   useEffect(() => {
     if (modelId !== "") fetchVariants(Number(modelId));
     else { setVariants([]); setVariantId(""); }
@@ -135,20 +189,34 @@ export default function Dashboard() {
     else { setColours([]); setColourId(""); }
   }, [variantId]);
 
-  // ── Fetchers ─────────────────────────────────────────────────
+  // ── Fetchers ──────────────────────────────────────────────
   const fetchVehicles = async () => {
     let retries = 5;
     while (retries > 0) {
       try {
         const res = await axios.get<VehicleApi[]>("/api/ScootyInventory/models-list");
-        const normalized = res.data.map((item) => ({
+        const normalized: Vehicle[] = res.data.map((item) => ({
           ...item,
           imageUrl: item.imageUrl ?? item.imagePath ?? null,
         }));
+
         setVehicles(normalized);
-        localStorage.setItem("vehicles", JSON.stringify(normalized));
         setLoading(false);
         setError("");
+
+        // Persist to localStorage
+        try { localStorage.setItem(CACHE_KEY, JSON.stringify(normalized)); } catch { /* quota */ }
+
+        // Persist resolved image URLs + preload them
+        saveImageUrlsToCache(normalized);
+        const resolvedUrls = normalized.map((v) => resolveImageSrc(v.imageUrl));
+        preloadImages(resolvedUrls);
+
+        // Update in-memory img cache for instant re-renders
+        const newMap: Record<number, string> = {};
+        normalized.forEach((v) => { newMap[v.scootyId] = resolveImageSrc(v.imageUrl); });
+        setImgCache(newMap);
+
         return;
       } catch {
         await new Promise((r) => setTimeout(r, 1000));
@@ -180,7 +248,13 @@ export default function Dashboard() {
     } catch { setColours([]); }
   };
 
-  // ── Image picker ─────────────────────────────────────────────
+  // ── Resolve image: use in-memory cache first ─────────────
+  const getImageSrc = useCallback(
+    (v: Vehicle): string => imgCache[v.scootyId] ?? resolveImageSrc(v.imageUrl),
+    [imgCache]
+  );
+
+  // ── Image picker ──────────────────────────────────────────
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     setImageFile(file);
@@ -193,8 +267,8 @@ export default function Dashboard() {
     }
   };
 
-  // ── Sheet helpers ────────────────────────────────────────────
-  const openSheet = () => { resetForm(); fetchModels(); setSheetOpen(true); };
+  // ── Sheet helpers ─────────────────────────────────────────
+  const openSheet  = () => { resetForm(); fetchModels(); setSheetOpen(true); };
   const closeSheet = () => { setSheetOpen(false); setSubmitMsg(""); };
 
   const resetForm = () => {
@@ -205,7 +279,7 @@ export default function Dashboard() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ── Submit ───────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (modelId === "" || variantId === "") {
       setSubmitMsg("Model and Variant are required.");
@@ -217,10 +291,10 @@ export default function Dashboard() {
       const form = new FormData();
       form.append("modelId",   String(modelId));
       form.append("variantId", String(variantId));
-      if (colourId !== "") form.append("colourId",      String(colourId));
-      if (price)           form.append("price",         price);
-      if (batterySpecs)    form.append("batterySpecs",  batterySpecs);
-      if (rangeKm)         form.append("rangeKm",       rangeKm);
+      if (colourId !== "") form.append("colourId",     String(colourId));
+      if (price)           form.append("price",        price);
+      if (batterySpecs)    form.append("batterySpecs", batterySpecs);
+      if (rangeKm)         form.append("rangeKm",      rangeKm);
       form.append("stockAvailable", String(stockAvailable));
       if (imageFile) form.append("image", imageFile);
 
@@ -243,16 +317,17 @@ export default function Dashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    localStorage.removeItem("vehicles");
+    localStorage.removeItem(CACHE_KEY);
+    // Keep IMG_CACHE_KEY so images load fast on next login
     navigate("/", { replace: true });
   };
 
-  // ── Derived ──────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────
   const username = localStorage.getItem("username") ?? "";
   const role     = localStorage.getItem("role")     ?? "";
   const initials = getInitials(username);
 
-  // ── Shared dropdown items renderer ───────────────────────────
+  // ── Shared dropdown items renderer ───────────────────────
   const renderDropdownItems = (onClose: () => void) => (
     <>
       {role === "admin" && (
@@ -281,7 +356,7 @@ export default function Dashboard() {
     </>
   );
 
-  // ────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
   return (
     <div className="dashboard">
 
@@ -297,7 +372,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* CENTER — search (hidden ≤640px via CSS) */}
+        {/* CENTER — search bar */}
         <div className="pro-center">
           <div className="nav-search-wrapper">
             <div className="nav-search-bar">
@@ -331,7 +406,7 @@ export default function Dashboard() {
         {/* RIGHT */}
         <div className="pro-right">
 
-          {/* ── DESKTOP dropdown (> 768px) ── */}
+          {/* Desktop dropdown */}
           <div className="desktop-user-wrapper" ref={desktopMenuRef}>
             <button
               className={`desktop-user-trigger${desktopMenuOpen ? " open" : ""}`}
@@ -347,10 +422,7 @@ export default function Dashboard() {
               <span className="desktop-chevron">▾</span>
             </button>
 
-            {/* Desktop dropdown panel */}
             <div className={`desktop-dropdown${desktopMenuOpen ? " is-open" : ""}`}>
-
-              {/* Header card */}
               <div className="desktop-dd-header">
                 <div className="desktop-dd-avatar">{initials}</div>
                 <div>
@@ -358,15 +430,13 @@ export default function Dashboard() {
                   <span className="desktop-dd-role-badge">{role}</span>
                 </div>
               </div>
-
               <div className="desktop-dd-divider" />
               <div className="desktop-dd-label">Actions</div>
-
               {renderDropdownItems(() => setDesktopMenuOpen(false))}
             </div>
           </div>
 
-          {/* ── MOBILE / TABLET ⋮ (≤ 768px) ── */}
+          {/* Mobile ⋮ menu */}
           <div className="mobile-nav-wrapper" ref={mobileMenuRef}>
             <button
               className={`mobile-menu-btn${mobileMenuOpen ? " open" : ""}`}
@@ -378,8 +448,6 @@ export default function Dashboard() {
             </button>
 
             <div className={`mobile-icon-dropdown${mobileMenuOpen ? " is-open" : ""}`}>
-
-              {/* User info row */}
               <div className="mobile-dd-user">
                 <div className="mobile-dd-avatar">{initials}</div>
                 <div>
@@ -387,10 +455,8 @@ export default function Dashboard() {
                   <div className="mobile-dd-role">{role}</div>
                 </div>
               </div>
-
               <div className="mobile-dropdown-divider" />
               <div className="mobile-dropdown-label">Actions</div>
-
               {role === "admin" && (
                 <button
                   className="mobile-dropdown-item"
@@ -403,9 +469,7 @@ export default function Dashboard() {
                   </div>
                 </button>
               )}
-
               <div className="mobile-dropdown-divider" />
-
               <button
                 className="mobile-dropdown-item danger"
                 onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
@@ -416,11 +480,10 @@ export default function Dashboard() {
                   <span className="mobile-dd-sub">Sign out of account</span>
                 </div>
               </button>
-
             </div>
           </div>
 
-          {/* ── USERNAME DISPLAY ── */}
+          {/* Username display */}
           <div className="nav-user-info">
             <div className="nav-user-avatar">{initials}</div>
             <div className="nav-user-text">
@@ -429,10 +492,8 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ── NAV ICON BUTTONS — visible via CSS, dropdowns hidden ── */}
+          {/* Icon buttons */}
           <div className="nav-icon-group">
-
-            {/* Modules — admin only */}
             {role === "admin" && (
               <button
                 className="nav-icon-btn btn-modules"
@@ -450,8 +511,6 @@ export default function Dashboard() {
                 </span>
               </button>
             )}
-
-            {/* Logout */}
             <button
               className="nav-icon-btn btn-logout"
               data-tip="Logout"
@@ -466,10 +525,9 @@ export default function Dashboard() {
                 </svg>
               </span>
             </button>
+          </div>
 
-          </div>{/* /nav-icon-group */}
-
-        </div>{/* /pro-right */}
+        </div>
       </header>
 
       {/* ═══ CONTENT ══════════════════════════════════════════ */}
@@ -480,7 +538,7 @@ export default function Dashboard() {
           <button className="add-fab" onClick={openSheet} title="Add Item">+</button>
         </div>
 
-        {/* Mobile-only search — visible only on ≤640px */}
+        {/* Mobile-only search */}
         <div className="search-wrapper mobile-search-only">
           <div className="search-bar">
             <span className="search-icon">
@@ -514,7 +572,7 @@ export default function Dashboard() {
         {/* VEHICLE GRID */}
         <div className="vehicle-grid">
 
-          {loading && Array.from({ length: 6 }).map((_, i) => (
+          {loading && vehicles.length === 0 && Array.from({ length: 6 }).map((_, i) => (
             <div className="vehicle-card skeleton" key={i}>
               <div className="skeleton-img" />
               <div className="skeleton-text" />
@@ -530,16 +588,20 @@ export default function Dashboard() {
             </div>
           )}
 
-          {filteredVehicles.map((v) => (
+          {filteredVehicles.map((v, index) => (
             <div
               className="vehicle-card"
               key={v.scootyId}
               onClick={() => navigate(`/vehicle/${v.scootyId}`)}
             >
               <img
-                src={resolveImageSrc(v.imageUrl)}
+                src={getImageSrc(v)}
                 className="vehicle-img"
-                loading="lazy"
+                /* First 6 cards load eagerly; rest lazy */
+                loading={index < 6 ? "eager" : "lazy"}
+                /* High fetch priority for first 3 visible cards */
+                fetchPriority={index < 3 ? "high" : "auto"}
+                decoding="async"
                 onError={(e) => { e.currentTarget.src = noImage; }}
                 alt={v.modelName}
               />
@@ -570,10 +632,7 @@ export default function Dashboard() {
 
           <div className="form-group">
             <label>Model <span className="required">*</span></label>
-            <select
-              value={modelId}
-              onChange={(e) => setModelId(e.target.value === "" ? "" : Number(e.target.value))}
-            >
+            <select value={modelId} onChange={(e) => setModelId(e.target.value === "" ? "" : Number(e.target.value))}>
               <option value="">Select Model</option>
               {models.map((m) => <option key={m.id} value={m.id}>{m.modelName}</option>)}
             </select>
@@ -581,11 +640,7 @@ export default function Dashboard() {
 
           <div className="form-group">
             <label>Variant <span className="required">*</span></label>
-            <select
-              value={variantId}
-              onChange={(e) => setVariantId(e.target.value === "" ? "" : Number(e.target.value))}
-              disabled={variants.length === 0}
-            >
+            <select value={variantId} onChange={(e) => setVariantId(e.target.value === "" ? "" : Number(e.target.value))} disabled={variants.length === 0}>
               <option value="">Select Variant</option>
               {variants.map((v) => <option key={v.id} value={v.id}>{v.variantName}</option>)}
             </select>
@@ -593,11 +648,7 @@ export default function Dashboard() {
 
           <div className="form-group">
             <label>Colour <span className="required">*</span></label>
-            <select
-              value={colourId}
-              onChange={(e) => setColourId(e.target.value === "" ? "" : Number(e.target.value))}
-              disabled={colours.length === 0}
-            >
+            <select value={colourId} onChange={(e) => setColourId(e.target.value === "" ? "" : Number(e.target.value))} disabled={colours.length === 0}>
               <option value="">Select Colour</option>
               {colours.map((c) => <option key={c.id} value={c.id}>{c.colourName}</option>)}
             </select>
@@ -621,11 +672,7 @@ export default function Dashboard() {
           <div className="form-group form-toggle">
             <label>Stock Available</label>
             <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={stockAvailable}
-                onChange={(e) => setStockAvailable(e.target.checked)}
-              />
+              <input type="checkbox" checked={stockAvailable} onChange={(e) => setStockAvailable(e.target.checked)} />
               <span className="toggle-slider" />
             </label>
           </div>
@@ -637,13 +684,7 @@ export default function Dashboard() {
                 ? <img src={imagePreview} className="image-preview" alt="preview" />
                 : <span className="upload-placeholder">📷 Tap to upload image</span>}
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={handleImageChange}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageChange} />
           </div>
 
           {submitMsg && (

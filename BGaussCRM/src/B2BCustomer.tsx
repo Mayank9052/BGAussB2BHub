@@ -1,10 +1,11 @@
 import "./B2BCustomer.css";
 import logo from "./assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import axios from "axios";
 
 const API = "/api/B2BCustomer";
+const PAGE_SIZE = 10;
 
 export default function B2BCustomer() {
   const navigate = useNavigate();
@@ -16,8 +17,11 @@ export default function B2BCustomer() {
   // ── ref for hidden import file input ─────────────────────────
   const importRef = useRef<HTMLInputElement>(null);
 
-  // ── NEW: live search state ────────────────────────────────────
+  // ── live search state ─────────────────────────────────────────
   const [tableSearch, setTableSearch] = useState("");
+
+  // ── pagination state ──────────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -105,24 +109,30 @@ export default function B2BCustomer() {
     window.open(`${API}/download-template`);
   };
 
-  // ── NEW: filtered customers for enterprise table ──────────────
-  const filteredCustomers = customers.filter((c) => {
+  // ── filtered customers ────────────────────────────────────────
+  const filteredCustomers = useMemo(() => {
     const q = tableSearch.toLowerCase().trim();
-    if (!q) return true;
-    return (
+    if (!q) return customers;
+    return customers.filter((c) =>
       (c.companyName    ?? "").toLowerCase().includes(q) ||
       (c.contactPerson  ?? "").toLowerCase().includes(q) ||
       (c.email          ?? "").toLowerCase().includes(q) ||
       (c.phone          ?? "").toLowerCase().includes(q)
     );
-  });
+  }, [customers, tableSearch]);
+
+  // ── pagination ────────────────────────────────────────────────
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+  const paginated  = filteredCustomers.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
 
   // ── Derived values ────────────────────────────────────────────
   const username = localStorage.getItem("username") ?? "";
   const role     = localStorage.getItem("role")     ?? "";
   const initial  = username.trim().charAt(0).toUpperCase() || "?";
 
-  // Company avatar initial
   const companyInitial = (name: string) =>
     (name ?? "?").trim().charAt(0).toUpperCase();
 
@@ -217,21 +227,17 @@ export default function B2BCustomer() {
       {/* ═══ CONTENT ══════════════════════════════════════════ */}
       <div className="b2b-container">
 
-        {/* ── ENTERPRISE HEADER ROW ── */}
+        {/* ── ENTERPRISE HEADER ROW — CENTERED ── */}
         <div className="b2b-header-row">
           <div className="b2b-header-title">
-            <div className="b2b-header-icon">👥</div>
             <div className="b2b-header-text">
               <h1>B2B Customers</h1>
-              <span className="b2b-header-sub">Manage dealer & enterprise customer records</span>
+              <span className="b2b-header-sub">Manage dealer &amp; enterprise customer records</span>
             </div>
           </div>
           <div className="b2b-stat-chips">
             <div className="b2b-chip chip-total">
               <strong>{customers.length}</strong> Total
-            </div>
-            <div className="b2b-chip chip-active">
-              <strong>{customers.length}</strong> Active
             </div>
           </div>
         </div>
@@ -357,11 +363,46 @@ export default function B2BCustomer() {
         {/* ── ENTERPRISE TABLE ── */}
         <div className="b2b-table-enterprise">
 
-          {/* Toolbar */}
+          {/* Toolbar — search left | pagination CENTER | count right */}
           <div className="b2b-table-toolbar">
+
             <div className="b2b-table-toolbar-title">
               <h3>Customer Records</h3>
               <span className="b2b-table-count">{filteredCustomers.length} records</span>
+            </div>
+
+            {/* ── PAGINATION — top center ── */}
+            <div className="b2b-pagination">
+              {filteredCustomers.length > PAGE_SIZE && (
+                <div className="b2b-pg-btns">
+                  <button
+                    className="b2b-pg"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >‹</button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .reduce<(number | "…")[]>((acc, p, i, arr) => {
+                      if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
+                      acc.push(p); return acc;
+                    }, [])
+                    .map((p, i) =>
+                      p === "…"
+                        ? <span key={`e${i}`} className="b2b-pg-ellipsis">…</span>
+                        : <button
+                            key={p}
+                            className={`b2b-pg${currentPage === p ? " active" : ""}`}
+                            onClick={() => setCurrentPage(p as number)}
+                          >{p}</button>
+                    )}
+
+                  <button
+                    className="b2b-pg"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >›</button>
+                </div>
+              )}
             </div>
 
             {/* Live search */}
@@ -374,9 +415,10 @@ export default function B2BCustomer() {
                 type="text"
                 placeholder="Search customers…"
                 value={tableSearch}
-                onChange={(e) => setTableSearch(e.target.value)}
+                onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
               />
             </div>
+
           </div>
 
           {/* Scrollable table */}
@@ -399,8 +441,9 @@ export default function B2BCustomer() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCustomers.map((c, index) => {
-                    const id = getId(c, index);
+                  {paginated.map((c, index) => {
+                    const globalIndex = (currentPage - 1) * PAGE_SIZE + index;
+                    const id = getId(c, globalIndex);
                     return (
                       <tr key={id}>
 
@@ -442,7 +485,7 @@ export default function B2BCustomer() {
                           <div className="b2b-row-actions">
                             <button
                               className="b2b-edit-btn"
-                              onClick={() => handleEdit(c, index)}
+                              onClick={() => handleEdit(c, globalIndex)}
                             >
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -452,7 +495,7 @@ export default function B2BCustomer() {
                             </button>
                             <button
                               className="b2b-delete-btn"
-                              onClick={() => handleDelete(c, index)}
+                              onClick={() => handleDelete(c, globalIndex)}
                             >
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="3 6 5 6 21 6"/>
@@ -476,7 +519,7 @@ export default function B2BCustomer() {
 
         {/* ── HIDDEN EXISTING ELEMENTS (preserved in DOM, not shown) ── */}
         <div style={{ display: "none" }}>
-          {/* Original form-card kept for reference — replaced by b2b-form-card above */}
+          {/* Original form-card kept for reference */}
           <div className="form-card">
             <input placeholder="Company Name" value={form.companyName || ""} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
             <input placeholder="Contact Person" value={form.contactPerson || ""} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />
