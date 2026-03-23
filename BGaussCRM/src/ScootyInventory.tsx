@@ -1,48 +1,67 @@
 import "./ScootyInventory.css";
+import "./VehicleConfig.css";
 import logo from "./assets/logo.jpg";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 const API = "/api/ScootyInventory";
 
+const PAGE_SIZE = 10;
+
+const guessColourHex = (name: string): string => {
+  const map: Record<string, string> = {
+    red: "#ef4444", blue: "#3b82f6", green: "#22c55e",
+    yellow: "#eab308", orange: "#f97316", purple: "#a855f7",
+    pink: "#ec4899", black: "#1f2937", white: "#f9fafb",
+    grey: "#9ca3af", gray: "#9ca3af", silver: "#cbd5e1",
+    gold: "#f59e0b", brown: "#92400e", cyan: "#06b6d4",
+  };
+  const lower = (name ?? "").toLowerCase();
+  for (const [key, hex] of Object.entries(map)) {
+    if (lower.includes(key)) return hex;
+  }
+  return "#e5e7eb";
+};
+
 export default function ScootyInventory() {
   const navigate = useNavigate();
 
-  const [data, setData] = useState<any[]>([]);
-  const [models, setModels] = useState<any[]>([]);
+  const [data,     setData]     = useState<any[]>([]);
+  const [models,   setModels]   = useState<any[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
-  const [colours, setColours] = useState<any[]>([]);
+  const [colours,  setColours]  = useState<any[]>([]);
 
   const [form, setForm] = useState<any>({
-    modelId: "",
-    variantId: "",
-    colourId: "",
-    price: "",
-    batterySpecs: "",
-    rangeKm: "",
-    stockAvailable: false,
-    image: null
+    modelId: "", variantId: "", colourId: "",
+    price: "", batterySpecs: "", rangeKm: "",
+    stockAvailable: false, image: null,
   });
 
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId,  setEditingId]  = useState<number | null>(null);
+  const [errorMsg,   setErrorMsg]   = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  // ── NEW: ref for hidden import file input ─────────────────────
+  const [tableSearch,  setTableSearch]  = useState("");
+  const [currentPage,  setCurrentPage]  = useState(1);
+  const [imageName,    setImageName]    = useState("");
+
   const importRef = useRef<HTMLInputElement>(null);
-
-  // ── NEW: ref + filename display for image upload inside form ──
   const imageRef  = useRef<HTMLInputElement>(null);
-  const [imageName, setImageName] = useState<string>("");
+  const navigate_ = useNavigate();
 
-  // ── NEW: live table search ────────────────────────────────────
-  const [tableSearch, setTableSearch] = useState("");
+  const username = localStorage.getItem("username") ?? "";
+  const role     = localStorage.getItem("role")     ?? "";
+  const initial  = username.trim().charAt(0).toUpperCase() || "?";
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/", { replace: true });
+  const handleLogout = () => { localStorage.clear(); navigate("/", { replace: true }); };
+
+  const flash = (msg: string, type: "success" | "error" = "success") => {
+    if (type === "success") { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(""), 3000); }
+    else setErrorMsg(msg);
   };
 
-  // ================= FETCH =================
+  // ── FETCH ─────────────────────────────────────────────────
   const fetchData = async () => {
     const res = await axios.get(API);
     setData(res.data);
@@ -59,67 +78,55 @@ export default function ScootyInventory() {
   };
 
   const fetchColours = async (modelId: number, variantId: number) => {
-    const res = await axios.get(
-      `${API}/colours?modelId=${modelId}&variantId=${variantId}`
-    );
+    const res = await axios.get(`${API}/colours?modelId=${modelId}&variantId=${variantId}`);
     setColours(res.data);
   };
 
-  useEffect(() => {
-    fetchData();
-    fetchModels();
-  }, []);
+  useEffect(() => { fetchData(); fetchModels(); }, []);
 
-  // ================= SUBMIT =================
+  // ── SUBMIT ────────────────────────────────────────────────
   const handleSubmit = async () => {
     try {
       if (!form.modelId || !form.variantId || !form.colourId) {
-        alert("Please select Model, Variant and Colour");
-        return;
+        flash("Please select Model, Variant and Colour.", "error"); return;
       }
-
       const exists = data.some(
         (item) =>
-          Number(item.modelId) === Number(form.modelId) &&
+          Number(item.modelId)   === Number(form.modelId)   &&
           Number(item.variantId) === Number(form.variantId) &&
-          Number(item.colourId) === Number(form.colourId) &&
+          Number(item.colourId)  === Number(form.colourId)  &&
           item.scootyId !== editingId
       );
-
-      if (exists) {
-        alert("⚠️ This combination already exists!");
-        return;
-      }
+      if (exists) { flash("⚠️ This combination already exists!", "error"); return; }
 
       const formData = new FormData();
-      formData.append("modelId", String(form.modelId));
+      formData.append("modelId",   String(form.modelId));
       formData.append("variantId", String(form.variantId));
-      formData.append("colourId", String(form.colourId));
-      if (form.price)        formData.append("price", String(Number(form.price)));
+      formData.append("colourId",  String(form.colourId));
+      if (form.price)        formData.append("price",        String(Number(form.price)));
       if (form.batterySpecs) formData.append("batterySpecs", form.batterySpecs);
-      if (form.rangeKm)      formData.append("rangeKm", String(Number(form.rangeKm)));
+      if (form.rangeKm)      formData.append("rangeKm",      String(Number(form.rangeKm)));
       formData.append("stockAvailable", form.stockAvailable ? "true" : "false");
       if (form.image)        formData.append("image", form.image);
 
       if (editingId) {
         await axios.put(`${API}/${editingId}`, formData);
+        flash("Item updated successfully ✓");
       } else {
         await axios.post(`${API}/add-item`, formData);
+        flash("Item added successfully ✓");
       }
 
       setForm({ modelId: "", variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
-      setEditingId(null);
-      setVariants([]);
-      setColours([]);
-      setImageName("");
+      setEditingId(null); setVariants([]); setColours([]); setImageName("");
+      setErrorMsg("");
       fetchData();
     } catch (err: any) {
-      console.error("SAVE ERROR 👉", err.response?.data || err.message);
-      alert(err.response?.data || "Save failed");
+      flash(err.response?.data || "Save failed", "error");
     }
   };
 
-  // ================= EDIT =================
+  // ── EDIT ──────────────────────────────────────────────────
   const handleEdit = (item: any) => {
     const modelId   = Number(item.modelId);
     const variantId = Number(item.variantId);
@@ -127,63 +134,71 @@ export default function ScootyInventory() {
     setEditingId(item.scootyId);
     fetchVariants(modelId);
     fetchColours(modelId, variantId);
+    setErrorMsg(""); setSuccessMsg("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ================= DELETE =================
+  const handleCancelEdit = () => {
+    setForm({ modelId: "", variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
+    setEditingId(null); setVariants([]); setColours([]); setImageName("");
+    setErrorMsg(""); setSuccessMsg("");
+  };
+
+  // ── DELETE ────────────────────────────────────────────────
   const handleDelete = async (id: number) => {
+    if (!window.confirm("Delete this item?")) return;
     try {
-      if (!window.confirm("Delete item?")) return;
       await axios.delete(`${API}/${id}`);
       fetchData();
+      flash("Item deleted");
     } catch (err: any) {
-      console.error("DELETE ERROR 👉", err.response?.data || err.message);
-      alert(err.response?.data || "Delete failed");
+      flash(err.response?.data || "Delete failed", "error");
     }
   };
 
-  // ================= IMPORT =================
+  // ── IMPORT / EXPORT ───────────────────────────────────────
   const handleImport = async (e: any) => {
-    const file = e.target.files[0];
-    const fd = new FormData();
-    fd.append("file", file);
-    await axios.post(`${API}/import`, fd);
-    fetchData();
+    const file = e.target.files[0]; if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    try { await axios.post(`${API}/import`, fd); fetchData(); flash("Import successful ✓"); }
+    catch { flash("Import failed", "error"); }
+    e.target.value = "";
   };
 
-  const downloadTemplate = () => {
-    window.open(`${API}/download-template`);
-  };
+  const downloadTemplate = () => window.open(`${API}/download-template`);
 
-  // ── Derived ──────────────────────────────────────────────────
-  const username = localStorage.getItem("username") ?? "";
-  const role     = localStorage.getItem("role")     ?? "";
-  const initial  = username.trim().charAt(0).toUpperCase() || "?";
-
+  // ── DERIVED ───────────────────────────────────────────────
   const stockCount   = data.filter((d) => d.stockAvailable).length;
   const noStockCount = data.length - stockCount;
 
-  const filteredData = data.filter((d) => {
+  const filteredData = useMemo(() => {
     const q = tableSearch.toLowerCase().trim();
-    if (!q) return true;
-    return (
+    if (!q) return data;
+    return data.filter((d) =>
       (d.modelName   ?? "").toLowerCase().includes(q) ||
       (d.variantName ?? "").toLowerCase().includes(q) ||
       (d.colourName  ?? "").toLowerCase().includes(q) ||
-      String(d.price   ?? "").includes(q) ||
+      String(d.price   ?? "").includes(q)             ||
       String(d.rangeKm ?? "").includes(q)
     );
-  });
+  }, [data, tableSearch]);
 
-  const modelInitial = (name: string) =>
-    (name ?? "?").trim().charAt(0).toUpperCase();
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / PAGE_SIZE));
+  const paginated  = filteredData.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const modelInitial = (name: string) => (name ?? "?").trim().charAt(0).toUpperCase();
+
+  // ── RENDER ────────────────────────────────────────────────
   return (
-    <div className="inv-page">
+    <div className="scr-page">
 
-      {/* ═══ NAVBAR ═══════════════════════════════════════════ */}
+      {/* CYAN TOP BAR */}
+      <div className="scr-topbar" />
+
+      {/* NAVBAR */}
       <header className="pro-navbar">
         <div className="pro-left">
-          <img src={logo} className="pro-logo" />
+          <img src={logo} className="pro-logo" alt="BGauss" />
           <div className="pro-text">
             <span className="pro-brand">BGauss Portal</span>
             <span className="pro-page">Scooty Inventory</span>
@@ -191,28 +206,24 @@ export default function ScootyInventory() {
         </div>
 
         <div className="pro-right">
-
-          {/* EXISTING — hidden via CSS */}
-          <span className="user-name">
-            Welcome, {username} ({role})
-          </span>
-          <button onClick={() => navigate("/modules")} className="module-btn">Modules</button>
+          {/* legacy hidden */}
+          <span className="user-name">Welcome, {username} ({role})</span>
+          <button onClick={() => navigate("/modules")}  className="module-btn">Modules</button>
           <button onClick={() => navigate("/dashboard")} className="module-btn">Dashboard</button>
           <button onClick={handleLogout} className="logout-btn">Logout</button>
 
-          {/* ── USERNAME PILL ── */}
-          <div className="inv-user-info">
-            <div className="inv-user-avatar">{initial}</div>
-            <div className="inv-user-text">
-              <span className="inv-user-name">{username}</span>
-              <span className="inv-user-role">{role}</span>
+          {/* User pill */}
+          <div className="vc-user-info">
+            <div className="vc-user-avatar">{initial}</div>
+            <div className="vc-user-text">
+              <span className="vc-user-name">{username}</span>
+              <span className="vc-user-role">{role}</span>
             </div>
           </div>
 
-          {/* ── NAV ICON BUTTONS ── */}
-          <div className="inv-icon-group">
-
-            <button className="inv-icon-btn btn-inv-modules" data-tip="Modules" aria-label="Modules" onClick={() => navigate("/modules")}>
+          {/* Icon buttons */}
+          <div className="vc-icon-group">
+            <button className="vc-icon-btn btn-vc-modules" data-tip="Modules" onClick={() => navigate("/modules")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="7" height="7" rx="1"/>
                 <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -220,380 +231,342 @@ export default function ScootyInventory() {
                 <rect x="14" y="14" width="7" height="7" rx="1"/>
               </svg>
             </button>
-
-            <button className="inv-icon-btn btn-inv-dashboard" data-tip="Dashboard" aria-label="Dashboard" onClick={() => navigate("/dashboard")}>
+            <button className="vc-icon-btn btn-vc-dashboard" data-tip="Dashboard" onClick={() => navigate("/dashboard")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12L12 3l9 9"/>
-                <path d="M9 21V12h6v9"/>
+                <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
               </svg>
             </button>
-
-            <button className="inv-icon-btn btn-inv-logout" data-tip="Logout" aria-label="Logout" onClick={handleLogout}>
+            <button className="vc-icon-btn btn-vc-logout" data-tip="Logout" onClick={handleLogout}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
             </button>
-
           </div>
-
         </div>
       </header>
 
-      {/* ═══ CONTENT ══════════════════════════════════════════ */}
-      <div className="inv-container">
+      {/* PAGE */}
+      <div className="scr-container">
 
-        {/* ── COMPACT PAGE HEADER ── */}
-        <div className="inv-header-row">
-          <div className="inv-header-title">
-            <div className="inv-header-icon">📦</div>
-            <div className="inv-header-text">
-              <h1>Scooty Inventory</h1>
-              <span className="inv-header-sub">Manage stock, variants & availability</span>
-            </div>
+        {/* Alerts */}
+        {successMsg && <div className="scr-alert scr-alert-success">✅ {successMsg}</div>}
+        {errorMsg   && (
+          <div className="scr-alert scr-alert-error">
+            ⚠️ {errorMsg}
+            <button className="scr-alert-close" onClick={() => setErrorMsg("")}>×</button>
           </div>
-          <div className="inv-stat-chips">
-            <div className="inv-chip chip-total">
-              <strong>{data.length}</strong> Total
-            </div>
-            <div className="inv-chip chip-stock">
-              <strong>{stockCount}</strong> In Stock
-            </div>
-            <div className="inv-chip chip-nostock">
-              <strong>{noStockCount}</strong> Out of Stock
-            </div>
+        )}
+
+        {/* ══ SECTION 1 — BANNER ══ */}
+        <div className="scr-banner">
+          <div className="scr-banner-text">
+            <h1>Scooty Inventory</h1>
+            <p>Manage stock, variants &amp; availability</p>
           </div>
         </div>
 
-        {/* ── ENTERPRISE SECTION GRID ── */}
-        <div className="section-grid">
+        {/* ══ SECTION 2 — FORM + BULK ══ */}
+        <div className="scr-top-grid">
 
-          {/* FORM CARD */}
-          <div className="inv-form-card">
-            <div className="inv-form-card-header">
-              <div className="inv-form-card-header-icon">
-                {editingId ? "✏️" : "➕"}
+          {/* LEFT: Form Card */}
+          <div className="scr-left-col">
+            <div className="scr-form-card">
+
+              {/* compact centered header */}
+              <div className="scr-form-header">
+                <div className="scr-form-icon">
+                  <svg viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {editingId
+                      ? <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>
+                      : <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>
+                    }
+                  </svg>
+                </div>
+                <h2>{editingId ? "Edit Inventory Item" : "Add New Item"}</h2>
+                <p>{editingId ? `Editing item ID #${editingId}` : "Fill in the details to add a new inventory item"}</p>
               </div>
-              <h3>{editingId ? "Edit Inventory Item" : "Add New Item"}</h3>
-              <p>{editingId ? "Update the item details below" : "Fill in the details to add a new inventory item"}</p>
-            </div>
 
-            <div className="inv-form-body">
-              {/* EXISTING form-card grid — unchanged */}
-              <div className="form-card">
+              <div className="scr-form-body">
 
-                <select value={form.modelId} onChange={(e) => {
-                  const modelId = Number(e.target.value);
-                  setForm({ modelId, variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
-                  fetchVariants(modelId);
-                  setColours([]);
-                }}>
-                  <option value="">Model</option>
-                  {models.map((m) => (
-                    <option key={m.id} value={m.id}>{m.modelName}</option>
-                  ))}
-                </select>
+                {/* Row 1: Model | Variant | Colour */}
+                <div className="scr-row-3">
+                  <div className="scr-field">
+                    <label className="scr-label">Model</label>
+                    <div className="scr-select-wrap">
+                      <select className="scr-select" value={form.modelId} onChange={(e) => {
+                        const modelId = Number(e.target.value);
+                        setForm({ modelId, variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
+                        fetchVariants(modelId); setColours([]);
+                      }}>
+                        <option value="">Select Model</option>
+                        {models.map((m) => <option key={m.id} value={m.id}>{m.modelName}</option>)}
+                      </select>
+                    </div>
+                  </div>
 
-                <select value={form.variantId} onChange={(e) => {
-                  const variantId = Number(e.target.value);
-                  const modelId   = Number(form.modelId);
-                  setForm((prev: any) => ({ ...prev, variantId, colourId: "" }));
-                  fetchColours(modelId, variantId);
-                }}>
-                  <option value="">Variant</option>
-                  {variants.map((v) => (
-                    <option key={v.id} value={v.id}>{v.variantName}</option>
-                  ))}
-                </select>
+                  <div className="scr-field">
+                    <label className="scr-label">Variant</label>
+                    <div className="scr-select-wrap">
+                      <select className="scr-select" value={form.variantId} onChange={(e) => {
+                        const variantId = Number(e.target.value);
+                        setForm((prev: any) => ({ ...prev, variantId, colourId: "" }));
+                        fetchColours(Number(form.modelId), variantId);
+                      }} disabled={variants.length === 0}>
+                        <option value="">Select Variant</option>
+                        {variants.map((v) => <option key={v.id} value={v.id}>{v.variantName}</option>)}
+                      </select>
+                    </div>
+                  </div>
 
-                <select value={form.colourId} onChange={(e) =>
-                  setForm({ ...form, colourId: Number(e.target.value) })
-                }>
-                  <option value="">Colour</option>
-                  {colours.map((c) => (
-                    <option key={c.id} value={c.id}>{c.colourName}</option>
-                  ))}
-                </select>
-
-                <input placeholder="Price" value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })} />
-
-                <input placeholder="Battery" value={form.batterySpecs}
-                  onChange={(e) => setForm({ ...form, batterySpecs: e.target.value })} />
-
-                <input placeholder="Range KM" value={form.rangeKm}
-                  onChange={(e) => setForm({ ...form, rangeKm: e.target.value })} />
-
-                {/* Hidden image file input */}
-                <input
-                  ref={imageRef}
-                  type="file"
-                  accept="image/*"
-                  className="inv-file-hidden"
-                  onChange={(e: any) => {
-                    const file = e.target.files[0];
-                    setForm({ ...form, image: file });
-                    setImageName(file ? file.name : "");
-                  }}
-                />
-
-                {/* Styled image upload button */}
-                <div style={{ display: "flex", flexDirection: "column" }}>
-                  <button
-                    type="button"
-                    className="inv-image-upload-btn"
-                    onClick={() => imageRef.current?.click()}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    {imageName ? "Change Image" : "Upload Image"}
-                  </button>
-                  {imageName && (
-                    <span className="inv-image-filename">📎 {imageName}</span>
-                  )}
+                  <div className="scr-field">
+                    <label className="scr-label">Colour</label>
+                    <div className="scr-select-wrap">
+                      <select className="scr-select" value={form.colourId} onChange={(e) => setForm({ ...form, colourId: Number(e.target.value) })} disabled={colours.length === 0}>
+                        <option value="">Select Colour</option>
+                        {colours.map((c) => <option key={c.id} value={c.id}>{c.colourName}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <label>
-                  <input type="checkbox" checked={form.stockAvailable}
-                    onChange={(e) => setForm({ ...form, stockAvailable: e.target.checked })} />
-                  In Stock
-                </label>
+                {/* Row 2: Price | Battery | Range KM */}
+                <div className="scr-row-3b">
+                  <div className="scr-field">
+                    <label className="scr-label">Price (₹)</label>
+                    <input className="scr-input" placeholder="e.g. 120000" value={form.price}
+                      onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                  </div>
+                  <div className="scr-field">
+                    <label className="scr-label">Battery</label>
+                    <input className="scr-input" placeholder="e.g. 3.0 kWh" value={form.batterySpecs}
+                      onChange={(e) => setForm({ ...form, batterySpecs: e.target.value })} />
+                  </div>
+                  <div className="scr-field">
+                    <label className="scr-label">Range (km)</label>
+                    <input className="scr-input" placeholder="e.g. 120" value={form.rangeKm}
+                      onChange={(e) => setForm({ ...form, rangeKm: e.target.value })} />
+                  </div>
+                </div>
 
-                <button className="add-btn" onClick={handleSubmit}>
-                  {editingId ? "Update" : "Add"}
-                </button>
+                {/* Row 3: Image upload | In Stock | Save/Cancel */}
+                <div className="scr-row-bottom">
+                  <div className="scr-field">
+                    <label className="scr-label">Image</label>
+                    <input ref={imageRef} type="file" accept="image/*" style={{ display: "none" }}
+                      onChange={(e: any) => {
+                        const file = e.target.files[0];
+                        setForm({ ...form, image: file });
+                        setImageName(file ? file.name : "");
+                      }}
+                    />
+                    <button type="button" className="scr-img-btn" onClick={() => imageRef.current?.click()}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 14, height: 14 }}>
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                      {imageName ? "Change" : "Upload Image"}
+                    </button>
+                    {imageName && <span className="scr-img-name">📎 {imageName}</span>}
+                  </div>
+
+                  <div className="scr-field" style={{ justifyContent: "flex-end" }}>
+                    <label className="scr-label">&nbsp;</label>
+                    <label className="scr-checkbox-wrap">
+                      <input type="checkbox" checked={form.stockAvailable}
+                        onChange={(e) => setForm({ ...form, stockAvailable: e.target.checked })} />
+                      In Stock
+                    </label>
+                  </div>
+
+                  <div className="scr-field" style={{ justifyContent: "flex-end" }}>
+                    <label className="scr-label">&nbsp;</label>
+                    <div className="scr-form-btns">
+                      <button className="scr-btn-save" onClick={handleSubmit}>
+                        {editingId ? "Update" : "Add"}
+                      </button>
+                      {editingId && (
+                        <button className="scr-btn-cancel" onClick={handleCancelEdit}>Cancel</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
               </div>
             </div>
           </div>
 
-          {/* ACTION CARD */}
-          <div className="inv-action-card">
-            <div className="inv-action-card-header">
-              <div className="inv-action-card-header-icon">📊</div>
-              <h3>Bulk Operations</h3>
-              <p>Import & export inventory data</p>
-            </div>
-
-            <div className="inv-action-body">
-
-              <div className="inv-action-item">
-                <span className="inv-action-item-label">Download Template</span>
-                <span className="inv-action-item-sub">Get the Excel import template with correct columns</span>
-                <button className="inv-download-btn" onClick={downloadTemplate}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
+          {/* RIGHT: Bulk Operations */}
+          <div className="scr-bulk-card">
+            <div className="scr-bulk-body">
+              <div className="scr-bulk-section">
+                <div className="scr-bulk-section-info">
+                  <span className="scr-bulk-label">DOWNLOAD TEMPLATE</span>
+                  <span className="scr-bulk-desc">Get the Excel import template with correct columns</span>
+                </div>
+                <button className="scr-btn-dl" onClick={downloadTemplate}>
+                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Download Excel
                 </button>
               </div>
 
-              <div className="inv-action-item">
-                <span className="inv-action-item-label">Import Items</span>
-                <span className="inv-action-item-sub">Upload a filled Excel file to bulk-import inventory</span>
+              <hr className="scr-bulk-hr" />
 
-                {/* Hidden native input */}
-                <input
-                  ref={importRef}
-                  type="file"
-                  className="inv-file-hidden"
-                  onChange={handleImport}
-                />
-
-                {/* Styled button — matches Download Excel */}
-                <button
-                  className="inv-upload-btn"
-                  onClick={() => importRef.current?.click()}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 5 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
+              <div className="scr-bulk-section">
+                <div className="scr-bulk-section-info">
+                  <span className="scr-bulk-label">IMPORT ITEMS</span>
+                  <span className="scr-bulk-desc">Upload a filled Excel file to bulk-import inventory</span>
+                </div>
+                <button className="scr-btn-imp" onClick={() => importRef.current?.click()}>
+                  <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   Import Excel
                 </button>
+                <input ref={importRef} type="file" style={{ display: "none" }} onChange={handleImport} />
               </div>
-
             </div>
           </div>
 
         </div>
+        {/* END SECTION 2 */}
 
-        {/* ── ENTERPRISE TABLE ── */}
-        <div className="inv-table-enterprise">
+        {/* ══ SECTION 3 — INVENTORY TABLE ══ */}
+        <div className="scr-table-card">
 
-          {/* Toolbar */}
-          <div className="inv-table-toolbar">
-            <div className="inv-table-toolbar-title">
-              <h3>Inventory Records</h3>
-              <span className="inv-table-count">{filteredData.length} items</span>
+          {/* Table header — title left | pagination center | search right */}
+          <div className="scr-table-header">
+            <div className="scr-table-title">
+              <div className="scr-table-title-icon">📋</div>
+              <div>
+                <h2>Inventory Records</h2>
+                <p>All scooty inventory items</p>
+              </div>
             </div>
-            <div className="inv-table-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search model, variant, colour…"
-                value={tableSearch}
-                onChange={(e) => setTableSearch(e.target.value)}
-              />
+
+            {/* Pagination — centered */}
+            <div className="scr-header-pagination">
+              {filteredData.length > PAGE_SIZE && (
+                <div className="scr-pg-btns">
+                  <button className="scr-pg" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>‹</button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .reduce<(number | "…")[]>((acc, p, i, arr) => {
+                      if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
+                      acc.push(p); return acc;
+                    }, [])
+                    .map((p, i) =>
+                      p === "…"
+                        ? <span key={`e${i}`} className="scr-pg-ellipsis">…</span>
+                        : <button key={p} className={`scr-pg${currentPage === p ? " active" : ""}`} onClick={() => setCurrentPage(p as number)}>{p}</button>
+                    )}
+                  <button className="scr-pg" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>›</button>
+                </div>
+              )}
+            </div>
+
+            <div className="scr-table-controls">
+              <div className="scr-search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input
+                  type="text"
+                  className="scr-search"
+                  placeholder="Search model, variant, colour..."
+                  value={tableSearch}
+                  onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
+                />
+              </div>
+              <span className="scr-count-pill">{filteredData.length} items</span>
             </div>
           </div>
 
-          {/* Scrollable table */}
-          <div className="inv-table-scroll">
-            {filteredData.length === 0 ? (
-              <div className="inv-empty-state">
-                <div className="inv-empty-icon">📦</div>
-                <p>{tableSearch ? `No items match "${tableSearch}"` : "No inventory items added yet"}</p>
-              </div>
-            ) : (
-              <table className="inv-enterprise-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Model</th>
-                    <th>Variant</th>
-                    <th>Colour</th>
-                    <th>Price (₹)</th>
-                    <th>Range (km)</th>
-                    <th>Stock</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredData.map((d) => (
-                    <tr key={d.scootyId}>
-
-                      <td><span className="inv-id-cell">{d.scootyId}</span></td>
-
+          {/* Table */}
+          <div className="scr-table-scroll">
+            <table className="scr-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Model</th>
+                  <th>Variant</th>
+                  <th>Colour</th>
+                  <th>Price (₹)</th>
+                  <th>Range</th>
+                  <th>Stock</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.length > 0 ? (
+                  paginated.map((d, idx) => (
+                    <tr key={d.scootyId} className={editingId === d.scootyId ? "scr-row-editing" : ""}>
+                      <td><span className="scr-id-badge">{(currentPage - 1) * PAGE_SIZE + idx + 1}</span></td>
                       <td>
-                        <div className="inv-model-cell">
-                          <div className="inv-model-avatar">{modelInitial(d.modelName)}</div>
-                          <span className="inv-model-name">{d.modelName}</span>
+                        <div className="scr-model-cell">
+                          <div className="scr-model-avatar">{modelInitial(d.modelName)}</div>
+                          <span className="scr-model-name">{d.modelName}</span>
                         </div>
                       </td>
-
-                      <td>{d.variantName}</td>
-                      <td>{d.colourName}</td>
-
+                      <td><span className="scr-variant-badge">{d.variantName}</span></td>
                       <td>
-                        <span className="inv-price-cell">
+                        <span className="scr-colour-swatch">
+                          <span className="scr-colour-dot" style={{ background: guessColourHex(d.colourName) }} />
+                          {d.colourName}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="scr-price">
                           {d.price != null ? `₹ ${Number(d.price).toLocaleString("en-IN")}` : "—"}
                         </span>
                       </td>
-
                       <td>{d.rangeKm != null ? `${d.rangeKm} km` : "—"}</td>
-
                       <td>
-                        <span className={`inv-stock-badge ${d.stockAvailable ? "in" : "out"}`}>
+                        <span className={`scr-stock-pill ${d.stockAvailable ? "scr-stock-in" : "scr-stock-out"}`}>
                           {d.stockAvailable ? "In Stock" : "Out of Stock"}
                         </span>
                       </td>
-
                       <td>
-                        <div className="inv-row-actions">
-                          <button className="inv-edit-btn" onClick={() => handleEdit(d)}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <div className="scr-row-acts">
+                          <button className="scr-act-btn scr-act-edit" onClick={() => handleEdit(d)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                             </svg>
                             Edit
                           </button>
-                          <button className="inv-delete-btn" onClick={() => handleDelete(d.scootyId)}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <button className="scr-act-btn scr-act-del" onClick={() => handleDelete(d.scootyId)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="3 6 5 6 21 6"/>
                               <path d="M19 6l-1 14H6L5 6"/>
-                              <path d="M10 11v6M14 11v6"/>
-                              <path d="M9 6V4h6v2"/>
+                              <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
                             </svg>
                             Delete
                           </button>
                         </div>
                       </td>
-
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        {/* ── HIDDEN: EXISTING elements kept in DOM ── */}
-        <div style={{ display: "none" }}>
-
-          {/* Original section-grid */}
-          <div className="section-grid">
-            <div className="form-wrapper">
-              <div className="form-card">
-                <select value={form.modelId} onChange={(e) => {
-                  const modelId = Number(e.target.value);
-                  setForm({ modelId, variantId: "", colourId: "", price: "", batterySpecs: "", rangeKm: "", stockAvailable: false, image: null });
-                  fetchVariants(modelId); setColours([]);
-                }}>
-                  <option value="">Model</option>
-                  {models.map((m) => <option key={m.id} value={m.id}>{m.modelName}</option>)}
-                </select>
-                <select value={form.variantId} onChange={(e) => {
-                  const variantId = Number(e.target.value);
-                  setForm((prev: any) => ({ ...prev, variantId, colourId: "" }));
-                  fetchColours(Number(form.modelId), variantId);
-                }}>
-                  <option value="">Variant</option>
-                  {variants.map((v) => <option key={v.id} value={v.id}>{v.variantName}</option>)}
-                </select>
-                <select value={form.colourId} onChange={(e) => setForm({ ...form, colourId: Number(e.target.value) })}>
-                  <option value="">Colour</option>
-                  {colours.map((c) => <option key={c.id} value={c.id}>{c.colourName}</option>)}
-                </select>
-                <input placeholder="Price" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-                <input placeholder="Battery" value={form.batterySpecs} onChange={(e) => setForm({ ...form, batterySpecs: e.target.value })} />
-                <input placeholder="Range KM" value={form.rangeKm} onChange={(e) => setForm({ ...form, rangeKm: e.target.value })} />
-                <input type="file" onChange={(e: any) => setForm({ ...form, image: e.target.files[0] })} />
-                <label><input type="checkbox" checked={form.stockAvailable} onChange={(e) => setForm({ ...form, stockAvailable: e.target.checked })} /> In Stock</label>
-                <button className="add-btn" onClick={handleSubmit}>{editingId ? "Update" : "Add"}</button>
-              </div>
-            </div>
-            <div className="actions-wrapper">
-              <div className="actions">
-                <button className="action-btn" onClick={downloadTemplate}>Download Template</button>
-                <input type="file" onChange={handleImport} />
-              </div>
-            </div>
-          </div>
-
-          {/* Original table */}
-          <div className="table">
-            <table>
-              <thead>
-                <tr><th>ID</th><th>Model</th><th>Variant</th><th>Colour</th><th>Price</th><th>Range</th><th>Stock</th><th>Action</th></tr>
-              </thead>
-              <tbody>
-                {data.map((d) => (
-                  <tr key={d.scootyId}>
-                    <td>{d.scootyId}</td><td>{d.modelName}</td><td>{d.variantName}</td>
-                    <td>{d.colourName}</td><td>{d.price}</td><td>{d.rangeKm}</td>
-                    <td>{d.stockAvailable ? "Yes" : "No"}</td>
-                    <td>
-                      <button onClick={() => handleEdit(d)}>Edit</button>
-                      <button onClick={() => handleDelete(d.scootyId)}>Delete</button>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8}>
+                      <div className="scr-empty">
+                        <div className="scr-empty-icon">📦</div>
+                        <div className="scr-empty-title">
+                          {tableSearch ? `No items match "${tableSearch}"` : "No inventory items added yet"}
+                        </div>
+                        <div className="scr-empty-sub">
+                          {tableSearch ? "Try a different search keyword." : "Add your first item using the form above."}
+                        </div>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
 
         </div>
+        {/* END SECTION 3 */}
 
       </div>
     </div>
