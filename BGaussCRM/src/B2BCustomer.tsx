@@ -7,564 +7,569 @@ import axios from "axios";
 const API = "/api/B2BCustomer";
 const PAGE_SIZE = 10;
 
+// ── TYPES ──────────────────────────────────────────────────
+interface Customer {
+  id?: number;
+  Id?: number;
+  customerId?: number;
+  companyName: string;
+  contactPerson: string;
+  address?: string;
+  email: string;
+  phone: string;
+  gstnumber: string;
+}
+
+interface FormState {
+  companyName: string;
+  contactPerson: string;
+  address: string;
+  email: string;
+  phone: string;
+  gstnumber: string;
+}
+
+const emptyForm: FormState = {
+  companyName: "", contactPerson: "", address: "",
+  email: "", phone: "", gstnumber: "",
+};
+
+// ── PAGINATION HELPER ──────────────────────────────────────
+interface PaginationBarProps {
+  currentPage: number;
+  totalPages: number;
+  totalRecords: number;
+  pageSize: number;
+  onPage: (p: number) => void;
+}
+
+function PaginationBar({ currentPage, totalPages, totalRecords, pageSize, onPage }: PaginationBarProps) {
+  if (totalRecords <= pageSize) return null;
+
+  const from = (currentPage - 1) * pageSize + 1;
+  const to   = Math.min(currentPage * pageSize, totalRecords);
+
+  // Build page number list with ellipsis
+  const pages: (number | "…")[] = [];
+  for (let p = 1; p <= totalPages; p++) {
+    if (
+      p === 1 ||
+      p === totalPages ||
+      (p >= currentPage - 1 && p <= currentPage + 1)
+    ) {
+      if (pages.length > 0 && typeof pages[pages.length - 1] === "number" && (pages[pages.length - 1] as number) < p - 1) {
+        pages.push("…");
+      }
+      pages.push(p);
+    }
+  }
+
+  return (
+    <div className="b2b-pg-bar">
+      <span className="b2b-pg-info">
+        Showing <strong>{from}–{to}</strong> of <strong>{totalRecords}</strong> records
+      </span>
+      <div className="b2b-pg-btns">
+        <button
+          className="b2b-pg"
+          onClick={() => onPage(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+        >‹</button>
+
+        {pages.map((p, i) =>
+          p === "…"
+            ? <span key={`e${i}`} className="b2b-pg-ellipsis">…</span>
+            : <button
+                key={p}
+                className={`b2b-pg${currentPage === p ? " active" : ""}`}
+                onClick={() => onPage(p as number)}
+              >{p}</button>
+        )}
+
+        <button
+          className="b2b-pg"
+          onClick={() => onPage(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+        >›</button>
+      </div>
+    </div>
+  );
+}
+
+// ── MAIN COMPONENT ─────────────────────────────────────────
 export default function B2BCustomer() {
   const navigate = useNavigate();
 
-  const [customers, setCustomers] = useState<any[]>([]);
-  const [form, setForm] = useState<any>({});
-  const [editingId, setEditingId] = useState<number | null>(null);
-
-  // ── ref for hidden import file input ─────────────────────────
-  const importRef = useRef<HTMLInputElement>(null);
-
-  // ── live search state ─────────────────────────────────────────
+  const [customers,   setCustomers]   = useState<Customer[]>([]);
+  const [form,        setForm]        = useState<FormState>(emptyForm);
+  const [editingId,   setEditingId]   = useState<number | null>(null);
   const [tableSearch, setTableSearch] = useState("");
-
-  // ── pagination state ──────────────────────────────────────────
   const [currentPage, setCurrentPage] = useState(1);
+  const [successMsg,  setSuccessMsg]  = useState("");
+  const [errorMsg,    setErrorMsg]    = useState("");
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate("/", { replace: true });
-  };
-
-  const getId = (c: any, index?: number) => {
-    return c.id ?? c.Id ?? c.customerId ?? index;
-  };
-
-  const fetchCustomers = async () => {
-    try {
-      const res = await axios.get(API);
-      setCustomers(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // ── FIX: refreshKey replaces useCallback fetchCustomers ──
+  // Every "void fetchCustomers()" is now replaced by triggerRefresh().
+  // The fetch lives entirely inside useEffect — no setState called
+  // synchronously in the effect body (it's called from a .then callback),
+  // which satisfies the react-hooks/set-state-in-effect rule.
+  const [refreshKey, setRefreshKey] = useState(0);
+  const triggerRefresh = () => setRefreshKey((k) => k + 1);
 
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    let cancelled = false;
+    axios
+      .get<Customer[]>(API)
+      .then((res) => { if (!cancelled) setCustomers(res.data); })
+      .catch(() => { /* silent */ });
+    return () => { cancelled = true; };
+  }, [refreshKey]); // re-runs whenever triggerRefresh() is called
 
-  const handleSubmit = async () => {
-    if (!form.companyName) {
-      alert("Company Name required");
-      return;
-    }
+  const importRef = useRef<HTMLInputElement>(null);
 
-    const query = new URLSearchParams({
-      companyName: form.companyName || "",
-      contactPerson: form.contactPerson || "",
-      address: form.address || "",
-      email: form.email || "",
-      phone: form.phone || "",
-      gstnumber: form.gstnumber || "",
-    }).toString();
-
-    if (editingId !== null) {
-      await axios.put(`${API}/${editingId}?${query}`);
-    } else {
-      await axios.post(`${API}/create?${query}`);
-    }
-
-    setForm({});
-    setEditingId(null);
-    fetchCustomers();
-  };
-
-  const handleDelete = async (c: any, index: number) => {
-    const id = getId(c, index);
-    if (!window.confirm("Delete this customer?")) return;
-    await axios.delete(`${API}/${id}`);
-    fetchCustomers();
-  };
-
-  const handleEdit = (c: any, index: number) => {
-    const id = getId(c, index);
-    setForm({
-      companyName: c.companyName,
-      contactPerson: c.contactPerson,
-      address: c.address,
-      email: c.email,
-      phone: c.phone,
-      gstnumber: c.gstnumber,
-    });
-    setEditingId(id);
-  };
-
-  const handleCancel = () => {
-    setForm({});
-    setEditingId(null);
-  };
-
-  const handleImport = async (e: any) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const data = new FormData();
-    data.append("file", file);
-    await axios.post(`${API}/import`, data);
-    fetchCustomers();
-  };
-
-  const downloadTemplate = () => {
-    window.open(`${API}/download-template`);
-  };
-
-  // ── filtered customers ────────────────────────────────────────
-  const filteredCustomers = useMemo(() => {
-    const q = tableSearch.toLowerCase().trim();
-    if (!q) return customers;
-    return customers.filter((c) =>
-      (c.companyName    ?? "").toLowerCase().includes(q) ||
-      (c.contactPerson  ?? "").toLowerCase().includes(q) ||
-      (c.email          ?? "").toLowerCase().includes(q) ||
-      (c.phone          ?? "").toLowerCase().includes(q)
-    );
-  }, [customers, tableSearch]);
-
-  // ── pagination ────────────────────────────────────────────────
-  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
-  const paginated  = filteredCustomers.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
-  // ── Derived values ────────────────────────────────────────────
   const username = localStorage.getItem("username") ?? "";
   const role     = localStorage.getItem("role")     ?? "";
   const initial  = username.trim().charAt(0).toUpperCase() || "?";
 
-  const companyInitial = (name: string) =>
-    (name ?? "?").trim().charAt(0).toUpperCase();
+  const handleLogout = () => { localStorage.clear(); navigate("/", { replace: true }); };
 
+  const flash = (msg: string, type: "success" | "error" = "success") => {
+    if (type === "success") {
+      setSuccessMsg(msg); setTimeout(() => setSuccessMsg(""), 3000);
+    } else {
+      setErrorMsg(msg);
+    }
+  };
+
+  const getId = (c: Customer) => c.id ?? c.Id ?? c.customerId ?? 0;
+
+  // ── SUBMIT ────────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (!form.companyName.trim()) {
+      flash("Company Name is required.", "error"); return;
+    }
+    const query = new URLSearchParams({
+      companyName:   form.companyName,
+      contactPerson: form.contactPerson,
+      address:       form.address,
+      email:         form.email,
+      phone:         form.phone,
+      gstnumber:     form.gstnumber,
+    }).toString();
+
+    try {
+      if (editingId !== null) {
+        await axios.put(`${API}/${editingId}?${query}`);
+        flash("Customer updated successfully ✓");
+      } else {
+        await axios.post(`${API}/create?${query}`);
+        flash("Customer added successfully ✓");
+      }
+      setForm(emptyForm);
+      setEditingId(null);
+      setErrorMsg("");
+      triggerRefresh(); // ← was: void fetchCustomers()
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: string } };
+      flash(e.response?.data || "Save failed", "error");
+    }
+  };
+
+  // ── EDIT ──────────────────────────────────────────────────
+  const handleEdit = (c: Customer) => {
+    setForm({
+      companyName:   c.companyName   ?? "",
+      contactPerson: c.contactPerson ?? "",
+      address:       c.address       ?? "",
+      email:         c.email         ?? "",
+      phone:         c.phone         ?? "",
+      gstnumber:     c.gstnumber     ?? "",
+    });
+    setEditingId(getId(c));
+    setErrorMsg(""); setSuccessMsg("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleCancelEdit = () => {
+    setForm(emptyForm); setEditingId(null);
+    setErrorMsg(""); setSuccessMsg("");
+  };
+
+  // ── DELETE ────────────────────────────────────────────────
+  const handleDelete = async (c: Customer) => {
+    if (!window.confirm("Delete this customer?")) return;
+    try {
+      await axios.delete(`${API}/${getId(c)}`);
+      triggerRefresh(); // ← was: void fetchCustomers()
+      flash("Customer deleted");
+    } catch {
+      flash("Delete failed", "error");
+    }
+  };
+
+  // ── IMPORT / EXPORT ───────────────────────────────────────
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    try {
+      await axios.post(`${API}/import`, fd);
+      triggerRefresh(); // ← was: void fetchCustomers()
+      flash("Import successful ✓");
+    } catch { flash("Import failed", "error"); }
+    e.target.value = "";
+  };
+
+  const downloadTemplate = () => window.open(`${API}/download-template`);
+
+  // ── DERIVED ───────────────────────────────────────────────
+  const filteredCustomers = useMemo(() => {
+    const q = tableSearch.toLowerCase().trim();
+    if (!q) return customers;
+    return customers.filter((c) =>
+      (c.companyName   ?? "").toLowerCase().includes(q) ||
+      (c.contactPerson ?? "").toLowerCase().includes(q) ||
+      (c.email         ?? "").toLowerCase().includes(q) ||
+      (c.phone         ?? "").toLowerCase().includes(q) ||
+      (c.gstnumber     ?? "").toLowerCase().includes(q)
+    );
+  }, [customers, tableSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+  const paginated  = filteredCustomers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  const companyInitial = (name: string) => (name ?? "?").trim().charAt(0).toUpperCase();
+
+  // ── RENDER ────────────────────────────────────────────────
   return (
     <div className="b2b-page">
 
-      {/* ═══ NAVBAR ═══════════════════════════════════════════ */}
+      {/* CYAN TOP BAR */}
+      <div className="b2b-topbar" />
+
+      {/* ═══ NAVBAR ══════════════════════════════════════════ */}
       <header className="pro-navbar">
         <div className="pro-left">
-          <img src={logo} className="pro-logo" />
+          <img src={logo} className="pro-logo" alt="BGauss" />
           <div className="pro-text">
             <span className="pro-brand">BGauss Portal</span>
-            <span className="pro-page">B2B Customer</span>
+            <span className="pro-page">B2B Customers</span>
           </div>
         </div>
 
         <div className="pro-right">
+          {/* hidden legacy buttons */}
+          <span className="user-name">Welcome, {username} ({role})</span>
+          <button onClick={() => navigate("/modules")} className="module-btn">Modules</button>
+          <button onClick={() => navigate("/dashboard")} className="module-btn">Dashboard</button>
+          <button onClick={handleLogout} className="logout-btn">Logout</button>
 
-          {/* EXISTING — hidden via CSS */}
-          <span className="user-name">
-            Welcome, {username} ({role})
-          </span>
-          <button className="module-btn" onClick={() => navigate("/modules")}>
-            Modules
-          </button>
-          <button className="module-btn" onClick={() => navigate("/dashboard")}>
-            Dashboard
-          </button>
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-
-          {/* ── USERNAME PILL ── */}
-          <div className="b2b-user-info">
-            <div className="b2b-user-avatar">{initial}</div>
-            <div className="b2b-user-text">
-              <span className="b2b-user-name">{username}</span>
-              <span className="b2b-user-role">{role}</span>
+          {/* User pill */}
+          <div className="vc-user-info">
+            <div className="vc-user-avatar">{initial}</div>
+            <div className="vc-user-text">
+              <span className="vc-user-name">{username}</span>
+              <span className="vc-user-role">{role}</span>
             </div>
           </div>
 
-          {/* ── NAV ICON BUTTONS ── */}
-          <div className="b2b-icon-group">
-
-            {/* Modules */}
-            <button
-              className="b2b-icon-btn btn-b2b-modules"
-              data-tip="Modules"
-              aria-label="Modules"
-              onClick={() => navigate("/modules")}
-            >
+          {/* Icon buttons */}
+          <div className="vc-icon-group">
+            <button className="vc-icon-btn btn-vc-modules" data-tip="Modules" onClick={() => navigate("/modules")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
               </svg>
             </button>
-
-            {/* Dashboard */}
-            <button
-              className="b2b-icon-btn btn-b2b-dashboard"
-              data-tip="Dashboard"
-              aria-label="Dashboard"
-              onClick={() => navigate("/dashboard")}
-            >
+            <button className="vc-icon-btn btn-vc-dashboard" data-tip="Dashboard" onClick={() => navigate("/dashboard")}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12L12 3l9 9"/>
-                <path d="M9 21V12h6v9"/>
+                <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
               </svg>
             </button>
-
-            {/* Logout */}
-            <button
-              className="b2b-icon-btn btn-b2b-logout"
-              data-tip="Logout"
-              aria-label="Logout"
-              onClick={handleLogout}
-            >
+            <button className="vc-icon-btn btn-vc-logout" data-tip="Logout" onClick={handleLogout}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
             </button>
-
           </div>
-
         </div>
       </header>
 
-      {/* ═══ CONTENT ══════════════════════════════════════════ */}
+      {/* ═══ PAGE CONTENT ════════════════════════════════════ */}
       <div className="b2b-container">
 
-        {/* ── ENTERPRISE HEADER ROW — CENTERED ── */}
-        <div className="b2b-header-row">
-          <div className="b2b-header-title">
-            <div className="b2b-header-text">
-              <h1>B2B Customers</h1>
-              <span className="b2b-header-sub">Manage dealer &amp; enterprise customer records</span>
-            </div>
+        {/* Alerts */}
+        {successMsg && <div className="b2b-alert b2b-alert-success">✅ {successMsg}</div>}
+        {errorMsg && (
+          <div className="b2b-alert b2b-alert-error">
+            ⚠️ {errorMsg}
+            <button className="b2b-alert-close" onClick={() => setErrorMsg("")}>×</button>
           </div>
-          <div className="b2b-stat-chips">
-            <div className="b2b-chip chip-total">
-              <strong>{customers.length}</strong> Total
-            </div>
+        )}
+
+        {/* Banner */}
+        <div className="b2b-banner">
+          <div className="b2b-banner-text">
+            <h1>B2B Customers</h1>
+            <p>Manage dealer &amp; enterprise customer records</p>
           </div>
         </div>
 
-        {/* ── ENTERPRISE FORM CARD ── */}
-        <div className="b2b-form-card">
-          <div className="b2b-form-header">
-            <div className="b2b-form-header-icon">
-              {editingId !== null ? "✏️" : "➕"}
-            </div>
-            <div className="b2b-form-header-text">
-              <h3>{editingId !== null ? "Edit Customer" : "Add New Customer"}</h3>
-              <p>{editingId !== null ? "Update the customer information below" : "Fill in the details to register a new B2B customer"}</p>
-            </div>
-          </div>
+        {/* Top grid: form left | bulk right */}
+        <div className="b2b-top-grid">
 
-          <div className="b2b-form-body">
-            <div className="b2b-form-grid">
-            <div className="b2b-form-field">
-              <label>Company Name *</label>
-              <input
-                placeholder="e.g. Acme Corp"
-                value={form.companyName || ""}
-                onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-              />
-            </div>
-            <div className="b2b-form-field">
-              <label>Contact Person</label>
-              <input
-                placeholder="e.g. John Doe"
-                value={form.contactPerson || ""}
-                onChange={(e) => setForm({ ...form, contactPerson: e.target.value })}
-              />
-            </div>
-            <div className="b2b-form-field">
-              <label>Email</label>
-              <input
-                placeholder="e.g. john@acme.com"
-                value={form.email || ""}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
-            </div>
-            <div className="b2b-form-field">
-              <label>Phone</label>
-              <input
-                placeholder="e.g. +91 98765 43210"
-                value={form.phone || ""}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              />
-            </div>
-            <div className="b2b-form-field">
-              <label>GST Number</label>
-              <input
-                placeholder="e.g. 27AAPFU0939F1ZV"
-                value={form.gstnumber || ""}
-                onChange={(e) => setForm({ ...form, gstnumber: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="b2b-form-actions">
-            <button className="b2b-submit-btn" onClick={handleSubmit}>
-              {editingId !== null ? "✓  Update Customer" : "+  Add Customer"}
-            </button>
-            {editingId !== null && (
-              <button className="b2b-cancel-btn" onClick={handleCancel}>
-                Cancel
-              </button>
-            )}
-          </div>
-          </div>{/* /b2b-form-body */}
-        </div>
-
-        {/* ── ENTERPRISE ACTION CARDS ── */}
-        <div className="b2b-action-cards">
-
-          <div className="b2b-action-card">
-            <div className="b2b-action-card-icon">
-              <div className="b2b-action-card-icon-circle green">📥</div>
-              <span className="b2b-action-card-icon-title">Download Template</span>
-            </div>
-            <div className="b2b-action-card-body">
-              <p>Get the Excel import template with correct column format</p>
-              <button className="b2b-action-card-btn green-btn" onClick={downloadTemplate}>
-                Download Excel
-              </button>
-            </div>
-          </div>
-
-          <div className="b2b-action-card">
-            <div className="b2b-action-card-icon">
-              <div className="b2b-action-card-icon-circle blue">📤</div>
-              <span className="b2b-action-card-icon-title">Import Customers</span>
-            </div>
-            <div className="b2b-action-card-body">
-              <p>Upload a filled Excel file to bulk-import customer records</p>
-
-              {/* Hidden native file input */}
-              <input
-                ref={importRef}
-                type="file"
-                className="b2b-file-hidden"
-                onChange={handleImport}
-              />
-
-              {/* Styled button matching Download Excel */}
-              <button
-                className="b2b-upload-btn"
-                onClick={() => importRef.current?.click()}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                  <polyline points="7 10 12 5 17 10"/>
-                  <line x1="12" y1="15" x2="12" y2="3"/>
-                </svg>
-                Import Excel
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        {/* ── ENTERPRISE TABLE ── */}
-        <div className="b2b-table-enterprise">
-
-          {/* Toolbar — search left | pagination CENTER | count right */}
-          <div className="b2b-table-toolbar">
-
-            <div className="b2b-table-toolbar-title">
-              <h3>Customer Records</h3>
-              <span className="b2b-table-count">{filteredCustomers.length} records</span>
-            </div>
-
-            {/* ── PAGINATION — top center ── */}
-            <div className="b2b-pagination">
-              {filteredCustomers.length > PAGE_SIZE && (
-                <div className="b2b-pg-btns">
-                  <button
-                    className="b2b-pg"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >‹</button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .reduce<(number | "…")[]>((acc, p, i, arr) => {
-                      if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push("…");
-                      acc.push(p); return acc;
-                    }, [])
-                    .map((p, i) =>
-                      p === "…"
-                        ? <span key={`e${i}`} className="b2b-pg-ellipsis">…</span>
-                        : <button
-                            key={p}
-                            className={`b2b-pg${currentPage === p ? " active" : ""}`}
-                            onClick={() => setCurrentPage(p as number)}
-                          >{p}</button>
-                    )}
-
-                  <button
-                    className="b2b-pg"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >›</button>
+          {/* FORM CARD */}
+          <div className="b2b-left-col">
+            <div className="b2b-form-card">
+              <div className="b2b-form-header">
+                <div className="b2b-form-icon">
+                  <svg viewBox="0 0 24 24" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    {editingId !== null
+                      ? <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>
+                      : <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>
+                    }
+                  </svg>
                 </div>
-              )}
+                <h2>{editingId !== null ? "Edit Customer" : "Add New Customer"}</h2>
+                <p>{editingId !== null ? `Editing customer ID #${editingId}` : "Fill in the details to register a new B2B customer"}</p>
+              </div>
+
+              <div className="b2b-form-body">
+                {/* Row 1: Company | Contact | Email */}
+                <div className="b2b-row-3">
+                  <div className="b2b-field">
+                    <label className="b2b-label">Company Name *</label>
+                    <input className="b2b-input" placeholder="e.g. Acme Corp"
+                      value={form.companyName}
+                      onChange={(e) => setForm((p) => ({ ...p, companyName: e.target.value }))} />
+                  </div>
+                  <div className="b2b-field">
+                    <label className="b2b-label">Contact Person</label>
+                    <input className="b2b-input" placeholder="e.g. John Doe"
+                      value={form.contactPerson}
+                      onChange={(e) => setForm((p) => ({ ...p, contactPerson: e.target.value }))} />
+                  </div>
+                  <div className="b2b-field">
+                    <label className="b2b-label">Email</label>
+                    <input className="b2b-input" placeholder="e.g. john@acme.com" type="email"
+                      value={form.email}
+                      onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} />
+                  </div>
+                </div>
+
+                {/* Row 2: Phone | GST | Address */}
+                <div className="b2b-row-3">
+                  <div className="b2b-field">
+                    <label className="b2b-label">Phone</label>
+                    <input className="b2b-input" placeholder="e.g. +91 98765 43210"
+                      value={form.phone}
+                      onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} />
+                  </div>
+                  <div className="b2b-field">
+                    <label className="b2b-label">GST Number</label>
+                    <input className="b2b-input" placeholder="e.g. 27AAPFU0939F1ZV"
+                      value={form.gstnumber}
+                      onChange={(e) => setForm((p) => ({ ...p, gstnumber: e.target.value }))} />
+                  </div>
+                  <div className="b2b-field">
+                    <label className="b2b-label">Address</label>
+                    <input className="b2b-input" placeholder="e.g. Mumbai, Maharashtra"
+                      value={form.address}
+                      onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))} />
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="b2b-form-btns">
+                  <button className="b2b-btn-save" onClick={handleSubmit}>
+                    {editingId !== null ? "Update" : "Add"}
+                  </button>
+                  {editingId !== null && (
+                    <button className="b2b-btn-cancel" onClick={handleCancelEdit}>Cancel</button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* BULK CARD */}
+          <div className="b2b-bulk-card">
+            <div className="b2b-bulk-body">
+              <div className="b2b-bulk-section">
+                <div className="b2b-bulk-section-info">
+                  <span className="b2b-bulk-label">DOWNLOAD TEMPLATE</span>
+                  <span className="b2b-bulk-desc">Get the Excel import template with correct columns</span>
+                </div>
+                <button className="b2b-btn-dl" onClick={downloadTemplate}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Download Excel
+                </button>
+              </div>
+
+              <hr className="b2b-bulk-hr" />
+
+              <div className="b2b-bulk-section">
+                <div className="b2b-bulk-section-info">
+                  <span className="b2b-bulk-label">IMPORT CUSTOMERS</span>
+                  <span className="b2b-bulk-desc">Upload a filled Excel file to bulk-import records</span>
+                </div>
+                <button className="b2b-btn-imp" onClick={() => importRef.current?.click()}>
+                  <svg viewBox="0 0 24 24">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                  Import Excel
+                </button>
+                <input ref={importRef} type="file" style={{ display: "none" }} onChange={handleImport} />
+              </div>
+            </div>
+          </div>
+
+        </div>{/* end top grid */}
+
+        {/* TABLE CARD */}
+        <div className="b2b-table-card">
+          <div className="b2b-table-header">
+
+            {/* Title */}
+            <div className="b2b-table-title">
+              <div className="b2b-table-title-icon">👥</div>
+              <div>
+                <h2>Customer Records</h2>
+                <p>All registered B2B customers</p>
+              </div>
             </div>
 
-            {/* Live search */}
-            <div className="b2b-table-search">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search customers…"
-                value={tableSearch}
-                onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
+            {/* Pagination — top / header */}
+            <div className="b2b-header-pagination">
+              <PaginationBar
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalRecords={filteredCustomers.length}
+                pageSize={PAGE_SIZE}
+                onPage={setCurrentPage}
               />
             </div>
 
-          </div>
-
-          {/* Scrollable table */}
-          <div className="b2b-table-scroll">
-            {filteredCustomers.length === 0 ? (
-              <div className="b2b-empty-state">
-                <div className="b2b-empty-icon">👥</div>
-                <p>{tableSearch ? `No customers match "${tableSearch}"` : "No customers added yet"}</p>
+            {/* Search + count */}
+            <div className="b2b-table-controls">
+              <div className="b2b-search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" className="b2b-search" placeholder="Search company, contact, email…"
+                  value={tableSearch}
+                  onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }} />
               </div>
-            ) : (
-              <table className="b2b-enterprise-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Company</th>
-                    <th>Contact</th>
-                    <th>Phone</th>
-                    <th>GST No.</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((c, index) => {
-                    const globalIndex = (currentPage - 1) * PAGE_SIZE + index;
-                    const id = getId(c, globalIndex);
-                    return (
-                      <tr key={id}>
-
-                        {/* ID */}
-                        <td>
-                          <span className="b2b-id-cell">{id}</span>
-                        </td>
-
-                        {/* Company */}
-                        <td>
-                          <div className="b2b-company-cell">
-                            <div className="b2b-company-avatar">
-                              {companyInitial(c.companyName)}
-                            </div>
-                            <span className="b2b-company-name">{c.companyName}</span>
-                          </div>
-                        </td>
-
-                        {/* Contact + Email */}
-                        <td>
-                          <div className="b2b-contact-cell">
-                            <span className="b2b-contact-name">{c.contactPerson || "—"}</span>
-                            <span className="b2b-contact-email">{c.email || ""}</span>
-                          </div>
-                        </td>
-
-                        {/* Phone */}
-                        <td>
-                          <span className="b2b-phone-cell">{c.phone || "—"}</span>
-                        </td>
-
-                        {/* GST */}
-                        <td style={{ fontFamily: "'Courier New', monospace", fontSize: "12px", color: "#64748b" }}>
-                          {c.gstnumber || "—"}
-                        </td>
-
-                        {/* Actions */}
-                        <td>
-                          <div className="b2b-row-actions">
-                            <button
-                              className="b2b-edit-btn"
-                              onClick={() => handleEdit(c, globalIndex)}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                              </svg>
-                              Edit
-                            </button>
-                            <button
-                              className="b2b-delete-btn"
-                              onClick={() => handleDelete(c, globalIndex)}
-                            >
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polyline points="3 6 5 6 21 6"/>
-                                <path d="M19 6l-1 14H6L5 6"/>
-                                <path d="M10 11v6M14 11v6"/>
-                                <path d="M9 6V4h6v2"/>
-                              </svg>
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        {/* ── HIDDEN EXISTING ELEMENTS (preserved in DOM, not shown) ── */}
-        <div style={{ display: "none" }}>
-          {/* Original form-card kept for reference */}
-          <div className="form-card">
-            <input placeholder="Company Name" value={form.companyName || ""} onChange={(e) => setForm({ ...form, companyName: e.target.value })} />
-            <input placeholder="Contact Person" value={form.contactPerson || ""} onChange={(e) => setForm({ ...form, contactPerson: e.target.value })} />
-            <input placeholder="Email" value={form.email || ""} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            <input placeholder="Phone" value={form.phone || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            <input placeholder="GST Number" value={form.gstnumber || ""} onChange={(e) => setForm({ ...form, gstnumber: e.target.value })} />
-            <div className="form-actions">
-              <button className="add-btn" onClick={handleSubmit}>{editingId !== null ? "Update" : "Add"}</button>
-              {editingId !== null && <button className="cancel-btn" onClick={handleCancel}>Cancel</button>}
+              <span className="b2b-count-pill">{filteredCustomers.length} records</span>
             </div>
+
           </div>
 
-          {/* Original action cards */}
-          <div className="b2b-actions-container">
-            <div className="action-card">
-              <h3>Download Template</h3><p>Download Excel format</p>
-              <button className="action-btn" onClick={downloadTemplate}>Download Excel</button>
-            </div>
-            <div className="action-card">
-              <h3>Import Customers</h3><p>Upload Excel file</p>
-              <input type="file" className="file-input" onChange={handleImport} />
-            </div>
-          </div>
-
-          {/* Original table */}
-          <div className="b2b-table">
-            <table>
-              <thead><tr><th>ID</th><th>Company</th><th>Contact</th><th>Email</th><th>Phone</th><th>Action</th></tr></thead>
+          {/* Table */}
+          <div className="b2b-table-scroll">
+            <table className="b2b-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Company</th>
+                  <th>Contact</th>
+                  <th>Phone</th>
+                  <th>GST No.</th>
+                  <th>Address</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody>
-                {customers.map((c, index) => {
-                  const id = getId(c, index);
-                  return (
-                    <tr key={id}>
-                      <td>{id}</td><td>{c.companyName}</td><td>{c.contactPerson}</td>
-                      <td>{c.email}</td><td>{c.phone}</td>
-                      <td className="table-actions">
-                        <button className="edit-btn" onClick={() => handleEdit(c, index)}>Edit</button>
-                        <button className="delete-btn" onClick={() => handleDelete(c, index)}>Delete</button>
+                {paginated.length > 0 ? (
+                  paginated.map((c, idx) => (
+                    <tr key={getId(c)} className={editingId === getId(c) ? "b2b-row-editing" : ""}>
+
+                      <td><span className="b2b-id-badge">{(currentPage - 1) * PAGE_SIZE + idx + 1}</span></td>
+
+                      <td>
+                        <div className="b2b-company-cell">
+                          <div className="b2b-company-avatar">{companyInitial(c.companyName)}</div>
+                          <span className="b2b-company-name">{c.companyName}</span>
+                        </div>
                       </td>
+
+                      <td>
+                        <div className="b2b-contact-cell">
+                          <span className="b2b-contact-name">{c.contactPerson || "—"}</span>
+                          <span className="b2b-contact-email">{c.email || ""}</span>
+                        </div>
+                      </td>
+
+                      <td><span className="b2b-phone-cell">{c.phone || "—"}</span></td>
+
+                      <td><span className="b2b-gst-cell">{c.gstnumber || "—"}</span></td>
+
+                      <td><span className="b2b-address-cell">{c.address || "—"}</span></td>
+
+                      <td>
+                        <div className="b2b-row-acts">
+                          <button className="b2b-act-btn b2b-act-edit" onClick={() => handleEdit(c)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                            Edit
+                          </button>
+                          <button className="b2b-act-btn b2b-act-del" onClick={() => handleDelete(c)}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6l-1 14H6L5 6"/>
+                              <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+
                     </tr>
-                  );
-                })}
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="b2b-empty">
+                        <div className="b2b-empty-icon">👥</div>
+                        <div className="b2b-empty-title">
+                          {tableSearch ? `No customers match "${tableSearch}"` : "No customers added yet"}
+                        </div>
+                        <div className="b2b-empty-sub">
+                          {tableSearch ? "Try a different keyword." : "Add your first customer using the form above."}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+
+          {/* ══ BOTTOM PAGINATION ══════════════════════════════ */}
+          <div className="b2b-table-footer">
+            <PaginationBar
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalRecords={filteredCustomers.length}
+              pageSize={PAGE_SIZE}
+              onPage={(p) => {
+                setCurrentPage(p);
+                // Scroll table into view for UX comfort on long lists
+                document.querySelector(".b2b-table-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            />
+          </div>
+
         </div>
 
       </div>

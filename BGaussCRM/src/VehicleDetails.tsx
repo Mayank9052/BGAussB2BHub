@@ -313,7 +313,9 @@ useEffect(() => {
           {username && (
             <div
               className="vd-nav-likes"
+              onClick={() => navigate("/my-likes")}
               title={`${totalLikedCount} liked vehicle${totalLikedCount !== 1 ? "s" : ""}`}
+              style={{ cursor: "pointer" }}
             >
               <svg
                 viewBox="0 0 24 24"

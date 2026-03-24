@@ -9,6 +9,7 @@ import VehicleConfig from "./VehicleConfig";
 import ModelPage from "./ModelPage";
 import VariantPage from "./Variant";
 import ColourPage from "./Colour";
+import MyLikes from "./MyLikes";
 
 /* 🔒 AUTH CHECK */
 const ProtectedRoute = ({ children }: any) => {
@@ -122,6 +123,8 @@ function App() {
         }
       />
 
+      <Route path="/my-likes" element={<MyLikes />} />
+      
     </Routes>
   );
 }

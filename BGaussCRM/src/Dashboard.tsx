@@ -19,9 +19,7 @@ interface Vehicle {
   imageUrl: string | null;
 }
 
-type VehicleApi = Vehicle & {
-  imagePath?: string | null;
-};
+type VehicleApi = Vehicle & { imagePath?: string | null };
 
 interface ModelOption   { id: number; modelName: string; }
 interface VariantOption { id: number; variantName: string; }
@@ -44,7 +42,6 @@ const getInitials = (name: string | null): string => {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
-// ── Preload a list of image URLs into browser cache ─────────
 const preloadImages = (urls: string[]) => {
   urls.forEach((url) => {
     if (!url || url === noImage) return;
@@ -54,18 +51,14 @@ const preloadImages = (urls: string[]) => {
   });
 };
 
-// ── Persist image URLs to localStorage for next session ─────
 const saveImageUrlsToCache = (vehicles: Vehicle[]) => {
   try {
     const map: Record<number, string> = {};
-    vehicles.forEach((v) => {
-      if (v.imageUrl) map[v.scootyId] = resolveImageSrc(v.imageUrl);
-    });
+    vehicles.forEach((v) => { if (v.imageUrl) map[v.scootyId] = resolveImageSrc(v.imageUrl); });
     localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(map));
-  } catch { /* quota exceeded — skip */ }
+  } catch { /* quota exceeded */ }
 };
 
-// ── Read cached image URL map ─────────────────────────────────
 const loadCachedImageUrls = (): Record<number, string> => {
   try {
     const raw = localStorage.getItem(IMG_CACHE_KEY);
@@ -77,21 +70,19 @@ export default function Dashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
-
-  // Image URL cache (resolved absolute URLs keyed by scootyId)
   const [imgCache, setImgCache] = useState<Record<number, string>>(loadCachedImageUrls);
 
-  // ── Search ──────────────────────────────────────────────────
+  // ── Search ────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredVehicles = vehicles.filter((v) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
     return (
-      v.modelName?.toLowerCase().includes(q)  ||
+      v.modelName?.toLowerCase().includes(q)   ||
       v.variantName?.toLowerCase().includes(q) ||
       v.colourName?.toLowerCase().includes(q)  ||
-      String(v.price   ?? "").includes(q)      ||
+      String(v.price   ?? "").includes(q)       ||
       String(v.rangeKm ?? "").includes(q)
     );
   });
@@ -101,7 +92,7 @@ export default function Dashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg,  setSubmitMsg]  = useState("");
 
-  // ── Dropdown options ──────────────────────────────────────
+  // ── Dropdowns ─────────────────────────────────────────────
   const [models,   setModels]   = useState<ModelOption[]>([]);
   const [variants, setVariants] = useState<VariantOption[]>([]);
   const [colours,  setColours]  = useState<ColourOption[]>([]);
@@ -117,56 +108,35 @@ export default function Dashboard() {
   const [imageFile,      setImageFile]      = useState<File | null>(null);
   const [imagePreview,   setImagePreview]   = useState<string | null>(null);
 
-  // ── Menu state ────────────────────────────────────────────
-  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
-  const [mobileMenuOpen,  setMobileMenuOpen]  = useState(false);
+  // ── Mobile menu ───────────────────────────────────────────
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const fileInputRef   = useRef<HTMLInputElement>(null);
-  const desktopMenuRef = useRef<HTMLDivElement>(null);
-  const mobileMenuRef  = useRef<HTMLDivElement>(null);
-  const navigate       = useNavigate();
+  const fileInputRef  = useRef<HTMLInputElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const navigate      = useNavigate();
 
   // ── Auth guard ────────────────────────────────────────────
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) { navigate("/", { replace: true }); return; }
 
-    // 1. INSTANT: paint from localStorage cache immediately
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
       try {
         const parsed: Vehicle[] = JSON.parse(cached);
         setVehicles(parsed);
         setLoading(false);
-
-        // 2. INSTANT: preload images from persisted URL map so
-        //    browser fetches from its HTTP cache right away
         const cachedUrls = loadCachedImageUrls();
-        if (Object.keys(cachedUrls).length > 0) {
-          preloadImages(Object.values(cachedUrls));
-        } else {
-          // Fallback: preload from parsed vehicle data
-          preloadImages(parsed.map((v) => resolveImageSrc(v.imageUrl)));
-        }
-      } catch { /* corrupt cache — ignore */ }
+        if (Object.keys(cachedUrls).length > 0) preloadImages(Object.values(cachedUrls));
+        else preloadImages(parsed.map((v) => resolveImageSrc(v.imageUrl)));
+      } catch { /* corrupt cache */ }
     }
 
-    fetchVehicles();
-    fetchModels();
+    void fetchVehicles();
+    void fetchModels();
   }, [navigate]);
 
-  // ── Outside-click: desktop menu ──────────────────────────
-  useEffect(() => {
-    if (!desktopMenuOpen) return;
-    const close = (e: MouseEvent) => {
-      if (desktopMenuRef.current && !desktopMenuRef.current.contains(e.target as Node))
-        setDesktopMenuOpen(false);
-    };
-    const t = setTimeout(() => document.addEventListener("mousedown", close), 50);
-    return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
-  }, [desktopMenuOpen]);
-
-  // ── Outside-click: mobile menu ───────────────────────────
+  // ── Outside click: mobile menu ────────────────────────────
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const close = (e: MouseEvent) => {
@@ -179,13 +149,12 @@ export default function Dashboard() {
 
   // ── Cascade dropdowns ─────────────────────────────────────
   useEffect(() => {
-    if (modelId !== "") fetchVariants(Number(modelId));
+    if (modelId !== "") void fetchVariants(Number(modelId));
     else { setVariants([]); setVariantId(""); }
   }, [modelId]);
 
   useEffect(() => {
-    if (modelId !== "" && variantId !== "")
-      fetchColours(Number(modelId), Number(variantId));
+    if (modelId !== "" && variantId !== "") void fetchColours(Number(modelId), Number(variantId));
     else { setColours([]); setColourId(""); }
   }, [variantId]);
 
@@ -196,27 +165,17 @@ export default function Dashboard() {
       try {
         const res = await axios.get<VehicleApi[]>("/api/ScootyInventory/models-list");
         const normalized: Vehicle[] = res.data.map((item) => ({
-          ...item,
-          imageUrl: item.imageUrl ?? item.imagePath ?? null,
+          ...item, imageUrl: item.imageUrl ?? item.imagePath ?? null,
         }));
-
         setVehicles(normalized);
         setLoading(false);
         setError("");
-
-        // Persist to localStorage
         try { localStorage.setItem(CACHE_KEY, JSON.stringify(normalized)); } catch { /* quota */ }
-
-        // Persist resolved image URLs + preload them
         saveImageUrlsToCache(normalized);
-        const resolvedUrls = normalized.map((v) => resolveImageSrc(v.imageUrl));
-        preloadImages(resolvedUrls);
-
-        // Update in-memory img cache for instant re-renders
+        preloadImages(normalized.map((v) => resolveImageSrc(v.imageUrl)));
         const newMap: Record<number, string> = {};
         normalized.forEach((v) => { newMap[v.scootyId] = resolveImageSrc(v.imageUrl); });
         setImgCache(newMap);
-
         return;
       } catch {
         await new Promise((r) => setTimeout(r, 1000));
@@ -248,7 +207,6 @@ export default function Dashboard() {
     } catch { setColours([]); }
   };
 
-  // ── Resolve image: use in-memory cache first ─────────────
   const getImageSrc = useCallback(
     (v: Vehicle): string => imgCache[v.scootyId] ?? resolveImageSrc(v.imageUrl),
     [imgCache]
@@ -262,13 +220,11 @@ export default function Dashboard() {
       const reader = new FileReader();
       reader.onload = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
-    } else {
-      setImagePreview(null);
-    }
+    } else { setImagePreview(null); }
   };
 
   // ── Sheet helpers ─────────────────────────────────────────
-  const openSheet  = () => { resetForm(); fetchModels(); setSheetOpen(true); };
+  const openSheet  = () => { resetForm(); void fetchModels(); setSheetOpen(true); };
   const closeSheet = () => { setSheetOpen(false); setSubmitMsg(""); };
 
   const resetForm = () => {
@@ -281,12 +237,8 @@ export default function Dashboard() {
 
   // ── Submit ────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (modelId === "" || variantId === "") {
-      setSubmitMsg("Model and Variant are required.");
-      return;
-    }
-    setSubmitting(true);
-    setSubmitMsg("");
+    if (modelId === "" || variantId === "") { setSubmitMsg("Model and Variant are required."); return; }
+    setSubmitting(true); setSubmitMsg("");
     try {
       const form = new FormData();
       form.append("modelId",   String(modelId));
@@ -297,405 +249,346 @@ export default function Dashboard() {
       if (rangeKm)         form.append("rangeKm",      rangeKm);
       form.append("stockAvailable", String(stockAvailable));
       if (imageFile) form.append("image", imageFile);
-
       await axios.post("/api/ScootyInventory/add-item", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setSubmitMsg("✅ Item added successfully!");
-      fetchVehicles();
+      void fetchVehicles();
       setTimeout(() => closeSheet(), 1200);
     } catch (err: unknown) {
-      const message =
-        axios.isAxiosError(err) && err.response?.data
-          ? String(err.response.data)
-          : "Failed to add item.";
+      const message = axios.isAxiosError(err) && err.response?.data
+        ? String(err.response.data) : "Failed to add item.";
       setSubmitMsg(`❌ ${message}`);
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem(CACHE_KEY);
-    // Keep IMG_CACHE_KEY so images load fast on next login
     navigate("/", { replace: true });
   };
 
-  // ── Derived ───────────────────────────────────────────────
   const username = localStorage.getItem("username") ?? "";
   const role     = localStorage.getItem("role")     ?? "";
   const initials = getInitials(username);
 
-  // ── Shared dropdown items renderer ───────────────────────
-  const renderDropdownItems = (onClose: () => void) => (
-    <>
-      {role === "admin" && (
-        <button
-          className="desktop-dd-item"
-          onClick={() => { onClose(); navigate("/modules"); }}
-        >
-          <div className="desktop-dd-icon blue">⊞</div>
-          <div className="desktop-dd-text">
-            <span className="desktop-dd-title">Modules</span>
-            <span className="desktop-dd-sub">Manage modules</span>
-          </div>
-        </button>
-      )}
-      <div className="desktop-dd-divider" />
-      <button
-        className="desktop-dd-item danger"
-        onClick={() => { onClose(); handleLogout(); }}
-      >
-        <div className="desktop-dd-icon red">⏻</div>
-        <div className="desktop-dd-text">
-          <span className="desktop-dd-title">Logout</span>
-          <span className="desktop-dd-sub">Sign out of account</span>
-        </div>
-      </button>
-    </>
-  );
-
-  // ─────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────
   return (
     <div className="dashboard">
 
-      {/* ═══ NAVBAR ═══════════════════════════════════════════ */}
-      <header className="pro-navbar">
+      {/* ═══ NAVBAR ══════════════════════════════════════════ */}
+      <header className="dash-navbar">
 
         {/* LEFT */}
-        <div className="pro-left">
-          <img src={logo} className="pro-logo" alt="logo" />
-          <div className="pro-text">
-            <span className="pro-brand">BGauss Portal</span>
-            <span className="pro-page">Dashboard</span>
+        <div className="dash-nav-left">
+          <img src={logo} className="dash-nav-logo" alt="BGauss" />
+          <div className="dash-nav-brand">
+            <span className="dash-brand-name">BGauss Portal</span>
+            <span className="dash-brand-page">Dashboard</span>
           </div>
         </div>
 
-        {/* CENTER — search bar */}
-        <div className="pro-center">
-          <div className="nav-search-wrapper">
-            <div className="nav-search-bar">
-              <span className="nav-search-icon">
-                <svg width="15" height="15" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="m21 21-4.35-4.35"/>
-                </svg>
-              </span>
-              <input
-                className="nav-search-input"
-                type="text"
-                placeholder="Search model, variant, colour..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button className="nav-search-clear" onClick={() => setSearchQuery("")}>✕</button>
-              )}
-            </div>
+        {/* CENTER — search */}
+        <div className="dash-nav-center">
+          <div className="dash-search-bar">
+            <svg width="15" height="15" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              className="dash-search-input"
+              type="text"
+              placeholder="Search model, variant, colour…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
             {searchQuery && (
-              <span className="nav-search-count">
-                {filteredVehicles.length === 0
-                  ? "No results"
-                  : `${filteredVehicles.length} result${filteredVehicles.length > 1 ? "s" : ""}`}
-              </span>
+              <button className="dash-search-clear" onClick={() => setSearchQuery("")}>✕</button>
             )}
           </div>
+          {searchQuery && (
+            <span className="dash-search-count">
+              {filteredVehicles.length === 0 ? "No results" : `${filteredVehicles.length} result${filteredVehicles.length > 1 ? "s" : ""}`}
+            </span>
+          )}
         </div>
 
         {/* RIGHT */}
-        <div className="pro-right">
+        <div className="dash-nav-right">
 
-          {/* Desktop dropdown */}
-          <div className="desktop-user-wrapper" ref={desktopMenuRef}>
-            <button
-              className={`desktop-user-trigger${desktopMenuOpen ? " open" : ""}`}
-              onClick={() => setDesktopMenuOpen((p) => !p)}
-              aria-label="User menu"
-              aria-expanded={desktopMenuOpen}
-            >
-              <div className="desktop-avatar">{initials}</div>
-              <div className="desktop-user-info">
-                <span className="desktop-user-name">{username}</span>
-                <span className="desktop-user-role">{role}</span>
-              </div>
-              <span className="desktop-chevron">▾</span>
-            </button>
-
-            <div className={`desktop-dropdown${desktopMenuOpen ? " is-open" : ""}`}>
-              <div className="desktop-dd-header">
-                <div className="desktop-dd-avatar">{initials}</div>
-                <div>
-                  <span className="desktop-dd-name">{username}</span>
-                  <span className="desktop-dd-role-badge">{role}</span>
-                </div>
-              </div>
-              <div className="desktop-dd-divider" />
-              <div className="desktop-dd-label">Actions</div>
-              {renderDropdownItems(() => setDesktopMenuOpen(false))}
+          {/* User pill */}
+          <div className="dash-user-pill">
+            <div className="dash-avatar">{initials}</div>
+            <div className="dash-user-info">
+              <span className="dash-user-name">{username}</span>
+              <span className="dash-user-role">{role}</span>
             </div>
           </div>
 
-          {/* Mobile ⋮ menu */}
-          <div className="mobile-nav-wrapper" ref={mobileMenuRef}>
+          {/* Icon buttons — desktop */}
+          <div className="dash-icon-group">
+            {role === "admin" && (
+              <button className="dash-icon-btn dash-btn-modules"
+                onClick={() => navigate("/modules")} aria-label="Modules" data-tip="Modules">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+              </button>
+            )}
+            <button className="dash-icon-btn dash-btn-logout"
+              onClick={handleLogout} aria-label="Logout" data-tip="Logout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
+          </div>
+
+          {/* Hamburger — mobile */}
+          <div className="dash-mobile-wrap" ref={mobileMenuRef}>
             <button
-              className={`mobile-menu-btn${mobileMenuOpen ? " open" : ""}`}
+              className={`dash-hamburger${mobileMenuOpen ? " open" : ""}`}
               onClick={() => setMobileMenuOpen((p) => !p)}
-              aria-label="Open menu"
-              aria-expanded={mobileMenuOpen}
+              aria-label="Menu"
             >
-              ⋮
+              <span /><span /><span />
             </button>
 
-            <div className={`mobile-icon-dropdown${mobileMenuOpen ? " is-open" : ""}`}>
-              <div className="mobile-dd-user">
-                <div className="mobile-dd-avatar">{initials}</div>
+            <div className={`dash-mobile-dd${mobileMenuOpen ? " open" : ""}`}>
+              {/* User card */}
+              <div className="dash-mdd-user">
+                <div className="dash-mdd-avatar">{initials}</div>
                 <div>
-                  <div className="mobile-dd-username">{username}</div>
-                  <div className="mobile-dd-role">{role}</div>
+                  <span className="dash-mdd-name">{username}</span>
+                  <span className="dash-mdd-role">{role}</span>
                 </div>
               </div>
-              <div className="mobile-dropdown-divider" />
-              <div className="mobile-dropdown-label">Actions</div>
+              <div className="dash-mdd-divider" />
+
               {role === "admin" && (
-                <button
-                  className="mobile-dropdown-item"
-                  onClick={() => { setMobileMenuOpen(false); navigate("/modules"); }}
-                >
-                  <div className="mobile-dd-icon blue">⊞</div>
-                  <div className="mobile-dd-text">
-                    <span className="mobile-dd-title">Modules</span>
-                    <span className="mobile-dd-sub">Manage modules</span>
+                <button className="dash-mdd-item" onClick={() => { setMobileMenuOpen(false); navigate("/modules"); }}>
+                  <div className="dash-mdd-icon blue">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                      <rect x="3" y="3" width="7" height="7" rx="1"/>
+                      <rect x="14" y="3" width="7" height="7" rx="1"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1"/>
+                      <rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                  </div>
+                  <div className="dash-mdd-text">
+                    <span className="dash-mdd-title">Modules</span>
+                    <span className="dash-mdd-sub">Manage system modules</span>
                   </div>
                 </button>
               )}
-              <div className="mobile-dropdown-divider" />
-              <button
-                className="mobile-dropdown-item danger"
-                onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
-              >
-                <div className="mobile-dd-icon red">⏻</div>
-                <div className="mobile-dd-text">
-                  <span className="mobile-dd-title">Logout</span>
-                  <span className="mobile-dd-sub">Sign out of account</span>
+
+              <div className="dash-mdd-divider" />
+              <button className="dash-mdd-item dash-mdd-item--logout"
+                onClick={() => { setMobileMenuOpen(false); handleLogout(); }}>
+                <div className="dash-mdd-icon red">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                </div>
+                <div className="dash-mdd-text">
+                  <span className="dash-mdd-title">Logout</span>
+                  <span className="dash-mdd-sub">Sign out of account</span>
                 </div>
               </button>
             </div>
-          </div>
-
-          {/* Username display */}
-          <div className="nav-user-info">
-            <div className="nav-user-avatar">{initials}</div>
-            <div className="nav-user-text">
-              <span className="nav-user-name">{username}</span>
-              <span className="nav-user-role">{role}</span>
-            </div>
-          </div>
-
-          {/* Icon buttons */}
-          <div className="nav-icon-group">
-            {role === "admin" && (
-              <button
-                className="nav-icon-btn btn-modules"
-                data-tip="Modules"
-                aria-label="Modules"
-                onClick={() => navigate("/modules")}
-              >
-                <span className="btn-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1"/>
-                    <rect x="14" y="3" width="7" height="7" rx="1"/>
-                    <rect x="3" y="14" width="7" height="7" rx="1"/>
-                    <rect x="14" y="14" width="7" height="7" rx="1"/>
-                  </svg>
-                </span>
-              </button>
-            )}
-            <button
-              className="nav-icon-btn btn-logout"
-              data-tip="Logout"
-              aria-label="Logout"
-              onClick={handleLogout}
-            >
-              <span className="btn-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
-              </span>
-            </button>
           </div>
 
         </div>
       </header>
 
       {/* ═══ CONTENT ══════════════════════════════════════════ */}
-      <div className="main-content">
+      <main className="dash-main">
 
-        <div className="dashboard-title-row">
-          <h1>Scooty Inventory</h1>
-          <button className="add-fab" onClick={openSheet} title="Add Item">+</button>
+        {/* Page title row */}
+        <div className="dash-title-row">
+          <div className="dash-title-left">
+            <h1>Scooty Inventory</h1>
+            <span className="dash-subtitle">
+              {loading ? "Loading…" : `${filteredVehicles.length} vehicle${filteredVehicles.length !== 1 ? "s" : ""}`}
+            </span>
+          </div>
+          <button className="dash-add-btn" onClick={openSheet} title="Add Item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
         </div>
 
-        {/* Mobile-only search */}
-        <div className="search-wrapper mobile-search-only">
-          <div className="search-bar">
-            <span className="search-icon">
-              <svg width="16" height="16" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
-              </svg>
-            </span>
-            <input
-              className="search-input"
-              type="text"
-              placeholder="Search by model, variant, colour, price..."
+        {/* Mobile search */}
+        <div className="dash-mobile-search">
+          <div className="dash-search-bar">
+            <svg width="15" height="15" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input className="dash-search-input" type="text"
+              placeholder="Search model, variant, colour…"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+              onChange={(e) => setSearchQuery(e.target.value)} />
             {searchQuery && (
-              <button className="search-clear" onClick={() => setSearchQuery("")}>✕</button>
+              <button className="dash-search-clear" onClick={() => setSearchQuery("")}>✕</button>
             )}
           </div>
-          {searchQuery && (
-            <p className="search-count">
-              {filteredVehicles.length === 0
-                ? "No results found"
-                : `${filteredVehicles.length} result${filteredVehicles.length > 1 ? "s" : ""} found`}
-            </p>
-          )}
         </div>
 
-        {error && <p className="error">{error}</p>}
+        {error && <div className="dash-error">⚠️ {error}</div>}
 
-        {/* VEHICLE GRID */}
-        <div className="vehicle-grid">
+        {/* Vehicle grid */}
+        <div className="dash-grid">
 
-          {loading && vehicles.length === 0 && Array.from({ length: 6 }).map((_, i) => (
-            <div className="vehicle-card skeleton" key={i}>
-              <div className="skeleton-img" />
-              <div className="skeleton-text" />
-              <div className="skeleton-text small" />
+          {/* Skeletons */}
+          {loading && vehicles.length === 0 && Array.from({ length: 8 }).map((_, i) => (
+            <div className="dash-card dash-card--skeleton" key={i}>
+              <div className="dash-skel-img" />
+              <div className="dash-skel-body">
+                <div className="dash-skel-line" />
+                <div className="dash-skel-line short" />
+                <div className="dash-skel-line shorter" />
+              </div>
             </div>
           ))}
 
+          {/* No results */}
           {!loading && searchQuery && filteredVehicles.length === 0 && (
-            <div className="no-results">
+            <div className="dash-no-results">
               <span>🔍</span>
               <p>No vehicles match "<strong>{searchQuery}</strong>"</p>
               <button onClick={() => setSearchQuery("")}>Clear search</button>
             </div>
           )}
 
+          {/* Cards */}
           {filteredVehicles.map((v, index) => (
             <div
-              className="vehicle-card"
+              className="dash-card"
               key={v.scootyId}
               onClick={() => navigate(`/vehicle/${v.scootyId}`)}
             >
-              <img
-                src={getImageSrc(v)}
-                className="vehicle-img"
-                /* First 6 cards load eagerly; rest lazy */
-                loading={index < 6 ? "eager" : "lazy"}
-                /* High fetch priority for first 3 visible cards */
-                fetchPriority={index < 3 ? "high" : "auto"}
-                decoding="async"
-                onError={(e) => { e.currentTarget.src = noImage; }}
-                alt={v.modelName}
-              />
-              <h3>{v.modelName}</h3>
-              <p>{v.variantName}</p>
-              <p>{v.rangeKm ?? "N/A"} km</p>
-              <p>₹ {v.price ?? "N/A"}</p>
-              <span className={v.stockAvailable ? "green" : "red"}>
-                {v.stockAvailable ? "In Stock" : "Out"}
-              </span>
+              <div className="dash-card-img-wrap">
+                <img
+                  src={getImageSrc(v)}
+                  className="dash-card-img"
+                  loading={index < 6 ? "eager" : "lazy"}
+                  decoding="async"
+                  onError={(e) => { e.currentTarget.src = noImage; }}
+                  alt={v.modelName}
+                />
+                {/* <span className={`dash-stock-badge ${v.stockAvailable ? "in" : "out"}`}>
+                  {v.stockAvailable ? "In Stock" : "Out"}
+                </span> */}
+              </div>
+
+              <div className="dash-card-body">
+                <h3 className="dash-card-model">{v.modelName}</h3>
+                <p className="dash-card-variant">{v.variantName}</p>
+                <div className="dash-card-chips">
+                  {v.rangeKm && <span className="dash-chip">🛣 {v.rangeKm} km</span>}
+                  {v.price && <span className="dash-chip price">₹ {Number(v.price).toLocaleString("en-IN")}</span>}
+                </div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      </main>
 
-      {/* ═══ BOTTOM SHEET ═════════════════════════════════════ */}
-      {sheetOpen && <div className="sheet-overlay" onClick={closeSheet} />}
+      {/* ═══ BOTTOM SHEET ════════════════════════════════════ */}
+      {sheetOpen && <div className="dash-overlay" onClick={closeSheet} />}
 
-      <div className={`bottom-sheet${sheetOpen ? " sheet-visible" : ""}`}>
-        <div className="sheet-handle" />
+      <div className={`dash-sheet${sheetOpen ? " open" : ""}`}>
+        <div className="dash-sheet-handle" />
 
-        <div className="sheet-header">
-          <span className="sheet-title">Add Item</span>
-          <button className="sheet-close" onClick={closeSheet}>✕</button>
+        <div className="dash-sheet-header">
+          <span className="dash-sheet-title">Add Inventory Item</span>
+          <button className="dash-sheet-close" onClick={closeSheet}>✕</button>
         </div>
 
-        <div className="sheet-body">
+        <div className="dash-sheet-body">
 
-          <div className="form-group">
-            <label>Model <span className="required">*</span></label>
+          <div className="dash-form-group">
+            <label>Model <span className="req">*</span></label>
             <select value={modelId} onChange={(e) => setModelId(e.target.value === "" ? "" : Number(e.target.value))}>
               <option value="">Select Model</option>
               {models.map((m) => <option key={m.id} value={m.id}>{m.modelName}</option>)}
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Variant <span className="required">*</span></label>
+          <div className="dash-form-group">
+            <label>Variant <span className="req">*</span></label>
             <select value={variantId} onChange={(e) => setVariantId(e.target.value === "" ? "" : Number(e.target.value))} disabled={variants.length === 0}>
               <option value="">Select Variant</option>
               {variants.map((v) => <option key={v.id} value={v.id}>{v.variantName}</option>)}
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Colour <span className="required">*</span></label>
+          <div className="dash-form-group">
+            <label>Colour</label>
             <select value={colourId} onChange={(e) => setColourId(e.target.value === "" ? "" : Number(e.target.value))} disabled={colours.length === 0}>
               <option value="">Select Colour</option>
               {colours.map((c) => <option key={c.id} value={c.id}>{c.colourName}</option>)}
             </select>
           </div>
 
-          <div className="form-group">
-            <label>Price (₹)</label>
-            <input type="number" placeholder="e.g. 120000" value={price} onChange={(e) => setPrice(e.target.value)} />
+          <div className="dash-form-row">
+            <div className="dash-form-group">
+              <label>Price (₹)</label>
+              <input type="number" placeholder="e.g. 120000" value={price} onChange={(e) => setPrice(e.target.value)} />
+            </div>
+            <div className="dash-form-group">
+              <label>Range (km)</label>
+              <input type="number" placeholder="e.g. 120" value={rangeKm} onChange={(e) => setRangeKm(e.target.value)} />
+            </div>
           </div>
 
-          <div className="form-group">
+          <div className="dash-form-group">
             <label>Battery Specs</label>
             <input type="text" placeholder="e.g. 3.0 kWh Li-ion" value={batterySpecs} onChange={(e) => setBatterySpecs(e.target.value)} />
           </div>
 
-          <div className="form-group">
-            <label>Range (km)</label>
-            <input type="number" placeholder="e.g. 120" value={rangeKm} onChange={(e) => setRangeKm(e.target.value)} />
-          </div>
-
-          <div className="form-group form-toggle">
+          <div className="dash-form-group dash-form-toggle">
             <label>Stock Available</label>
-            <label className="toggle-switch">
+            <label className="dash-toggle">
               <input type="checkbox" checked={stockAvailable} onChange={(e) => setStockAvailable(e.target.checked)} />
-              <span className="toggle-slider" />
+              <span className="dash-toggle-slider" />
             </label>
           </div>
 
-          <div className="form-group">
+          <div className="dash-form-group">
             <label>Image</label>
-            <div className="image-upload-box" onClick={() => fileInputRef.current?.click()}>
+            <div className="dash-upload-box" onClick={() => fileInputRef.current?.click()}>
               {imagePreview
-                ? <img src={imagePreview} className="image-preview" alt="preview" />
-                : <span className="upload-placeholder">📷 Tap to upload image</span>}
+                ? <img src={imagePreview} className="dash-upload-preview" alt="preview" />
+                : <div className="dash-upload-placeholder">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span>Tap to upload image</span>
+                  </div>
+              }
             </div>
             <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleImageChange} />
           </div>
 
           {submitMsg && (
-            <p className={`submit-msg ${submitMsg.startsWith("✅") ? "success" : "fail"}`}>
+            <div className={`dash-submit-msg ${submitMsg.startsWith("✅") ? "success" : "fail"}`}>
               {submitMsg}
-            </p>
+            </div>
           )}
 
-          <div className="sheet-actions">
-            <button className="btn-cancel" onClick={closeSheet}>Cancel</button>
-            <button className="btn-submit" onClick={handleSubmit} disabled={submitting}>
+          <div className="dash-sheet-actions">
+            <button className="dash-btn-cancel" onClick={closeSheet}>Cancel</button>
+            <button className="dash-btn-submit" onClick={handleSubmit} disabled={submitting}>
               {submitting ? "Submitting…" : "Submit"}
             </button>
           </div>
