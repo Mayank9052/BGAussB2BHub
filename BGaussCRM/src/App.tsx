@@ -11,7 +11,6 @@ import VariantPage from "./Variant";
 import ColourPage from "./Colour";
 import Salespage from "./SalesPage"
 import MyLikes from "./MyLikes";
-import RoadPrice from "./RoadPrice";
 
 /* 🔒 AUTH CHECK */
 const ProtectedRoute = ({ children }: any) => {
@@ -135,8 +134,6 @@ function App() {
       />
 
       <Route path="/my-likes" element={<MyLikes />} />
-
-      <Route path="/road-price/:id" element={<RoadPrice />} />
       
     </Routes>
   );
