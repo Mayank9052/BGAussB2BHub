@@ -12,8 +12,8 @@ export default function Modules() {
 
   // ── Derived values ────────────────────────────────────────────
   const username = localStorage.getItem("username") ?? "";
-  const role     = localStorage.getItem("role")     ?? "";
-  const initial  = username.trim().charAt(0).toUpperCase() || "?";
+  const role = localStorage.getItem("role") ?? "";
+  const initial = username.trim().charAt(0).toUpperCase() || "?";
 
   return (
     <div className="modules-page">
@@ -67,8 +67,8 @@ export default function Modules() {
               onClick={() => navigate("/dashboard")}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12L12 3l9 9"/>
-                <path d="M9 21V12h6v9"/>
+                <path d="M3 12L12 3l9 9" />
+                <path d="M9 21V12h6v9" />
               </svg>
             </button>
 
@@ -80,9 +80,9 @@ export default function Modules() {
               onClick={handleLogout}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </button>
 
@@ -127,11 +127,13 @@ export default function Modules() {
             <p>Manage Model, Variant & Colour</p>
           </div>
 
-          {/* REPORTS */}
-          <div className="module-card disabled">
-            <div className="icon-circle report-icon">📊</div>
-            <h3>Reports</h3>
-            <p>Coming soon</p>
+          {/* Sales Price */}
+          <div className="module-card"
+          onClick={() => navigate("/sales")}
+          >
+            <div className="icon-circle sales-icon">💰</div>
+            <h3>Sales Price</h3>
+            <p>Manage vehicle pricing</p>
           </div>
 
         </div>

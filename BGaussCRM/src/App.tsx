@@ -9,6 +9,7 @@ import VehicleConfig from "./VehicleConfig";
 import ModelPage from "./ModelPage";
 import VariantPage from "./Variant";
 import ColourPage from "./Colour";
+import Salespage from "./SalesPage"
 import MyLikes from "./MyLikes";
 
 /* 🔒 AUTH CHECK */
@@ -119,6 +120,15 @@ function App() {
         element={
           <AdminRoute>
             <ColourPage />
+          </AdminRoute>
+        }
+      />
+
+      <Route
+        path="/sales"
+        element={
+          <AdminRoute>
+            <Salespage />
           </AdminRoute>
         }
       />
