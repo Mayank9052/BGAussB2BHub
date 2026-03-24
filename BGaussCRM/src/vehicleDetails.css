@@ -896,3 +896,96 @@
   .vd-nav-likes-badge { font-size: 9px; min-width: 16px; height: 16px; top: -4px; right: -4px; }
   .vd-like-btn, .vd-share-btn { padding: 7px 14px; font-size: 12px; }
 }
+
+/* =========================================
+   ✅ MOBILE NAVBAR — MATCH DESKTOP STYLE
+   ========================================= */
+
+@media (max-width: 768px) {
+
+  /* Navbar layout */
+  .pro-navbar {
+    padding: 0 12px;
+    height: 56px;
+    gap: 8px;
+  }
+
+  /* Left section */
+  .pro-left {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .pro-logo {
+    height: 28px;
+  }
+
+  .pro-text {
+    min-width: 0;
+  }
+
+  .pro-brand {
+    font-size: 12px;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pro-page {
+    display: none; /* hide subtitle */
+  }
+
+  /* Right section */
+  .vehicle-details-nav-buttons {
+    gap: 6px;
+  }
+
+  /* User pill → avatar only */
+  .vd-user-pill {
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .desktop-user-info {
+    display: none;
+  }
+
+  .desktop-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  /* Icons (uniform size) */
+  .vd-icon-btn,
+  .vd-nav-likes {
+    width: 34px;
+    height: 34px;
+  }
+
+  .vd-icon-btn svg,
+  .vd-nav-likes svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Likes badge fix */
+  .vd-nav-likes-badge {
+    top: -3px;
+    right: -3px;
+    min-width: 14px;
+    height: 14px;
+    font-size: 8px;
+    padding: 0 3px;
+  }
+
+  /* Prevent overflow */
+  .pro-right {
+    flex-shrink: 0;
+  }
+
+}

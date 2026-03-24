@@ -381,12 +381,6 @@ export default function VariantPage() {
 
           {/* ── RIGHT: BULK OPERATIONS ── */}
           <div className="vp-bulk-card">
-            <div className="vp-bulk-header">
-              <div className="vp-bulk-icon">📊</div>
-              <h2>Bulk Operations</h2>
-              <p>Import &amp; export variant data</p>
-            </div>
-
             <div className="vp-bulk-body">
               <div className="vp-bulk-section">
                 <div className="vp-bulk-section-info">

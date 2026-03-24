@@ -617,15 +617,80 @@
 
 /* 768px — switch to hamburger */
 @media (max-width: 768px) {
-  .dash-navbar { padding: 0 16px; height: 60px; gap: 10px; }
-  .dash-icon-group { display: none; }
-  .dash-mobile-wrap { display: block; }
-  .dash-user-name { font-size: 12px; max-width: 80px; }
-  .dash-avatar { width: 28px; height: 28px; font-size: 10px; }
-  .dash-user-pill { padding: 4px 10px 4px 4px; gap: 7px; }
-  .dash-main { padding: 18px 16px 40px; }
-  .dash-title-left h1 { font-size: 24px; }
-  .dash-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .dash-navbar { 
+    padding: 0 16px; 
+    height: 60px; 
+    gap: 10px; 
+  }
+  .dash-mobile-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* LEFT SIDE */
+  .dash-nav-left {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* BRAND */
+  .dash-brand-name { 
+    font-size: 12px; 
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dash-brand-page {
+    display: none; /* cleaner UI */
+  }
+
+  /* USER */
+  .dash-user-name { 
+    display: none; /* only avatar */
+  }
+
+  .dash-user-pill { 
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .dash-avatar { 
+    width: 30px; 
+    height: 30px; 
+    font-size: 11px; 
+  }
+
+  /* ICON BUTTONS */
+  .dash-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .dash-icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* OTHER LAYOUT */
+  .dash-main { 
+    padding: 18px 12px 36px; 
+  }
+
+  .dash-title-left h1 { 
+    font-size: 22px; 
+  }
+
+  .dash-grid { 
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+    gap: 10px; 
+  }
 }
 
 /* 640px — hide search in navbar center, show below title */
@@ -658,3 +723,70 @@
   .dash-main { padding: 12px 10px 28px; }
   .dash-form-row { grid-template-columns: 1fr; }
 }
+
+/* =========================================
+   ✅ UNIFIED NAVBAR ACTIONS (DESKTOP + MOBILE)
+   ========================================= */
+
+.dash-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* REMOVE OLD SYSTEM VISUALLY (but keep code safe) */
+.dash-icon-group,
+.dash-mobile-icons {
+  display: none !important;
+}
+
+/* Desktop */
+@media (min-width: 769px) {
+  .dash-actions {
+    gap: 10px;
+  }
+
+  .dash-icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+
+  /* Navbar compact */
+  .dash-navbar {
+    padding: 0 12px;
+    height: 56px;
+  }
+
+  /* Only avatar */
+  .dash-user-name {
+    display: none;
+  }
+
+  .dash-user-pill {
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    justify-content: center;
+  }
+
+  .dash-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Icons smaller */
+  .dash-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .dash-icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+   

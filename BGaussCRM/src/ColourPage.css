@@ -454,12 +454,45 @@
   border: 1px solid rgba(0,0,0,0.12); flex-shrink: 0;
 }
 
-/* Mini action buttons */
+/* Action container */
+.cp-row-acts {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+/* Icon buttons */
 .cp-mini-act {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 26px; height: 26px; border-radius: 6px; border: none;
-  cursor: pointer; margin: 0 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+
+  cursor: pointer;
   transition: transform 0.15s, filter 0.15s;
+}
+
+/* Icon size */
+.cp-mini-act svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Hover */
+.cp-mini-act:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+/* 📱 Mobile (bigger tap area) */
+@media (max-width: 768px) {
+  .cp-mini-act {
+    flex: 1;
+    height: 36px;
+  }
 }
 .cp-mini-act svg { width: 12px; height: 12px; display: block; pointer-events: none; }
 .cp-mini-act:hover  { transform: translateY(-1px); filter: brightness(1.1); }
@@ -508,15 +541,92 @@
   .cp-fields-row { grid-template-columns: 1fr 1fr; }
 }
 
-@media (max-width: 768px) {
-  .cp-container { padding: 16px; gap: 16px; }
-  .cp-banner { text-align: center; }
-  .cp-mini-search { width: 120px; }
-}
-
 @media (max-width: 560px) {
   .cp-chips { display: none; }
   .cp-banner-text h1 { font-size: 18px; }
   .cp-fields-row { grid-template-columns: 1fr; }
   .cp-mini-search { width: 100px; }
+}
+
+/* =========================================
+   📱 MOBILE ONLY — SAME AS OTHER PAGES
+   ========================================= */
+@media (max-width: 768px) {
+
+  /* Hide header */
+  .cp-mini-table thead {
+    display: none;
+  }
+
+  /* Row becomes card */
+  .cp-mini-table tbody tr {
+    display: block;
+    margin-bottom: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+
+  /* Each cell becomes row */
+  .cp-mini-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 4px;
+    border: none;
+    text-align: left;
+    position: relative;
+  }
+
+  /* Labels */
+  .cp-mini-table tbody td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 90px;
+
+    /* 🔥 FIX CLICK ISSUE */
+    pointer-events: none;
+  }
+
+  /* Align fixes */
+  .cmtd-model {
+    justify-content: flex-start;
+  }
+
+  .cmtd-colour {
+    justify-content: flex-end;
+  }
+
+  /* =========================================
+     ACTIONS → SAME AS OTHER PAGES
+     ========================================= */
+
+  .cp-mini-table tbody td[data-label="Actions"] {
+    width: 100%;
+    display: block;
+    margin-top: 10px;
+  }
+
+  /* Hide "Actions" label */
+  .cp-mini-table tbody td[data-label="Actions"]::before {
+    display: none;
+  }
+
+  /* Buttons layout */
+  .cmtd-act {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .cp-mini-act {
+    flex: 1;
+    height: 36px;
+    justify-content: center;
+  }
+
 }

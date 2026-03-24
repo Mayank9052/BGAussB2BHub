@@ -323,87 +323,37 @@ export default function Dashboard() {
               <span className="dash-user-role">{role}</span>
             </div>
           </div>
-
-          {/* Icon buttons — desktop */}
-          <div className="dash-icon-group">
-            {role === "admin" && (
-              <button className="dash-icon-btn dash-btn-modules"
-                onClick={() => navigate("/modules")} aria-label="Modules" data-tip="Modules">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1"/>
-                  <rect x="14" y="3" width="7" height="7" rx="1"/>
-                  <rect x="3" y="14" width="7" height="7" rx="1"/>
-                  <rect x="14" y="14" width="7" height="7" rx="1"/>
-                </svg>
-              </button>
-            )}
-            <button className="dash-icon-btn dash-btn-logout"
-              onClick={handleLogout} aria-label="Logout" data-tip="Logout">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+          <div className="dash-actions">
+          {role === "admin" && (
+            <button
+              className="dash-icon-btn dash-btn-modules"
+              onClick={() => navigate("/modules")}
+              aria-label="Modules"
+              data-tip="Modules"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/>
               </svg>
             </button>
-          </div>
+          )}
 
-          {/* Hamburger — mobile */}
-          <div className="dash-mobile-wrap" ref={mobileMenuRef}>
-            <button
-              className={`dash-hamburger${mobileMenuOpen ? " open" : ""}`}
-              onClick={() => setMobileMenuOpen((p) => !p)}
-              aria-label="Menu"
-            >
-              <span /><span /><span />
-            </button>
-
-            <div className={`dash-mobile-dd${mobileMenuOpen ? " open" : ""}`}>
-              {/* User card */}
-              <div className="dash-mdd-user">
-                <div className="dash-mdd-avatar">{initials}</div>
-                <div>
-                  <span className="dash-mdd-name">{username}</span>
-                  <span className="dash-mdd-role">{role}</span>
-                </div>
-              </div>
-              <div className="dash-mdd-divider" />
-
-              {role === "admin" && (
-                <button className="dash-mdd-item" onClick={() => { setMobileMenuOpen(false); navigate("/modules"); }}>
-                  <div className="dash-mdd-icon blue">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-                      <rect x="3" y="3" width="7" height="7" rx="1"/>
-                      <rect x="14" y="3" width="7" height="7" rx="1"/>
-                      <rect x="3" y="14" width="7" height="7" rx="1"/>
-                      <rect x="14" y="14" width="7" height="7" rx="1"/>
-                    </svg>
-                  </div>
-                  <div className="dash-mdd-text">
-                    <span className="dash-mdd-title">Modules</span>
-                    <span className="dash-mdd-sub">Manage system modules</span>
-                  </div>
-                </button>
-              )}
-
-              <div className="dash-mdd-divider" />
-              <button className="dash-mdd-item dash-mdd-item--logout"
-                onClick={() => { setMobileMenuOpen(false); handleLogout(); }}>
-                <div className="dash-mdd-icon red">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="16" height="16">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" y1="12" x2="9" y2="12"/>
-                  </svg>
-                </div>
-                <div className="dash-mdd-text">
-                  <span className="dash-mdd-title">Logout</span>
-                  <span className="dash-mdd-sub">Sign out of account</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
+          <button
+            className="dash-icon-btn dash-btn-logout"
+            onClick={handleLogout}
+            aria-label="Logout"
+            data-tip="Logout"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
         </div>
+    </div>
       </header>
 
       {/* ═══ CONTENT ══════════════════════════════════════════ */}

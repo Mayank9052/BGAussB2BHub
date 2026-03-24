@@ -287,12 +287,6 @@ export default function ModelPage() {
 
           {/* RIGHT: Bulk Operations */}
           <div className="si-bulk-card">
-            <div className="si-bulk-header">
-              <div className="si-bulk-icon">📊</div>
-              <h2>Bulk Operations</h2>
-              <p>Import &amp; export model data</p>
-            </div>
-
             <div className="si-bulk-body">
               <div className="si-bulk-section">
                 <div className="si-bulk-section-info">

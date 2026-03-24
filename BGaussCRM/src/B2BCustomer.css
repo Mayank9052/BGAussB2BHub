@@ -395,43 +395,219 @@
 .b2b-pg:disabled { opacity: 0.3; cursor: not-allowed; pointer-events: none; }
 .b2b-pg-ellipsis { padding: 0 3px; color: #9ca3af; font-size: 12px; }
 
-/* ── NAVBAR ICON BTNS (reuse vc- from VehicleConfig.css) ── */
-.b2b-page .vc-user-info {
-  display: flex; align-items: center; gap: 10px;
-  padding: 5px 14px 5px 6px;
-  border: 1.5px solid #e5e7eb;
-  border-radius: 999px; background: #f9fafb; margin-right: 6px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+/* ── NAVBAR FIX (UPDATED) ── */
+
+.pro-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  overflow: hidden;
 }
-.b2b-page .vc-user-info:hover { border-color: #d1d5db; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+/* LEFT */
+.pro-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pro-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.pro-brand {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.pro-page {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* RIGHT */
+.pro-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* USER FIX */
+.b2b-page .vc-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f9fafb;
+  white-space: nowrap;
+}
 
 .b2b-page .vc-user-avatar {
-  width: 30px; height: 30px; border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #1e3a8a);
-  color: #fff; font-size: 12px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0; box-shadow: 0 2px 6px rgba(37,99,235,0.3);
+  width: 30px;
+  height: 30px;
+  font-size: 12px;
+  flex-shrink: 0;
 }
 
-.b2b-page .vc-user-text { display: flex; flex-direction: column; gap: 1px; }
-.b2b-page .vc-user-name { font-size: 13px; font-weight: 600; color: #111827; white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
-.b2b-page .vc-user-role { font-size: 10px; color: #6b7280; text-transform: capitalize; }
+.b2b-page .vc-user-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
 
+/* ICON FIX */
+.vc-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vc-icon-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.vc-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) { .b2b-top-grid { grid-template-columns: 1fr; } }
 @media (max-width: 900px)  { .b2b-row-3 { grid-template-columns: 1fr 1fr; } }
 
 @media (max-width: 768px) {
+
+  /* NAVBAR MOBILE FIX */
+  .pro-navbar {
+    height: 56px;
+    padding: 0 10px;
+  }
+
+  .pro-page {
+    display: none;
+  }
+
+  .b2b-page .vc-user-text {
+    display: none;
+  }
+
+  .b2b-page .vc-user-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  .vc-icon-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .vc-icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .vc-icon-group {
+    gap: 6px;
+  }
+
+  /* EXISTING */
   .b2b-container { padding: 16px; gap: 16px; }
   .b2b-table-header { grid-template-columns: 1fr; justify-items: center; text-align: center; }
   .b2b-table-title { justify-content: center; }
   .b2b-table-controls { justify-content: center; }
   .b2b-search { width: 100%; }
+
+  /* =========================================
+     ✅ TABLE MOBILE RESPONSIVE (ADD THIS)
+     ========================================= */
+
+  /* Hide header */
+  .b2b-table thead {
+    display: none;
+  }
+
+  /* Convert rows to cards */
+  .b2b-table tbody tr {
+    display: block;
+    margin-bottom: 14px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+
+  /* Each cell becomes row */
+  .b2b-table tbody td {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  border: none;
+  text-align: left;
+  position: relative;
 }
 
-@media (max-width: 560px) {
-  .b2b-banner-text h1 { font-size: 18px; }
-  .b2b-row-3 { grid-template-columns: 1fr; }
+/* Label before value */
+.b2b-table tbody td::before {
+  content: attr(data-label);
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  min-width: 90px;
+
+  /* 🔥 FIX: allow button click */
+  pointer-events: none;
+}
+
+/* Special alignment fixes */
+  .b2b-company-cell {
+  justify-content: flex-start;
+}
+
+  .b2b-contact-cell {
+  align-items: flex-end;
+}
+
+  /* Actions row */
+ b2b-table tbody td[data-label="Actions"] {
+  width: 100%;
+  display: block;
+  margin-top: 8px;
+}
+
+/* Hide "Actions" label */
+.b2b-table tbody td[data-label="Actions"]::before {
+  display: none;
+}
+
+/* Actions row layout */
+.b2b-row-acts {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+  z-index: 2;
+}
+
+/* Buttons */
+.b2b-act-btn {
+  flex: 1;
+  justify-content: center;
+  height: 36px;
+}
+
 }
 
 /* ── PAGINATION BAR (reusable, used top + bottom) ────────── */
@@ -460,4 +636,45 @@
   border-top: 1px solid #e2e8f0;
   background: #f8fafc;
   border-radius: 0 0 12px 12px;
+}
+
+/* =========================================
+   ✅ ACTION COLUMN RESPONSIVE FIX
+   ========================================= */
+
+/* Desktop → normal column */
+@media (min-width: 769px) {
+  .b2b-table tbody td[data-label="Actions"] {
+    display: table-cell;
+  }
+}
+
+/* Mobile → move actions to bottom */
+@media (max-width: 768px) {
+
+  /* Make actions full width */
+  .b2b-table tbody td[data-label="Actions"] {
+    width: 100%;
+    display: block;
+    order: 999;
+  }
+
+  /* Remove label "Actions" */
+  .b2b-table tbody td[data-label="Actions"]::before {
+    display: none;
+  }
+
+  /* Button layout */
+  .b2b-row-acts {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .b2b-act-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
 }

@@ -581,70 +581,92 @@ export default function ScootyInventory() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.length > 0 ? (
-                  paginated.map((d, idx) => (
-                    <tr key={d.scootyId} className={editingId === d.scootyId ? "scr-row-editing" : ""}>
-                      <td><span className="scr-id-badge">{(currentPage - 1) * PAGE_SIZE + idx + 1}</span></td>
-                      <td>
-                        <div className="scr-model-cell">
-                          <div className="scr-model-avatar">{modelInitial(d.modelName)}</div>
-                          <span className="scr-model-name">{d.modelName}</span>
-                        </div>
-                      </td>
-                      <td><span className="scr-variant-badge">{d.variantName}</span></td>
-                      <td>
-                        <span className="scr-colour-swatch">
-                          <span className="scr-colour-dot" style={{ background: guessColourHex(d.colourName) }} />
-                          {d.colourName}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="scr-price">
-                          {d.price != null ? `₹ ${Number(d.price).toLocaleString("en-IN")}` : "—"}
-                        </span>
-                      </td>
-                      <td>{d.rangeKm != null ? `${d.rangeKm} km` : "—"}</td>
-                      <td>
-                        <span className={`scr-stock-pill ${d.stockAvailable ? "scr-stock-in" : "scr-stock-out"}`}>
-                          {d.stockAvailable ? "In Stock" : "Out of Stock"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="scr-row-acts">
-                          <button className="scr-act-btn scr-act-edit" onClick={() => handleEdit(d)}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                            Edit
-                          </button>
-                          <button className="scr-act-btn scr-act-del" onClick={() => handleDelete(d.scootyId)}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6l-1 14H6L5 6" />
-                              <path d="M10 11v6M14 11v6M9 6V4h6v2" />
-                            </svg>
-                            Delete
-                          </button>
+                  {paginated.length > 0 ? (
+                    paginated.map((d, idx) => (
+                      <tr key={d.scootyId} className={editingId === d.scootyId ? "scr-row-editing" : ""}>
+
+                        <td data-label="#">
+                          <span className="scr-id-badge">
+                            {(currentPage - 1) * PAGE_SIZE + idx + 1}
+                          </span>
+                        </td>
+
+                        <td data-label="Model">
+                          <div className="scr-model-cell">
+                            <div className="scr-model-avatar">
+                              {modelInitial(d.modelName)}
+                            </div>
+                            <span className="scr-model-name">{d.modelName}</span>
+                          </div>
+                        </td>
+
+                        <td data-label="Variant">
+                          <span className="scr-variant-badge">{d.variantName}</span>
+                        </td>
+
+                        <td data-label="Colour">
+                          <span className="scr-colour-swatch">
+                            <span
+                              className="scr-colour-dot"
+                              style={{ background: guessColourHex(d.colourName) }}
+                            />
+                            {d.colourName}
+                          </span>
+                        </td>
+
+                        <td data-label="Price">
+                          <span className="scr-price">
+                            {d.price != null
+                              ? `₹ ${Number(d.price).toLocaleString("en-IN")}`
+                              : "—"}
+                          </span>
+                        </td>
+
+                        <td data-label="Range">
+                          {d.rangeKm != null ? `${d.rangeKm} km` : "—"}
+                        </td>
+
+                        <td data-label="Stock">
+                          <span className={`scr-stock-pill ${d.stockAvailable ? "scr-stock-in" : "scr-stock-out"}`}>
+                            {d.stockAvailable ? "In Stock" : "Out of Stock"}
+                          </span>
+                        </td>
+
+                        <td data-label="Actions">
+                          <div className="scr-row-acts">
+                            <button
+                              className="scr-act-btn scr-act-edit"
+                              onClick={() => handleEdit(d)}
+                            >
+                              Edit
+                            </button>
+
+                            <button
+                              className="scr-act-btn scr-act-del"
+                              onClick={() => handleDelete(d.scootyId)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className="scr-empty">
+                          <div className="scr-empty-icon">📦</div>
+                          <div className="scr-empty-title">
+                            {tableSearch ? `No items match "${tableSearch}"` : "No inventory items added yet"}
+                          </div>
+                          <div className="scr-empty-sub">
+                            {tableSearch ? "Try a different search keyword." : "Add your first item using the form above."}
+                          </div>
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={8}>
-                      <div className="scr-empty">
-                        <div className="scr-empty-icon">📦</div>
-                        <div className="scr-empty-title">
-                          {tableSearch ? `No items match "${tableSearch}"` : "No inventory items added yet"}
-                        </div>
-                        <div className="scr-empty-sub">
-                          {tableSearch ? "Try a different search keyword." : "Add your first item using the form above."}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
+                  )}
               </tbody>
             </table>
           </div>
