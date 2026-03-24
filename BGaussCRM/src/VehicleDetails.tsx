@@ -396,9 +396,10 @@ useEffect(() => {
                 Home / Vehicles / BGauss / {vehicle.modelName} / {vehicle.variantName}
               </p>
 
-              {/* ── LIKE + SHARE BUTTONS ── */}
+              {/* ── LIKE + SHARE + ROAD PRICE BUTTONS ── */}
               <div className="vd-action-buttons">
 
+                {/* LIKE */}
                 <button
                   className={`vd-like-btn${isLiked ? " liked" : ""}`}
                   onClick={handleLike}
@@ -419,12 +420,13 @@ useEffect(() => {
                   {likeCount > 0 && <span className="vd-like-count">{likeCount}</span>}
                 </button>
 
+                {/* SHARE */}
                 <button
                   className="vd-share-btn"
                   onClick={handleShare}
                   aria-label="Share this vehicle"
                 >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="18" cy="5" r="3"/>
                     <circle cx="6" cy="12" r="3"/>
                     <circle cx="18" cy="19" r="3"/>
@@ -432,6 +434,19 @@ useEffect(() => {
                     <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                   </svg>
                   <span>Share</span>
+                </button>
+
+                {/* ROAD PRICE */}
+                <button
+                  className="vd-road-price-btn"
+                  onClick={() => navigate(`/road-price/${vehicle.scootyId}`)}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  <span>On Road Price</span>
                 </button>
 
                 {shareMsg && <span className="vd-share-msg">✓ {shareMsg}</span>}

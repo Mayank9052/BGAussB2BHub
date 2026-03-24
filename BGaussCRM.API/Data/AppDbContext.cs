@@ -14,7 +14,11 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<B2bcustomer> B2bcustomers { get; set; }
 
+    public virtual DbSet<City> Cities { get; set; }
+
     public virtual DbSet<PriceMaster> PriceMasters { get; set; }
+
+    public virtual DbSet<RoadPrice> RoadPrices { get; set; }
 
     public virtual DbSet<SalesOrder> SalesOrders { get; set; }
 
@@ -67,6 +71,18 @@ public partial class AppDbContext : DbContext
                 .IsUnicode(false);
         });
 
+        modelBuilder.Entity<City>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Cities__3214EC073B69A4CB");
+
+            entity.HasIndex(e => e.IsPopular, "IX_Cities_IsPopular");
+
+            entity.HasIndex(e => e.CityName, "UQ_Cities_Name").IsUnique();
+
+            entity.Property(e => e.CityName).HasMaxLength(100);
+            entity.Property(e => e.StateName).HasMaxLength(100);
+        });
+
         modelBuilder.Entity<PriceMaster>(entity =>
         {
             entity.HasKey(e => e.PriceId).HasName("PK__PriceMas__4957584F98AE03AF");
@@ -92,6 +108,35 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.VariantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PriceMast__Varia__6754599E");
+        });
+
+        modelBuilder.Entity<RoadPrice>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__RoadPric__3214EC0752F40D8A");
+
+            entity.HasIndex(e => e.CityId, "IX_RoadPrices_CityId");
+
+            entity.HasIndex(e => e.ScootyId, "IX_RoadPrices_ScootyId");
+
+            entity.HasIndex(e => new { e.ScootyId, e.CityId }, "UQ_RoadPrice_Scooty_City").IsUnique();
+
+            entity.Property(e => e.ExShowroomPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.InsuranceAmount).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.OtherCharges).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.RtoCharges).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.ScootyId).HasColumnName("ScootyID");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ValidFrom).HasDefaultValueSql("(getdate())");
+
+            entity.HasOne(d => d.City).WithMany(p => p.RoadPrices)
+                .HasForeignKey(d => d.CityId)
+                .HasConstraintName("FK_RoadPrices_City");
+
+            entity.HasOne(d => d.Scooty).WithMany(p => p.RoadPrices)
+                .HasForeignKey(d => d.ScootyId)
+                .HasConstraintName("FK_RoadPrices_Scooty");
         });
 
         modelBuilder.Entity<SalesOrder>(entity =>
