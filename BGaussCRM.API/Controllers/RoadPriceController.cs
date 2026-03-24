@@ -15,6 +15,50 @@ namespace BGaussCRM.API.Controllers
         public RoadPriceController(AppDbContext context) { _context = context; }
 
         // =============================================
+        // GET ALL ROAD PRICES
+        // GET /api/RoadPrice
+        // =============================================
+        [HttpGet]
+        public async Task<IActionResult> GetAllRoadPrices()
+        {
+            var data = await _context.RoadPrices
+                .Include(r => r.Scooty).ThenInclude(s => s.Model)
+                .Include(r => r.Scooty).ThenInclude(s => s.Variant)
+                .Include(r => r.Scooty).ThenInclude(s => s.Colour)
+                .Include(r => r.City)
+                .Select(r => new
+                {
+                    r.Id,
+                    r.ScootyId,
+
+                    ModelName   = r.Scooty.Model.ModelName,
+                    VariantName = r.Scooty.Variant.VariantName,
+                    ColourName  = r.Scooty.Colour != null ? r.Scooty.Colour.ColourName : null,
+
+                    r.CityId,
+                    CityName  = r.City.CityName,
+                    StateName = r.City.StateName,
+
+                    r.ExShowroomPrice,
+                    r.RtoCharges,
+                    r.InsuranceAmount,
+                    r.OtherCharges,
+
+                    OnRoadPrice = r.ExShowroomPrice 
+                                + r.RtoCharges 
+                                + r.InsuranceAmount 
+                                + r.OtherCharges,
+
+                    r.ValidFrom,
+                    r.UpdatedAt
+                })
+                .OrderByDescending(r => r.UpdatedAt)
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
+        // =============================================
         // GET ALL CITIES  (search + popular)
         // GET /api/RoadPrice/cities?search=mum
         // =============================================
