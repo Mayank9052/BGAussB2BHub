@@ -1,0 +1,253 @@
+/* =============================================
+   VEHICLE REVIEWS PAGE
+   ============================================= */
+.vr-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: #0f172a;
+}
+
+/* NAVBAR */
+.vr-navbar {
+  position: sticky; top: 0; z-index: 200;
+  height: 64px; background: rgba(255,255,255,0.97);
+  backdrop-filter: blur(12px);
+  border-bottom: 1.5px solid #e5e7eb;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  display: flex; align-items: center;
+  justify-content: space-between; padding: 0 28px; gap: 16px;
+}
+.vr-nav-left  { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.vr-nav-logo  { height: 36px; border-radius: 8px; object-fit: contain; }
+.vr-nav-brand { display: flex; flex-direction: column; gap: 1px; }
+.vr-brand-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+.vr-brand-page { font-size: 11px; color: #f43f5e; font-weight: 600; }
+.vr-nav-right  { display: flex; align-items: center; gap: 10px; }
+
+.vr-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  padding: 6px 16px 6px 6px;
+  border-radius: 999px;
+
+  background: linear-gradient(145deg, #f0f4ff, #e6ecff);
+  border: 1px solid #dbe3ff;
+
+  box-shadow: 
+    4px 4px 12px rgba(0, 0, 0, 0.08),
+    -4px -4px 12px rgba(255, 255, 255, 0.9);
+
+  transition: all 0.2s ease;
+}
+
+.vr-user-pill:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.vr-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+
+  background: linear-gradient(135deg, #2563eb, #1e3a8a);
+  color: #fff;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+.vr-user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.vr-user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.vr-user-role {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.vr-icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  cursor: pointer;
+
+  box-shadow: 
+    4px 4px 10px rgba(0,0,0,0.15),
+    -4px -4px 10px rgba(255,255,255,0.8);
+
+  transition: all 0.2s ease;
+}
+
+.vr-icon-btn svg { width: 18px; height: 18px; pointer-events: none; }
+.vr-icon-btn:hover { transform: translateY(-2px); }
+.vr-btn-back { background: linear-gradient(135deg, #0f766e, #0f172a); color: #fff; box-shadow: 0 4px 14px rgba(15,118,110,0.4); }
+.vr-btn-dash { background: linear-gradient(135deg, #6366f1, #312e81); color: #fff; box-shadow: 0 4px 14px rgba(99,102,241,0.4); }
+.vr-icon-btn::after {
+  content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) scale(0.85);
+  background: #0f172a; color: #fff; font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+  opacity: 0; pointer-events: none; transition: opacity 0.15s, transform 0.15s; z-index: 400;
+}
+.vr-icon-btn:hover::after { opacity: 1; transform: translateX(-50%) scale(1); }
+
+/* MAIN */
+.vr-main { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+
+.vr-loading { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 80px; }
+.vr-spinner {
+  width: 38px; height: 38px; border: 3px solid #fecdd3; border-top-color: #f43f5e;
+  border-radius: 50%; animation: vrSpin 0.8s linear infinite;
+}
+@keyframes vrSpin { to { transform: rotate(360deg); } }
+
+/* LAYOUT */
+.vr-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px; align-items: start;
+}
+
+/* LEFT */
+.vr-left { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 84px; }
+
+.vr-vehicle-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px; background: #fff;
+  border: 1.5px solid #e5e7eb; border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(15,23,42,0.07);
+  cursor: pointer; transition: box-shadow 0.15s;
+}
+.vr-vehicle-card:hover { box-shadow: 0 8px 24px rgba(15,23,42,0.12); }
+.vr-vehicle-card img { width: 64px; height: 52px; object-fit: contain; border-radius: 8px; background: #f8fafc; }
+.vr-vehicle-info h3 { font-size: 14px; font-weight: 700; color: #0f172a; margin: 0 0 2px; }
+.vr-vehicle-info p  { font-size: 12px; color: #64748b; margin: 0 0 4px; }
+.vr-vehicle-price   { font-size: 13px; font-weight: 700; color: #1d4ed8; }
+
+/* Summary card */
+.vr-summary-card {
+  background: #fff; border: 1.5px solid #e5e7eb;
+  border-radius: 18px; padding: 18px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.07);
+}
+
+.vr-summary-top { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-bottom: 16px; }
+.vr-big-rating { display: flex; align-items: baseline; gap: 2px; }
+.vr-big-score  { font-size: 44px; font-weight: 900; color: #0f172a; line-height: 1; }
+.vr-big-max    { font-size: 18px; color: #64748b; font-weight: 600; }
+.vr-summary-based { font-size: 13px; color: #64748b; margin: 0; }
+
+.vr-stars-row { display: inline-flex; gap: 2px; }
+.vr-star.on  { color: #f59e0b; }
+.vr-star.off { color: #d1d5db; }
+
+.vr-bar-section { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.vr-star-bar { display: flex; align-items: center; gap: 8px; }
+.vr-star-label { font-size: 12px; font-weight: 600; color: #374151; min-width: 32px; }
+.vr-bar-track  { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+.vr-bar-fill   { height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 3px; transition: width 0.5s ease; }
+.vr-star-count { font-size: 11px; color: #9ca3af; min-width: 28px; text-align: right; }
+
+.vr-cat-section { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; padding-top: 14px; border-top: 1px solid #f1f5f9; }
+.vr-cat-bar { display: flex; align-items: center; gap: 8px; }
+.vr-cat-label { font-size: 12px; color: #374151; min-width: 90px; }
+.vr-cat-score { font-size: 11px; font-weight: 700; color: #374151; }
+
+.vr-write-btn {
+  width: 100%; padding: 12px; border: none; border-radius: 10px;
+  background: linear-gradient(135deg, #f43f5e, #9f1239);
+  color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(244,63,94,0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.vr-write-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(244,63,94,0.4); }
+
+.vr-no-reviews-card {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 32px; text-align: center;
+  background: #fff; border: 1.5px solid #e5e7eb; border-radius: 18px;
+}
+.vr-no-reviews-card span { font-size: 32px; opacity: 0.5; }
+.vr-no-reviews-card p { font-size: 14px; color: #64748b; margin: 0; }
+
+/* RIGHT: Review list */
+.vr-right { display: flex; flex-direction: column; gap: 16px; }
+
+.vr-list-title { font-size: 20px; font-weight: 800; color: #0f172a; margin: 0 0 4px; }
+.vr-list-count { font-size: 16px; font-weight: 500; color: #64748b; }
+
+.vr-empty-reviews { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 48px; text-align: center; color: #64748b; }
+.vr-empty-reviews span { font-size: 36px; }
+
+.vr-review-list { display: flex; flex-direction: column; gap: 14px; }
+
+.vr-review-card {
+  background: #fff; border: 1.5px solid #e5e7eb;
+  border-radius: 16px; padding: 18px;
+  box-shadow: 0 3px 12px rgba(15,23,42,0.06);
+  transition: box-shadow 0.15s;
+}
+.vr-review-card:hover { box-shadow: 0 6px 20px rgba(15,23,42,0.1); }
+
+.vr-review-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+}
+.vr-reviewer-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, #64748b, #334155);
+  color: #fff; font-size: 16px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.vr-reviewer-info { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.vr-reviewer-name { font-size: 14px; font-weight: 600; color: #0f172a; }
+.vr-review-date   { font-size: 12px; color: #9ca3af; white-space: nowrap; }
+
+.vr-review-title  { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 6px; }
+.vr-review-text   { font-size: 13px; color: #475569; line-height: 1.6; margin: 0; }
+
+.vr-read-more {
+  background: none; border: none; color: #2563eb;
+  font-size: 13px; font-weight: 600; cursor: pointer; padding: 0;
+}
+
+.vr-review-cats {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+}
+.vr-review-cats span {
+  font-size: 11px; font-weight: 600; color: #475569;
+  padding: 3px 10px; background: #f1f5f9;
+  border: 1px solid #e2e8f0; border-radius: 999px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vr-navbar { padding: 0 16px; height: 58px; }
+  .vr-user-info { display: none; }
+  .vr-user-pill { padding: 5px; border-radius: 50%; }
+  .vr-icon-btn { width: 36px; height: 36px; }
+  .vr-main { padding: 16px 14px 32px; }
+  .vr-layout { grid-template-columns: 1fr; }
+  .vr-left { position: static; }
+}

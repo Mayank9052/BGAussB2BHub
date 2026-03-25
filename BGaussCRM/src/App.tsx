@@ -12,7 +12,7 @@ import ColourPage from "./Colour";
 import Salespage from "./SalesPage"
 import MyLikes from "./MyLikes";
 import RoadPrice from "./RoadPrice";
-
+import VehicleReviews from "./vehicleReviews";
 /* 🔒 AUTH CHECK */
 const ProtectedRoute = ({ children }: any) => {
   const token = localStorage.getItem("token");
@@ -138,6 +138,7 @@ function App() {
       <Route path="/road-price/:id" element={<RoadPrice />} />
       <Route path="/" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reviews/:id" element={<VehicleReviews />} />
       
     </Routes>
   );

@@ -25,6 +25,8 @@ public partial class ScootyInventory
 
     public virtual VehicleColour? Colour { get; set; }
 
+    public virtual ICollection<EmiEnquiry> EmiEnquiries { get; set; } = new List<EmiEnquiry>();
+
     public virtual VehicleModel Model { get; set; } = null!;
 
     public virtual ICollection<RoadPrice> RoadPrices { get; set; } = new List<RoadPrice>();
@@ -34,4 +36,6 @@ public partial class ScootyInventory
     public virtual ICollection<UserLike> UserLikes { get; set; } = new List<UserLike>();
 
     public virtual VehicleVariant Variant { get; set; } = null!;
+
+    public virtual ICollection<VehicleReview> VehicleReviews { get; set; } = new List<VehicleReview>();
 }

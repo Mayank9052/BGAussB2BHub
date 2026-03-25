@@ -1018,3 +1018,290 @@
   }
 
 }
+/* =============================================
+   Reviews bar + Write Review modal + EMI modal
+   ============================================= */
+
+/* ── Road price button ── */
+.vd-road-price-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 999px;
+  border: 1.5px solid #bfdbfe;
+  background: #eff6ff; color: #1d4ed8;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.18s;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.1);
+}
+.vd-road-price-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.vd-road-price-btn:hover { background: #dbeafe; border-color: #93c5fd; box-shadow: 0 4px 14px rgba(37,99,235,0.2); }
+
+/* ── GET EMI BUTTON (sidebar) ── */
+.vd-emi-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 13px 20px;
+  border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #ef4444, #991b1b);
+  color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(239,68,68,0.35);
+  transition: transform 0.18s, box-shadow 0.18s;
+  letter-spacing: 0.01em;
+}
+.vd-emi-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(239,68,68,0.45); }
+.vd-emi-btn:active { transform: scale(0.97); }
+
+/* ── REVIEWS BAR ── */
+.vd-reviews-bar {
+  display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  padding: 12px 16px;
+  background: #f8fafc; border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.vd-reviews-bar-left  { display: flex; align-items: center; gap: 8px; }
+.vd-reviews-bar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.vd-avg-score {
+  font-size: 18px; font-weight: 800; color: #0f172a;
+}
+
+.vd-mini-stars { display: inline-flex; gap: 1px; }
+.vd-mini-star  { font-size: 14px; color: #d1d5db; }
+.vd-mini-star.on { color: #f59e0b; }
+
+.vd-review-count {
+  font-size: 13px; font-weight: 600; color: #2563eb;
+}
+.vd-review-count.no-reviews { color: #9ca3af; font-weight: 500; }
+
+/* Stars (interactive) */
+.vd-stars { display: inline-flex; }
+.vd-star  { color: #d1d5db; transition: color 0.1s; }
+.vd-star.filled { color: #f59e0b; }
+
+/* Write review button */
+.vd-write-review-btn {
+  padding: 8px 16px; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, #f43f5e, #9f1239);
+  color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 3px 10px rgba(244,63,94,0.3);
+  transition: transform 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+.vd-write-review-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(244,63,94,0.4); }
+
+.vd-see-reviews-btn {
+  padding: 8px 14px; border: 1.5px solid #e5e7eb;
+  border-radius: 8px; background: #fff;
+  color: #374151; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.vd-see-reviews-btn:hover { background: #f3f4f6; border-color: #d1d5db; }
+
+/* ── MODAL OVERLAY ── */
+.vd-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 900;
+  animation: vdFade 0.2s ease;
+}
+@keyframes vdFade { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── MODAL BASE ── */
+.vd-modal {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+  display: flex; flex-direction: column;
+  animation: vdModalIn 0.22s cubic-bezier(0.16,1,0.3,1);
+  max-height: 88vh; overflow: hidden;
+}
+@keyframes vdModalIn {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.vd-review-modal { width: min(560px, 94vw); }
+.vd-emi-modal    { width: min(440px, 94vw); }
+
+.vd-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #f1f5f9; flex-shrink: 0;
+}
+.vd-modal-header h3 { font-size: 17px; font-weight: 700; color: #0f172a; margin: 0; }
+.vd-modal-close {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: #f3f4f6; font-size: 13px;
+  cursor: pointer; color: #6b7280;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.vd-modal-close:hover { background: #e5e7eb; color: #0f172a; }
+
+.vd-modal-body { overflow-y: auto; padding: 18px 22px 22px; flex: 1; }
+
+/* Review modal fields */
+.vd-review-vehicle-tag {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; background: #f8fafc;
+  border-radius: 10px; border: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+.vd-review-vehicle-tag img {
+  width: 48px; height: 40px; object-fit: contain; border-radius: 6px;
+}
+.vd-review-vehicle-tag span { font-size: 13px; color: #374151; }
+.vd-review-vehicle-tag strong { color: #0f172a; }
+
+.vd-review-field { margin-bottom: 14px; }
+.vd-review-field label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: #374151; margin-bottom: 6px;
+}
+.req { color: #ef4444; }
+
+.vd-review-input {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  font-size: 14px; color: #111827; background: #f9fafb;
+  outline: none; transition: border-color 0.2s; box-sizing: border-box;
+}
+.vd-review-input:focus { border-color: #f43f5e; background: #fff; }
+
+.vd-review-textarea {
+  width: 100%; padding: 11px 14px;
+  border: 1.5px solid #e5e7eb; border-radius: 10px;
+  font-size: 14px; color: #111827; background: #f9fafb;
+  outline: none; transition: border-color 0.2s; box-sizing: border-box;
+  resize: vertical; font-family: inherit; line-height: 1.5;
+}
+.vd-review-textarea:focus { border-color: #f43f5e; background: #fff; }
+
+.vd-review-hint { font-size: 11px; color: #ef4444; margin-top: 3px; display: block; }
+
+/* Category ratings */
+.vd-review-categories {
+  background: #f8fafc; border: 1px solid #e5e7eb;
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+}
+.vd-review-cat-title {
+  font-size: 12px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px;
+}
+.vd-review-cat-grid { display: flex; flex-direction: column; gap: 8px; }
+.vd-cat-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+}
+.vd-cat-row span { font-size: 13px; color: #374151; min-width: 100px; }
+
+/* Messages */
+.vd-review-msg {
+  padding: 10px 14px; border-radius: 10px;
+  font-size: 13px; font-weight: 500; margin-bottom: 12px;
+}
+.vd-review-msg.success { background: #dcfce7; color: #166534; border: 1px solid #6ee7b7; }
+.vd-review-msg.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+/* Modal action buttons */
+.vd-modal-actions { display: flex; gap: 10px; }
+.vd-modal-btn-cancel {
+  flex: 1; padding: 12px; border-radius: 12px;
+  border: 1.5px solid #e5e7eb; background: #fff; color: #374151;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.vd-modal-btn-cancel:hover { background: #f3f4f6; }
+
+.vd-modal-btn-submit {
+  flex: 2; padding: 12px; border-radius: 12px;
+  border: none; background: linear-gradient(135deg, #f43f5e, #9f1239);
+  color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(244,63,94,0.35);
+  transition: opacity 0.15s, box-shadow 0.15s;
+}
+.vd-modal-btn-submit:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(244,63,94,0.45); }
+.vd-modal-btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── EMI MODAL ── */
+.vd-emi-voucher-banner {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+  border: 1px solid #fecdd3; border-radius: 14px;
+  padding: 14px 18px; margin-bottom: 14px;
+}
+.vd-emi-voucher-icon {
+  width: 50px; height: 50px; border-radius: 50%;
+  background: linear-gradient(135deg, #ef4444, #991b1b);
+  color: #fff; font-size: 22px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+}
+.vd-emi-voucher-title { font-size: 14px; font-weight: 700; color: #0f172a; margin: 0 0 2px; }
+.vd-emi-voucher-sub   { font-size: 12px; color: #64748b; margin: 0; }
+
+.vd-emi-benefits {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 14px;
+}
+.vd-emi-benefits span {
+  font-size: 12px; color: #475569; font-weight: 500;
+  padding: 5px 12px; background: #f1f5f9;
+  border-radius: 999px; border: 1px solid #e5e7eb;
+}
+
+.vd-emi-sub  { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
+.vd-emi-note { font-size: 12px; color: #9ca3af; margin: 0 0 16px; }
+
+.vd-emi-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.vd-emi-field { position: relative; }
+.vd-emi-input {
+  width: 100%; padding: 12px 14px;
+  border: 1px solid #e5e7eb; border-radius: 10px;
+  font-size: 14px; color: #111827; background: #f9fafb;
+  outline: none; transition: border-color 0.2s; box-sizing: border-box;
+}
+.vd-emi-input:focus { border-color: #ef4444; background: #fff; }
+
+.vd-emi-loan-row { padding: 12px 14px; background: #f9fafb; border-radius: 10px; }
+.vd-emi-loan-row p { font-size: 13px; color: #374151; margin: 0 0 8px; font-weight: 500; }
+.vd-emi-radio-group { display: flex; gap: 20px; }
+.vd-emi-radio {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: #374151; cursor: pointer;
+}
+.vd-emi-radio input { accent-color: #ef4444; width: 16px; height: 16px; }
+
+.vd-emi-submit-btn {
+  width: 100%; padding: 14px;
+  border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #ef4444, #991b1b);
+  color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 6px 18px rgba(239,68,68,0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.vd-emi-submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(239,68,68,0.45); }
+.vd-emi-submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* EMI success */
+.vd-emi-success {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px; padding: 20px 0; text-align: center;
+}
+.vd-emi-success-icon { font-size: 48px; }
+.vd-emi-success h3 { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }
+.vd-emi-success p  { font-size: 14px; color: #64748b; margin: 0; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  .vd-modal { border-radius: 20px 20px 0 0; top: auto; bottom: 0; left: 0; right: 0; transform: none; width: 100%; max-height: 88vh; animation: vdModalUp 0.22s ease; }
+  @keyframes vdModalUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .vd-reviews-bar { flex-direction: column; align-items: flex-start; }
+  .vd-modal-overlay { animation: none; }
+}

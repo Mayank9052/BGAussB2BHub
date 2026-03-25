@@ -16,6 +16,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<City> Cities { get; set; }
 
+    public virtual DbSet<EmiEnquiry> EmiEnquiries { get; set; }
+
     public virtual DbSet<PriceMaster> PriceMasters { get; set; }
 
     public virtual DbSet<RoadPrice> RoadPrices { get; set; }
@@ -31,6 +33,8 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<VehicleColour> VehicleColours { get; set; }
 
     public virtual DbSet<VehicleModel> VehicleModels { get; set; }
+
+    public virtual DbSet<VehicleReview> VehicleReviews { get; set; }
 
     public virtual DbSet<VehicleVariant> VehicleVariants { get; set; }
 
@@ -81,6 +85,31 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.CityName).HasMaxLength(100);
             entity.Property(e => e.StateName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<EmiEnquiry>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__EmiEnqui__3214EC071B2B0F16");
+
+            entity.HasIndex(e => e.ScootyId, "IX_EmiEnquiries_ScootyId");
+
+            entity.HasIndex(e => e.UserId, "IX_EmiEnquiries_UserId");
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.FullName).HasMaxLength(200);
+            entity.Property(e => e.MobileNumber).HasMaxLength(20);
+            entity.Property(e => e.PinCode).HasMaxLength(10);
+            entity.Property(e => e.ScootyId).HasColumnName("ScootyID");
+            entity.Property(e => e.Status)
+                .HasMaxLength(50)
+                .HasDefaultValue("Pending");
+            entity.Property(e => e.UserId).HasMaxLength(100);
+
+            entity.HasOne(d => d.Scooty).WithMany(p => p.EmiEnquiries)
+                .HasForeignKey(d => d.ScootyId)
+                .HasConstraintName("FK_EmiEnquiries_Scooty");
         });
 
         modelBuilder.Entity<PriceMaster>(entity =>
@@ -249,6 +278,30 @@ public partial class AppDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__VehicleM__3214EC070A7DD962");
 
             entity.Property(e => e.ModelName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<VehicleReview>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__VehicleR__3214EC0707642560");
+
+            entity.HasIndex(e => e.ScootyId, "IX_VehicleReviews_ScootyID");
+
+            entity.HasIndex(e => e.UserId, "IX_VehicleReviews_UserId");
+
+            entity.HasIndex(e => new { e.ScootyId, e.UserId }, "UQ_Review_User_Scooty").IsUnique();
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.IsApproved).HasDefaultValue(true);
+            entity.Property(e => e.ReviewText).HasMaxLength(2000);
+            entity.Property(e => e.ScootyId).HasColumnName("ScootyID");
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.UserId).HasMaxLength(100);
+
+            entity.HasOne(d => d.Scooty).WithMany(p => p.VehicleReviews)
+                .HasForeignKey(d => d.ScootyId)
+                .HasConstraintName("FK_Reviews_Scooty");
         });
 
         modelBuilder.Entity<VehicleVariant>(entity =>
