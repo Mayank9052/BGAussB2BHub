@@ -9,138 +9,130 @@ import VehicleConfig from "./VehicleConfig";
 import ModelPage from "./ModelPage";
 import VariantPage from "./Variant";
 import ColourPage from "./Colour";
-import Salespage from "./SalesPage"
+import Salespage from "./SalesPage";
 import MyLikes from "./MyLikes";
 import RoadPrice from "./RoadPrice";
 import VehicleReviews from "./VehicleReviews";
+import Footer from "./Footer";
+import "./Footer.css";
+
 /* 🔒 AUTH CHECK */
 const ProtectedRoute = ({ children }: any) => {
   const token = localStorage.getItem("token");
-
-  if (!token) {
-    return <LoginPage />;
-  }
-
+  if (!token) return <LoginPage />;
   return children;
 };
 
 /* 🔒 ADMIN CHECK */
 const AdminRoute = ({ children }: any) => {
   const role = localStorage.getItem("role");
-
-  if (role !== "admin") {
-    return <Dashboard />;
-  }
-
+  if (role !== "admin") return <Dashboard />;
   return children;
 };
 
 function App() {
   return (
-    <Routes>
+    <div className="app-shell">
+      <div className="app-content">
+        <main className="app-main">
+          <Routes>
+            {/* PUBLIC */}
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
 
-      {/* PUBLIC */}
-      <Route path="/" element={<LoginPage />} />
+            {/* USER + ADMIN */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/vehicle/:id"
+              element={
+                <ProtectedRoute>
+                  <VehicleDetails />
+                </ProtectedRoute>
+              }
+            />
 
-      {/* USER + ADMIN */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
+            {/* ADMIN ONLY */}
+            <Route
+              path="/modules"
+              element={
+                <AdminRoute>
+                  <Modules />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/b2b-customers"
+              element={
+                <AdminRoute>
+                  <B2BCustomer />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/scootyInventory"
+              element={
+                <AdminRoute>
+                  <ScootyInventory />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/vehicle-config"
+              element={
+                <AdminRoute>
+                  <VehicleConfig />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/vehicle-config/models"
+              element={
+                <AdminRoute>
+                  <ModelPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/vehicle-config/variants"
+              element={
+                <AdminRoute>
+                  <VariantPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/vehicle-config/colours"
+              element={
+                <AdminRoute>
+                  <ColourPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/sales"
+              element={
+                <AdminRoute>
+                  <Salespage />
+                </AdminRoute>
+              }
+            />
 
-      <Route
-        path="/vehicle/:id"
-        element={
-          <ProtectedRoute>
-            <VehicleDetails />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* ADMIN ONLY */}
-      <Route
-        path="/modules"
-        element={
-          <AdminRoute>
-            <Modules />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/b2b-customers"
-        element={
-          <AdminRoute>
-            <B2BCustomer />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/scootyInventory"
-        element={
-          <AdminRoute>
-            <ScootyInventory />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/vehicle-config"
-        element={
-          <AdminRoute>
-            <VehicleConfig />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/vehicle-config/models"
-        element={
-          <AdminRoute>
-            <ModelPage />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/vehicle-config/variants"
-        element={
-          <AdminRoute>
-            <VariantPage />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/vehicle-config/colours"
-        element={
-          <AdminRoute>
-            <ColourPage />
-          </AdminRoute>
-        }
-      />
-
-      <Route
-        path="/sales"
-        element={
-          <AdminRoute>
-            <Salespage />
-          </AdminRoute>
-        }
-      />
-
-      <Route path="/my-likes" element={<MyLikes />} />
-      <Route path="/road-price/:id" element={<RoadPrice />} />
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/reviews/:id" element={<VehicleReviews />} />
-      
-    </Routes>
+            {/* OPEN ROUTES */}
+            <Route path="/my-likes" element={<MyLikes />} />
+            <Route path="/road-price/:id" element={<RoadPrice />} />
+            <Route path="/reviews/:id" element={<VehicleReviews />} />
+          </Routes>
+        </main>
+      </div>
+      <Footer />
+    </div>
   );
 }
 

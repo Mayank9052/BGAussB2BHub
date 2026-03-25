@@ -69,11 +69,11 @@ const LoginPage = () => {
               required
             />
           </div>
-
-          <button className="login-btn">Login</button>
+          <button className="login-btn">Login</button>      
         </form>
       </div>
     </div>
+    
   );
 };
 
