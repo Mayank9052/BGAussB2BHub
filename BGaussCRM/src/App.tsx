@@ -134,6 +134,8 @@ function App() {
       />
 
       <Route path="/my-likes" element={<MyLikes />} />
+      <Route path="/" element={<LoginPage />} />
+      <Route path="/login" element={<LoginPage />} />
       
     </Routes>
   );
