@@ -12,7 +12,7 @@ import ColourPage from "./Colour";
 import Salespage from "./SalesPage"
 import MyLikes from "./MyLikes";
 import RoadPrice from "./RoadPrice";
-import VehicleReviews from "./vehicleReviews";
+import VehicleReviews from "./VehicleReviews";
 /* 🔒 AUTH CHECK */
 const ProtectedRoute = ({ children }: any) => {
   const token = localStorage.getItem("token");
