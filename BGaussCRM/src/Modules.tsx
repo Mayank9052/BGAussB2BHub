@@ -131,8 +131,8 @@ export default function Modules() {
           <div className="module-card"
           onClick={() => navigate("/sales")}
           >
-            <div className="icon-circle sales-icon">💰</div>
-            <h3>Sales Price</h3>
+            <div className="icon-circle sales-icon">🛣️</div>
+            <h3>Road Price</h3>
             <p>Manage vehicle pricing</p>
           </div>
 

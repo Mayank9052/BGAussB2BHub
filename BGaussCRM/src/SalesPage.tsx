@@ -3,6 +3,7 @@ import "./VehicleConfig.css";
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import logo from "./assets/logo.jpg";
 
 const API = "/api/RoadPrice";
 const PAGE_SIZE = 10;
@@ -308,23 +309,15 @@ export default function RoadPrice() {
 
             {/* ── NAVBAR ── */}
             <header className="rp-navbar">
-                {/* Left: Logo box + Brand text */}
                 <div className="rp-navbar-left">
-                    <div className="rp-navbar-logo-box">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="2" y="3" width="20" height="14" rx="2" />
-                            <path d="M8 21h8M12 17v4" />
-                        </svg>
-                    </div>
-                    <div className="rp-navbar-brand">
-                        <span className="rp-navbar-brand-name">BGauss Portal</span>
-                        <span className="rp-navbar-brand-sub">Road Price</span>
+                    <img src={logo} className="pro-logo" />
+                    <div className="pro-text">
+                        <span className="pro-brand">BGauss Portal</span>
+                        <span className="pro-page">Modules</span>
                     </div>
                 </div>
 
-                {/* Right: User pill + icon buttons */}
                 <div className="rp-navbar-right">
-                    {/* User pill */}
                     <div className="rp-navbar-user-pill">
                         <div className="rp-navbar-avatar">{initial}</div>
                         <div className="rp-navbar-user-info">
@@ -333,8 +326,7 @@ export default function RoadPrice() {
                         </div>
                     </div>
 
-                    {/* Dashboard / grid icon — blue */}
-                    <button className="rp-navbar-circle-btn rp-circle-blue" title="Dashboard"  onClick={() => navigate("/dashboard")}>
+                    <button className="rp-navbar-circle-btn rp-circle-blue" title="Dashboard" onClick={() => navigate("/dashboard")}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="3" width="7" height="7" rx="1" />
                             <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -343,16 +335,14 @@ export default function RoadPrice() {
                         </svg>
                     </button>
 
-                    {/* Home icon — indigo */}
-                    <button className="rp-navbar-circle-btn rp-circle-indigo" title="Home"  onClick={() => navigate("/modules")}>
+                    <button className="rp-navbar-circle-btn rp-circle-indigo" title="Home" onClick={() => navigate("/modules")}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
                             <path d="M9 21V12h6v9" />
                         </svg>
                     </button>
 
-                    {/* Logout icon — red */}
-                    <button className="rp-navbar-circle-btn rp-circle-red" title="Logout"  onClick={() => navigate("/login")}>
+                    <button className="rp-navbar-circle-btn rp-circle-red" title="Logout" onClick={() => navigate("/login")}>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
                             <polyline points="16 17 21 12 16 7" />
@@ -381,10 +371,13 @@ export default function RoadPrice() {
                     </div>
                 </div>
 
-                {/* ── TOP GRID: Form + Bulk ── */}
+                {/* ── TOP GRID: Left col (Form + Table) | Right col (Bulk) ── */}
                 <div className="scr-top-grid">
-                    {/* LEFT COLUMN — Add / Edit Form */}
+
+                    {/* LEFT COLUMN — Form card + Table card stacked */}
                     <div className="scr-left-col">
+
+                        {/* ── FORM CARD ── */}
                         <div className="scr-form-card">
                             <div className="scr-form-header">
                                 <div className="scr-form-icon">
@@ -483,7 +476,115 @@ export default function RoadPrice() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* ── TABLE CARD — directly below form ── */}
+                        <div className="scr-table-card">
+                            <div className="scr-table-header">
+                                <div className="scr-table-title">
+                                    <div className="scr-table-title-icon">🛵</div>
+                                    <div>
+                                        <h2>Road Price Records</h2>
+                                        <p>All scooty–city on-road pricing entries</p>
+                                    </div>
+                                </div>
+
+                                <div className="scr-header-pagination">
+                                    <div className="scr-pg-btns">
+                                        <button className="scr-pg" disabled={safeCurrentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>‹</button>
+                                        {buildPages(safeCurrentPage, totalPages).map((p, i) =>
+                                            p === "…" ? (
+                                                <span key={`e${i}`} className="scr-pg-ellipsis">…</span>
+                                            ) : (
+                                                <button key={p} className={`scr-pg${safeCurrentPage === p ? " active" : ""}`} onClick={() => setCurrentPage(p as number)}>{p}</button>
+                                            )
+                                        )}
+                                        <button className="scr-pg" disabled={safeCurrentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>›</button>
+                                    </div>
+                                </div>
+
+                                <div className="scr-table-controls">
+                                    <div className="scr-search-wrap">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                        </svg>
+                                        <input className="scr-search" placeholder="Search model, city, state…" value={tableSearch} onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }} />
+                                    </div>
+                                    <span className="scr-count-pill">{filtered.length} records</span>
+                                </div>
+                            </div>
+
+                            <div className="scr-table-scroll">
+                                <table className="scr-table">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th><th>Scooty</th><th>Variant</th><th>City</th>
+                                            <th>State</th><th>On-Road Price</th><th>Valid From</th><th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {loading ? (
+                                            Array.from({ length: 5 }).map((_, i) => (
+                                                <tr key={i}>{Array.from({ length: 8 }).map((_, j) => (
+                                                    <td key={j}><span className="scr-skel" style={{ width: j === 1 ? "90px" : "60px" }} /></td>
+                                                ))}</tr>
+                                            ))
+                                        ) : paginated.length === 0 ? (
+                                            <tr><td colSpan={8}>
+                                                <div className="scr-empty">
+                                                    <span className="scr-empty-icon">🛵</span>
+                                                    <span className="scr-empty-title">No road price records found</span>
+                                                    <span className="scr-empty-sub">{tableSearch ? "No records match your search. Try different keywords." : "Add your first road price record using the form above."}</span>
+                                                </div>
+                                            </td></tr>
+                                        ) : (
+                                            paginated.map((d, idx) => (
+                                                <tr key={`${d.scootyId}-${d.cityId}`}>
+                                                    <td data-label="#"><span className="scr-id-badge">{(safeCurrentPage - 1) * PAGE_SIZE + idx + 1}</span></td>
+                                                    <td data-label="Scooty">
+                                                        <div className="scr-model-cell">
+                                                            <div className="scr-model-avatar">{d.modelName?.charAt(0).toUpperCase() ?? "?"}</div>
+                                                            <span className="scr-model-name">{d.modelName ?? "—"}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td data-label="Variant"><span className="scr-variant-badge">{d.variantName ?? "—"}</span></td>
+                                                    <td data-label="City"><span style={{ fontWeight: 600, color: "#0f172a" }}>{d.cityName}</span></td>
+                                                    <td data-label="State"><span style={{ fontSize: "11px", color: "#64748b" }}>{d.stateName}</span></td>
+                                                    <td data-label="On-Road Price"><span className="scr-price rp-onroad-pill">₹ {Number(d.onRoadPrice).toLocaleString("en-IN")}</span></td>
+                                                    <td data-label="Valid From">{d.validFrom ? new Date(d.validFrom).toLocaleDateString("en-IN") : <span style={{ color: "#9ca3af" }}>—</span>}</td>
+                                                    <td data-label="Actions">
+                                                        <div className="scr-row-acts">
+                                                            <button className="scr-act-btn scr-act-cities" onClick={() => openAllCities(d)} title="View all city prices for this scooty">
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
+                                                                    <path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" />
+                                                                </svg>
+                                                            </button>
+                                                            <button className="scr-act-btn scr-act-edit" onClick={() => handleEdit(d)}>
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                                                                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                                </svg>
+                                                            </button>
+                                                            <button className="scr-act-btn scr-act-del" onClick={() => handleDelete(d)}>
+                                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <polyline points="3 6 5 6 21 6" />
+                                                                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                                                                    <path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {/* ── END TABLE CARD ── */}
+
                     </div>
+                    {/* ── END LEFT COLUMN ── */}
 
                     {/* RIGHT COLUMN — Bulk Operations */}
                     <div className="scr-bulk-card">
@@ -515,115 +616,9 @@ export default function RoadPrice() {
                             </div>
                         </div>
                     </div>
+
                 </div>
-
-                {/* ── TABLE CARD ── */}
-                <div className="scr-table-card">
-                    <div className="scr-table-header">
-                        <div className="scr-table-title">
-                            <div className="scr-table-title-icon">🛵</div>
-                            <div>
-                                <h2>Road Price Records</h2>
-                                <p>All scooty–city on-road pricing entries</p>
-                            </div>
-                        </div>
-
-                        <div className="scr-header-pagination">
-                            <div className="scr-pg-btns">
-                                <button className="scr-pg" disabled={safeCurrentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}>‹</button>
-                                {buildPages(safeCurrentPage, totalPages).map((p, i) =>
-                                    p === "…" ? (
-                                        <span key={`e${i}`} className="scr-pg-ellipsis">…</span>
-                                    ) : (
-                                        <button key={p} className={`scr-pg${safeCurrentPage === p ? " active" : ""}`} onClick={() => setCurrentPage(p as number)}>{p}</button>
-                                    )
-                                )}
-                                <button className="scr-pg" disabled={safeCurrentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}>›</button>
-                            </div>
-                        </div>
-
-                        <div className="scr-table-controls">
-                            <div className="scr-search-wrap">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                </svg>
-                                <input className="scr-search" placeholder="Search model, city, state…" value={tableSearch} onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }} />
-                            </div>
-                            <span className="scr-count-pill">{filtered.length} records</span>
-                        </div>
-                    </div>
-
-                    <div className="scr-table-scroll">
-                        <table className="scr-table">
-                            <thead>
-                                <tr>
-                                    <th>#</th><th>Scooty</th><th>Variant</th><th>City</th>
-                                    <th>State</th><th>On-Road Price</th><th>Valid From</th><th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <tr key={i}>{Array.from({ length: 8 }).map((_, j) => (
-                                            <td key={j}><span className="scr-skel" style={{ width: j === 1 ? "90px" : "60px" }} /></td>
-                                        ))}</tr>
-                                    ))
-                                ) : paginated.length === 0 ? (
-                                    <tr><td colSpan={8}>
-                                        <div className="scr-empty">
-                                            <span className="scr-empty-icon">🛵</span>
-                                            <span className="scr-empty-title">No road price records found</span>
-                                            <span className="scr-empty-sub">{tableSearch ? "No records match your search. Try different keywords." : "Add your first road price record using the form above."}</span>
-                                        </div>
-                                    </td></tr>
-                                ) : (
-                                    paginated.map((d, idx) => (
-                                        <tr key={`${d.scootyId}-${d.cityId}`}>
-                                            <td data-label="#"><span className="scr-id-badge">{(safeCurrentPage - 1) * PAGE_SIZE + idx + 1}</span></td>
-                                            <td data-label="Scooty">
-                                                <div className="scr-model-cell">
-                                                    <div className="scr-model-avatar">{d.modelName?.charAt(0).toUpperCase() ?? "?"}</div>
-                                                    <span className="scr-model-name">{d.modelName ?? "—"}</span>
-                                                </div>
-                                            </td>
-                                            <td data-label="Variant"><span className="scr-variant-badge">{d.variantName ?? "—"}</span></td>
-                                            <td data-label="City"><span style={{ fontWeight: 600, color: "#0f172a" }}>{d.cityName}</span></td>
-                                            <td data-label="State"><span style={{ fontSize: "12px", color: "#64748b" }}>{d.stateName}</span></td>
-                                            <td data-label="On-Road Price"><span className="scr-price rp-onroad-pill">₹ {Number(d.onRoadPrice).toLocaleString("en-IN")}</span></td>
-                                            <td data-label="Valid From">{d.validFrom ? new Date(d.validFrom).toLocaleDateString("en-IN") : <span style={{ color: "#9ca3af" }}>—</span>}</td>
-                                            <td data-label="Actions">
-                                                <div className="scr-row-acts">
-                                                    <button className="scr-act-btn scr-act-cities" onClick={() => openAllCities(d)} title="View all city prices for this scooty">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
-                                                            <path d="M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" />
-                                                        </svg>
-                                                        All Cities
-                                                    </button>
-                                                    <button className="scr-act-btn scr-act-edit" onClick={() => handleEdit(d)}>
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-                                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                                        </svg>
-                                                        Edit
-                                                    </button>
-                                                    <button className="scr-act-btn scr-act-del" onClick={() => handleDelete(d)}>
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <polyline points="3 6 5 6 21 6" />
-                                                            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                                                            <path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-                                                        </svg>
-                                                        Delete
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                {/* ── END TOP GRID ── */}
 
             </div>
 
