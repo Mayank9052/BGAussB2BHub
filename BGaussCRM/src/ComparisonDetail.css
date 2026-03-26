@@ -1,0 +1,356 @@
+/* ─── Comparison Detail Page ───────────────────────────────── */
+
+.cmpd-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.cmpd-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 16px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Back button ── */
+.cmpd-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  color: #374151;
+  border-radius: 6px;
+  margin-right: 4px;
+  transition: background 0.15s;
+}
+.cmpd-back-btn:hover { background: #f3f4f6; }
+
+/* ── HERO card ── */
+.cmpd-hero-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+}
+
+/* Left utility col (Add bike / hide common) */
+.cmpd-add-col {
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-right: 1px solid #f3f4f6;
+  justify-content: flex-end;
+}
+.cmpd-add-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2563eb;
+  cursor: pointer;
+}
+.cmpd-add-label:hover { text-decoration: underline; }
+.cmpd-hide-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+/* Bike columns */
+.cmpd-bike-col {
+  padding: 24px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  border-right: 1px solid #f3f4f6;
+  position: relative;
+}
+.cmpd-bike-col:last-child { border-right: none; }
+
+.cmpd-edit-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+.cmpd-edit-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #9ca3af;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.15s;
+}
+.cmpd-edit-icon:hover { color: #374151; }
+
+.cmpd-hero-img {
+  width: 100%;
+  max-width: 220px;
+  height: 160px;
+  object-fit: contain;
+}
+
+.cmpd-bike-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111;
+  margin: 0;
+  text-align: center;
+}
+
+/* Variant select dropdown */
+.cmpd-variant-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #374151;
+  background: #fff;
+  cursor: pointer;
+  appearance: auto;
+  transition: border-color 0.15s;
+}
+.cmpd-variant-select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+.cmpd-hero-price {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.cmpd-offer-btn {
+  width: 100%;
+  padding: 10px;
+  border: 1.5px solid #ef4444;
+  border-radius: 8px;
+  background: transparent;
+  color: #ef4444;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cmpd-offer-btn:hover { background: #fef2f2; }
+
+/* ── Skeleton ── */
+.cmpd-skeleton-hero {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+  height: 280px;
+}
+.cmpd-skel-box {
+  flex: 1;
+  background: #e5e7eb;
+  border-radius: 16px;
+  animation: shimmer 1.4s infinite;
+}
+.cmpd-skel-mid {
+  width: 60px;
+  background: #e5e7eb;
+  border-radius: 16px;
+  animation: shimmer 1.4s infinite 0.3s;
+}
+
+/* ── KEY HIGHLIGHTS card ── */
+.cmpd-highlights-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.cmpd-highlights-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111;
+  padding: 22px 24px 18px;
+  margin: 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* ── Section ── */
+.cmpd-section {
+  border-bottom: 1px solid #f3f4f6;
+}
+.cmpd-section:last-child { border-bottom: none; }
+
+/* ── Table rows ── */
+.cmpd-table-row {
+  display: grid;
+  grid-template-columns: 280px 1fr 1fr;
+  border-bottom: 1px solid #f9fafb;
+}
+.cmpd-table-row:last-child { border-bottom: none; }
+
+/* Section header row */
+.cmpd-section-header {
+  background: #f9fafb;
+}
+.cmpd-col-head {
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+}
+
+/* Cells */
+.cmpd-col-label {
+  padding: 14px 24px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  border-right: 1px solid #f3f4f6;
+}
+.cmpd-row-label {
+  font-weight: 400;
+  color: #4b5563;
+}
+.cmpd-col-val {
+  padding: 14px 20px;
+  font-size: 0.85rem;
+  color: #111;
+  border-right: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+}
+.cmpd-col-val:last-child { border-right: none; }
+
+/* ── Stars ── */
+.cmp-stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.cmp-review-count {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-left: 6px;
+}
+
+/* ── Bool yes/no ── */
+.cmp-bool {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.cmp-bool.yes {
+  background: #dcfce7;
+  color: #166534;
+}
+.cmp-bool.no {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* ── Colour dots ── */
+.cmp-colours {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cmp-colour-dots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cmp-colour-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,0,0,0.15);
+  display: inline-block;
+  cursor: default;
+}
+.cmp-colour-link {
+  font-size: 0.78rem;
+  color: #2563eb;
+  cursor: pointer;
+}
+.cmp-colour-link:hover { text-decoration: underline; }
+
+/* ── Check Road Price / Insurance link ── */
+.cmp-check-link {
+  font-size: 0.78rem;
+  color: #2563eb;
+  cursor: pointer;
+  display: block;
+  margin-top: 2px;
+}
+.cmp-check-link:hover { text-decoration: underline; }
+
+/* ── Brochure btn ── */
+.cmpd-highlights-card .cmpd-col-val a.cmp-brochure-btn,
+a.cmp-brochure-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1.5px solid #ef4444;
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+a.cmp-brochure-btn:hover { background: #fef2f2; }
+
+.cmp-na {
+  color: #9ca3af;
+  font-size: 0.82rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .cmpd-hero-card {
+    grid-template-columns: 1fr;
+  }
+  .cmpd-add-col {
+    flex-direction: row;
+    border-right: none;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 14px 16px;
+  }
+  .cmpd-bike-col {
+    border-right: none;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .cmpd-table-row {
+    grid-template-columns: 140px 1fr 1fr;
+  }
+  .cmpd-col-label { padding: 12px 12px; font-size: 0.78rem; }
+  .cmpd-col-val   { padding: 12px 10px; font-size: 0.78rem; }
+  .cmpd-highlights-title { font-size: 0.95rem; padding: 16px; }
+}
+
+@media (max-width: 600px) {
+  .cmpd-table-row {
+    grid-template-columns: 110px 1fr 1fr;
+  }
+  .cmpd-col-label { padding: 10px 8px; font-size: 0.72rem; }
+  .cmpd-col-val   { padding: 10px 8px; font-size: 0.72rem; }
+}
+
+@keyframes shimmer {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}

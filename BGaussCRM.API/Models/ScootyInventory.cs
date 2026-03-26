@@ -23,7 +23,29 @@ public partial class ScootyInventory
 
     public string? ImageUrl { get; set; }
 
+    public decimal? MaxPowerKw { get; set; }
+
+    public string? BrakeFront { get; set; }
+
+    public string? BrakeRear { get; set; }
+
+    public string? BrakingType { get; set; }
+
+    public string? WheelSize { get; set; }
+
+    public string? WheelType { get; set; }
+
+    public string? ChargingTimeHrs { get; set; }
+
+    public string? StartingType { get; set; }
+
+    public string? Speedometer { get; set; }
+
     public virtual VehicleColour? Colour { get; set; }
+
+    public virtual ICollection<ComparisonConfig> ComparisonConfigScooty1s { get; set; } = new List<ComparisonConfig>();
+
+    public virtual ICollection<ComparisonConfig> ComparisonConfigScooty2s { get; set; } = new List<ComparisonConfig>();
 
     public virtual ICollection<EmiEnquiry> EmiEnquiries { get; set; } = new List<EmiEnquiry>();
 
@@ -32,6 +54,8 @@ public partial class ScootyInventory
     public virtual ICollection<RoadPrice> RoadPrices { get; set; } = new List<RoadPrice>();
 
     public virtual ICollection<SalesOrder> SalesOrders { get; set; } = new List<SalesOrder>();
+
+    public virtual ScootySpec? ScootySpec { get; set; }
 
     public virtual ICollection<UserLike> UserLikes { get; set; } = new List<UserLike>();
 

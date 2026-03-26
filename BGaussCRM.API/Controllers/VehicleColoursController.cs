@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using BGaussCRM.API.DTOs;
+using System.Security.Cryptography;
 
 namespace BGaussCRM.API.Controllers
 {
@@ -35,14 +36,13 @@ namespace BGaussCRM.API.Controllers
         public async Task<IActionResult> GetColour(int id)
         {
             var colour = await _context.VehicleColours.FindAsync(id);
-
-            if (colour == null)
-                return NotFound();
-
+            if (colour == null) return NotFound();
             return Ok(colour);
         }
 
+        // ==========================
         // CREATE
+        // ==========================
         [HttpPost("CreateColour")]
         public async Task<IActionResult> CreateColour([FromBody] CreateColourDto dto)
         {
@@ -50,14 +50,15 @@ namespace BGaussCRM.API.Controllers
             {
                 if (dto == null) return BadRequest("Data is null");
                 if (string.IsNullOrWhiteSpace(dto.ColourName)) return BadRequest("ColourName required");
-                if (dto.ModelId == 0)   return BadRequest("ModelId required");
+                if (dto.ModelId == 0) return BadRequest("ModelId required");
                 if (dto.VariantId == 0) return BadRequest("VariantId required");
 
                 var colour = new VehicleColour
                 {
                     ColourName = dto.ColourName.Trim(),
-                    ModelId    = dto.ModelId,
-                    VariantId  = dto.VariantId
+                    ModelId = dto.ModelId,
+                    VariantId = dto.VariantId,
+                    HexCode = GenerateHexCode(dto.ColourName) // Generate Hex Code
                 };
 
                 _context.VehicleColours.Add(colour);
@@ -70,7 +71,9 @@ namespace BGaussCRM.API.Controllers
             }
         }
 
+        // ==========================
         // UPDATE
+        // ==========================
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateColour(int id, [FromBody] UpdateColourDto dto)
         {
@@ -82,8 +85,9 @@ namespace BGaussCRM.API.Controllers
                 if (existing == null) return NotFound();
 
                 existing.ColourName = dto.ColourName.Trim();
-                existing.ModelId    = dto.ModelId;
-                existing.VariantId  = dto.VariantId;
+                existing.ModelId = dto.ModelId;
+                existing.VariantId = dto.VariantId;
+                existing.HexCode = GenerateHexCode(dto.ColourName); // Update Hex Code
 
                 await _context.SaveChangesAsync();
                 return Ok(existing);
@@ -101,13 +105,10 @@ namespace BGaussCRM.API.Controllers
         public async Task<IActionResult> DeleteColour(int id)
         {
             var colour = await _context.VehicleColours.FindAsync(id);
-
-            if (colour == null)
-                return NotFound();
+            if (colour == null) return NotFound();
 
             _context.VehicleColours.Remove(colour);
             await _context.SaveChangesAsync();
-
             return Ok("Deleted successfully");
         }
 
@@ -123,9 +124,9 @@ namespace BGaussCRM.API.Controllers
             worksheet.Cells[1, 1].Value = "ColourName";
             worksheet.Cells[1, 2].Value = "ModelId";
             worksheet.Cells[1, 3].Value = "VariantId";
+            worksheet.Cells[1, 4].Value = "HexCode"; // Added HexCode column
 
             var stream = new MemoryStream(package.GetAsByteArray());
-
             return File(stream,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 "VehicleColoursTemplate.xlsx");
@@ -146,7 +147,6 @@ namespace BGaussCRM.API.Controllers
 
             try
             {
-                // Load existing colours
                 var existingColours = await _context.VehicleColours.ToListAsync();
 
                 using var stream = new MemoryStream();
@@ -155,16 +155,13 @@ namespace BGaussCRM.API.Controllers
 
                 using var package = new ExcelPackage(stream);
                 var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-
-                if (worksheet == null)
-                    return BadRequest("Invalid Excel file.");
+                if (worksheet == null) return BadRequest("Invalid Excel file.");
 
                 int rowCount = worksheet.Dimension.Rows;
 
                 for (int row = 2; row <= rowCount; row++)
                 {
                     var colourName = worksheet.Cells[row, 1].Text?.Trim();
-
                     if (string.IsNullOrWhiteSpace(colourName))
                     {
                         skippedRows.Add(row);
@@ -174,39 +171,36 @@ namespace BGaussCRM.API.Controllers
                     int? modelId = int.TryParse(worksheet.Cells[row, 2].Text, out var mId) ? mId : (int?)null;
                     int? variantId = int.TryParse(worksheet.Cells[row, 3].Text, out var vId) ? vId : (int?)null;
 
-                    // Check if colour already exists
                     var existingColour = existingColours.FirstOrDefault(c =>
                         c.ColourName!.Equals(colourName, StringComparison.OrdinalIgnoreCase) &&
                         c.ModelId == modelId &&
                         c.VariantId == variantId
                     );
 
+                    string hexCode = GenerateHexCode(colourName); // Generate HexCode
+
                     if (existingColour != null)
                     {
-                        // Update existing record if needed
+                        // Update HexCode if needed
+                        existingColour.HexCode = hexCode;
                         updatedCount++;
                         continue;
                     }
 
-                    // Insert new colour
                     coloursToInsert.Add(new VehicleColour
                     {
                         ColourName = colourName,
                         ModelId = modelId,
-                        VariantId = variantId
+                        VariantId = variantId,
+                        HexCode = hexCode
                     });
                 }
 
-                if (coloursToInsert.Any())
-                    await _context.VehicleColours.AddRangeAsync(coloursToInsert);
+                if (coloursToInsert.Any()) await _context.VehicleColours.AddRangeAsync(coloursToInsert);
+                if (coloursToInsert.Any() || updatedCount > 0) await _context.SaveChangesAsync();
 
-                if (coloursToInsert.Any() || updatedCount > 0)
-                    await _context.SaveChangesAsync();
-
-                var message = $"{coloursToInsert.Count} inserted, {updatedCount} already existed.";
-
-                if (skippedRows.Any())
-                    message += $" Skipped rows: {string.Join(",", skippedRows)}";
+                var message = $"{coloursToInsert.Count} inserted, {updatedCount} updated.";
+                if (skippedRows.Any()) message += $" Skipped rows: {string.Join(",", skippedRows)}";
 
                 return Ok(message);
             }
@@ -215,6 +209,20 @@ namespace BGaussCRM.API.Controllers
                 var inner = ex.InnerException?.Message;
                 return BadRequest($"Import failed: {ex.Message} | SQL Error: {inner}");
             }
+        }
+
+        // ==========================
+        // HEX CODE GENERATOR
+        // ==========================
+        private string GenerateHexCode(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return "#000000";
+
+            // Use hash to create deterministic colour
+            using var md5 = MD5.Create();
+            var hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+            // Take first 3 bytes and convert to hex
+            return $"#{hash[0]:X2}{hash[1]:X2}{hash[2]:X2}";
         }
     }
 }

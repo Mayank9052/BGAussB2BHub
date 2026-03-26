@@ -12,4 +12,6 @@ public partial class VehicleModel
     public virtual ICollection<PriceMaster> PriceMasters { get; set; } = new List<PriceMaster>();
 
     public virtual ICollection<ScootyInventory> ScootyInventories { get; set; } = new List<ScootyInventory>();
+
+    public virtual ICollection<VehicleBrochure> VehicleBrochures { get; set; } = new List<VehicleBrochure>();
 }
