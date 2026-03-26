@@ -65,8 +65,8 @@ const resolveImg = (path: string | null) => {
   return `${API_ORIGIN}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
-const fmt = (v: number | null, suffix = "") =>
-  v != null ? `${v.toLocaleString("en-IN")}${suffix}` : "—";
+// const fmt = (v: number | null, suffix = "") =>
+//   v != null ? `${v.toLocaleString("en-IN")}${suffix}` : "—";
 
 const fmtPrice = (v: number | null) =>
   v != null ? `Rs. ${(v / 100000).toFixed(2)} Lakh` : "—";
