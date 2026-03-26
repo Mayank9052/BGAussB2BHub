@@ -82,46 +82,43 @@ const LoginPage = () => {
   };
 
   /* ================= LOAD VEHICLES ================= */
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setFetchError("");
+ /* ================= LOAD VEHICLES ================= */
+useEffect(() => {
+  const load = async () => {
+    setLoading(true);
+    setFetchError("");
 
-      const maxRetries = 3;
+    const maxRetries = 3;
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const res = await fetch(("/api/LoginVehicle/models"));
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch("/api/LoginVehicle/models");
 
-          if (!res.ok) {
-            throw new Error(`Server responded ${res.status}`);
-          }
+        if (!res.ok) {
+          throw new Error(`Server responded ${res.status}`);
+        }
 
-          const data: VehicleModel[] = await res.json();
-          setVehicles(data);
-          setFetchError("");
-          break;
-        } catch (err) {
-          if (attempt === maxRetries) {
-            setFetchError(
-              err instanceof Error
-                ? err.message
-                : "Failed to load vehicles"
-            );
-          } else {
-            await sleep(400 * attempt);
-          }
-        } finally {
-          if (attempt === maxRetries) setLoading(false);
+        const data: VehicleModel[] = await res.json();
+        setVehicles(data);
+        setFetchError("");
+        setLoading(false);  // ✅ stop loading on SUCCESS
+        return;             // ✅ exit immediately, no more retries
+
+      } catch (err) {
+        if (attempt === maxRetries) {
+          setFetchError(
+            err instanceof Error ? err.message : "Failed to load vehicles"
+          );
+          setLoading(false); // ✅ stop loading on FINAL failure
+        } else {
+          await sleep(400 * attempt);
         }
       }
+    }
+  };
 
-      setLoading(false);
-    };
-
-    load();
-  }, []);
-
+  load();
+}, []);
   /* ================= UI ================= */
   return (
     <div className="page">
@@ -139,6 +136,8 @@ const LoginPage = () => {
           <button
             className="nav-login-circle"
             onClick={() => setShowModal((v) => !v)}
+             aria-label="Login"
+             title="Login"
           >
             ↪
           </button>
@@ -175,9 +174,9 @@ const LoginPage = () => {
                   {v.imageUrl ? (
                     <img
                       src={
-                        v.imageUrl.startsWith("http")
-                          ? v.imageUrl
-                          :v.imageUrl
+                          v.imageUrl.startsWith("http")
+                            ? v.imageUrl
+                            : `http://localhost:5181${v.imageUrl}`
                       }
                       alt={v.modelName}
                       className="dash-card-img"

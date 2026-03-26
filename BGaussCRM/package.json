@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "client": "vite",
-    "server": "dotnet run --project ../BgaussCRM.api/BgaussCRM.API.csproj",
-    "dev-all": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "dotnet run --project ../bgausscrm.api/BgaussCRM.API.csproj",
+    "dev-all": "concurrently \"dotnet run --project ../bgausscrm.api/BgaussCRM.API.csproj\" \"npm run dev\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
@@ -16,8 +16,7 @@
     "axios": "^1.13.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-router-dom": "^7.13.1",
-    "wait-on": "^9.0.4"
+    "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
