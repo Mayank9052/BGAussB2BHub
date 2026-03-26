@@ -5,6 +5,7 @@ import noImage from "./assets/No-Image.jpg";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
+import EmiCalculator from "./EmiCalculator";
 
 const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "";
 
@@ -19,6 +20,16 @@ interface VehicleDetailsResponse {
   batterySpecs: string | null;
   rangeKm: number | null;
   stockAvailable: boolean;
+  // ── NEW fields from updated controller ──
+  maxPowerKw: number | null;
+  brakeFront: string | null;
+  brakeRear: string | null;
+  brakingType: string | null;
+  wheelSize: string | null;
+  wheelType: string | null;
+  chargingTimeHrs: string | null;
+  startingType: string | null;
+  speedometer: string | null;
 }
 
 type VehicleDetailsResponseApi = VehicleDetailsResponse & { imagePath?: string | null };
@@ -334,13 +345,23 @@ export default function VehicleDetails() {
   const isNextDisabled = !vehicle || currentIdx >= availableModels.length - 1;
 
   const specificationItems = vehicle ? [
-    { label: "Model",   value: vehicle.modelName },
-    { label: "Variant", value: vehicle.variantName },
-    { label: "Colour",  value: vehicle.colourName ?? "Not specified" },
-    { label: "Range",   value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available" },
-    { label: "Battery", value: vehicle.batterySpecs ?? "Not available" },
-    { label: "Price",   value: formatCurrency(vehicle.price) },
-  ] : [];
+  { label: "Model",          value: vehicle.modelName },
+  { label: "Variant",        value: vehicle.variantName },
+  { label: "Colour",         value: vehicle.colourName ?? "Not specified" },
+  { label: "Price",          value: formatCurrency(vehicle.price) },
+  { label: "Range",          value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available" },
+  { label: "Battery",        value: vehicle.batterySpecs ?? "Not available" },
+  // ── NEW ──
+  { label: "Max Power",      value: vehicle.maxPowerKw ? `${vehicle.maxPowerKw} kW` : "—" },
+  { label: "Charging Time",  value: vehicle.chargingTimeHrs ?? "—" },
+  { label: "Brakes Front",   value: vehicle.brakeFront ?? "—" },
+  { label: "Brakes Rear",    value: vehicle.brakeRear ?? "—" },
+  { label: "Braking Type",   value: vehicle.brakingType ?? "—" },
+  { label: "Wheel Size",     value: vehicle.wheelSize ?? "—" },
+  { label: "Wheel Type",     value: vehicle.wheelType ?? "—" },
+  { label: "Starting",       value: vehicle.startingType ?? "—" },
+  { label: "Speedometer",    value: vehicle.speedometer ?? "—" },
+] : [];
 
   const galleryHighlights = vehicle ? [
     { label: "Range",   value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available",   detail: "Certified riding distance" },
@@ -428,6 +449,21 @@ export default function VehicleDetails() {
                   <span>On Road Price</span>
                 </button>
 
+                {/* <button
+                  className="vd-compare-btn"
+                  onClick={() => navigate(`/comparison?highlight=${vehicle.scootyId}`)}
+                  title="Compare this vehicle"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                    <line x1="6" y1="1" x2="6" y2="4"/>
+                    <line x1="10" y1="1" x2="10" y2="4"/>
+                    <line x1="14" y1="1" x2="14" y2="4"/>
+                  </svg>
+                  <span>Compare</span>
+                </button> */}
+
                 {shareMsg && <span className="vd-share-msg">✓ {shareMsg}</span>}
               </div>
 
@@ -507,7 +543,10 @@ export default function VehicleDetails() {
             {/* RIGHT SIDEBAR */}
             <aside className="vehicle-details-sidebar">
               <div className="vehicle-details-sidebar-scroll">
-                <p className="vehicle-details-sidebar-title">Selected Colour: <strong>{vehicle.colourName ?? "Not specified"}</strong></p>
+
+                <p className="vehicle-details-sidebar-title">
+                  Selected Colour: <strong>{vehicle.colourName ?? "Not specified"}</strong>
+                </p>
 
                 <section className="vehicle-details-sidebar-block">
                   <h2>{vehicle.modelName}</h2>
@@ -530,6 +569,14 @@ export default function VehicleDetails() {
                   Get EMI Offers
                 </button>
 
+                {/* ── EMI CALCULATOR ── */}
+                <EmiCalculator
+                  scootyId={vehicle.scootyId}
+                  modelName={vehicle.modelName}
+                  variantName={vehicle.variantName}
+                  basePrice={vehicle.price}
+                />
+
                 <section className="vehicle-details-sidebar-block">
                   <div className="vehicle-details-sidebar-head"><h3>Specifications</h3></div>
                   <div className="vehicle-details-spec-list">
@@ -540,12 +587,15 @@ export default function VehicleDetails() {
                     ))}
                     <div className="vehicle-details-spec-row">
                       <span>Availability</span>
-                      <strong className={vehicle.stockAvailable ? "vehicle-details-stock-text vehicle-details-stock-text-in" : "vehicle-details-stock-text vehicle-details-stock-text-out"}>
+                      <strong className={vehicle.stockAvailable
+                        ? "vehicle-details-stock-text vehicle-details-stock-text-in"
+                        : "vehicle-details-stock-text vehicle-details-stock-text-out"}>
                         {vehicle.stockAvailable ? "Available Now" : "Currently Unavailable"}
                       </strong>
                     </div>
                   </div>
                 </section>
+
               </div>
             </aside>
 

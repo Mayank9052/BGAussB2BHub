@@ -13,6 +13,11 @@ import Salespage from "./SalesPage"
 import MyLikes from "./MyLikes";
 import RoadPrice from "./RoadPrice";
 import VehicleReviews from "./VehicleReviews";
+import EmiCalculatorWrapper from "./EmiCalculatorWrapper";
+import ComparisonList   from "./ComparisonList";
+import ComparisonDetail from "./ComparisonDetail";
+import ComparisonManage from "./ComparisonManage";
+
 /* 🔒 AUTH CHECK */
 const ProtectedRoute = ({ children }: any) => {
   const token = localStorage.getItem("token");
@@ -139,6 +144,13 @@ function App() {
       <Route path="/" element={<LoginPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/reviews/:id" element={<VehicleReviews />} />
+      <Route
+        path="/emi-calculator/:id"
+        element={<EmiCalculatorWrapper />}
+      />
+      <Route path="/comparison"              element={<ComparisonList />} />
+      <Route path="/comparison/:id1/:id2"    element={<ComparisonDetail />} />
+      <Route path="/comparison/manage" element={<ComparisonManage />} />
       
     </Routes>
   );
