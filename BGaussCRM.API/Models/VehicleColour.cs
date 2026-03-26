@@ -13,5 +13,7 @@ public partial class VehicleColour
 
     public int? VariantId { get; set; }
 
+    public string? HexCode { get; set; }
+
     public virtual ICollection<ScootyInventory> ScootyInventories { get; set; } = new List<ScootyInventory>();
 }

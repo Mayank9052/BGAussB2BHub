@@ -16,6 +16,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<City> Cities { get; set; }
 
+    public virtual DbSet<ComparisonConfig> ComparisonConfigs { get; set; }
+
     public virtual DbSet<EmiEnquiry> EmiEnquiries { get; set; }
 
     public virtual DbSet<PriceMaster> PriceMasters { get; set; }
@@ -26,9 +28,13 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ScootyInventory> ScootyInventories { get; set; }
 
+    public virtual DbSet<ScootySpec> ScootySpecs { get; set; }
+
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<UserLike> UserLikes { get; set; }
+
+    public virtual DbSet<VehicleBrochure> VehicleBrochures { get; set; }
 
     public virtual DbSet<VehicleColour> VehicleColours { get; set; }
 
@@ -85,6 +91,25 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.CityName).HasMaxLength(100);
             entity.Property(e => e.StateName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<ComparisonConfig>(entity =>
+        {
+            entity.HasIndex(e => new { e.Scooty1Id, e.Scooty2Id }, "UQ_ComparisonConfigs").IsUnique();
+
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.Scooty1Id).HasColumnName("Scooty1ID");
+            entity.Property(e => e.Scooty2Id).HasColumnName("Scooty2ID");
+
+            entity.HasOne(d => d.Scooty1).WithMany(p => p.ComparisonConfigScooty1s)
+                .HasForeignKey(d => d.Scooty1Id)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ComparisonConfigs_Scooty1");
+
+            entity.HasOne(d => d.Scooty2).WithMany(p => p.ComparisonConfigScooty2s)
+                .HasForeignKey(d => d.Scooty2Id)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ComparisonConfigs_Scooty2");
         });
 
         modelBuilder.Entity<EmiEnquiry>(entity =>
@@ -207,11 +232,20 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.BatterySpecs)
                 .HasMaxLength(100)
                 .IsUnicode(false);
+            entity.Property(e => e.BrakeFront).HasMaxLength(50);
+            entity.Property(e => e.BrakeRear).HasMaxLength(50);
+            entity.Property(e => e.BrakingType).HasMaxLength(100);
+            entity.Property(e => e.ChargingTimeHrs).HasMaxLength(50);
             entity.Property(e => e.ImageUrl)
                 .HasMaxLength(255)
                 .IsUnicode(false)
                 .HasColumnName("ImageURL");
+            entity.Property(e => e.MaxPowerKw).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Speedometer).HasMaxLength(50);
+            entity.Property(e => e.StartingType).HasMaxLength(50);
+            entity.Property(e => e.WheelSize).HasMaxLength(100);
+            entity.Property(e => e.WheelType).HasMaxLength(50);
 
             entity.HasOne(d => d.Colour).WithMany(p => p.ScootyInventories)
                 .HasForeignKey(d => d.ColourId)
@@ -226,6 +260,26 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.VariantId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__ScootyInv__Varia__5CD6CB2B");
+        });
+
+        modelBuilder.Entity<ScootySpec>(entity =>
+        {
+            entity.HasKey(e => e.ScootyId);
+
+            entity.Property(e => e.ScootyId)
+                .ValueGeneratedNever()
+                .HasColumnName("ScootyID");
+            entity.Property(e => e.BatteryWarranty).HasMaxLength(150);
+            entity.Property(e => e.FuelType)
+                .HasMaxLength(30)
+                .HasDefaultValue("Electric");
+            entity.Property(e => e.MotorWarranty).HasMaxLength(150);
+            entity.Property(e => e.RidingModes).HasMaxLength(100);
+            entity.Property(e => e.WaterWading).HasMaxLength(30);
+
+            entity.HasOne(d => d.Scooty).WithOne(p => p.ScootySpec)
+                .HasForeignKey<ScootySpec>(d => d.ScootyId)
+                .HasConstraintName("FK_ScootySpecs_ScootyInventory");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -266,11 +320,24 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_UserLikes_ScootyInventory");
         });
 
+        modelBuilder.Entity<VehicleBrochure>(entity =>
+        {
+            entity.Property(e => e.BrochureUrl).HasMaxLength(500);
+            entity.Property(e => e.UploadedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.Model).WithMany(p => p.VehicleBrochures)
+                .HasForeignKey(d => d.ModelId)
+                .HasConstraintName("FK_VehicleBrochures_VehicleModels");
+        });
+
         modelBuilder.Entity<VehicleColour>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__VehicleC__3214EC07F189FD2A");
 
             entity.Property(e => e.ColourName).HasMaxLength(50);
+            entity.Property(e => e.HexCode).HasMaxLength(10);
         });
 
         modelBuilder.Entity<VehicleModel>(entity =>

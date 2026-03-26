@@ -5,6 +5,7 @@ namespace BGaussCRM.API.DTOs
         public string ColourName { get; set; } = string.Empty;
         public int ModelId { get; set; }
         public int VariantId { get; set; }
+        //public string? HexCode    { get; set; } 
     }
 
     public class UpdateColourDto
@@ -13,5 +14,6 @@ namespace BGaussCRM.API.DTOs
         public string ColourName { get; set; } = string.Empty;
         public int ModelId { get; set; }
         public int VariantId { get; set; }
+        //public string? HexCode    { get; set; } 
     }
 }
