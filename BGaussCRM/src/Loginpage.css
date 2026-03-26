@@ -36,6 +36,7 @@ html, body, #root {
   border-bottom: 1px solid #e5e7eb;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   z-index: 100;
+  gap: 16px;
 }
 
 .pro-left {
@@ -68,6 +69,7 @@ html, body, #root {
 .pro-right {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .user-name {
@@ -75,6 +77,32 @@ html, body, #root {
   color: #374151;
   font-weight: 500;
 }
+
+.nav-login-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 14px 24px rgba(185,28,28,0.28);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.nav-login-circle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(185,28,28,0.34);
+}
+
+.nav-login-circle:active {
+  transform: scale(0.97);
+}
+
 
 /* CENTER LOGIN */
 .login-container {
@@ -172,6 +200,239 @@ html, body, #root {
 .login-btn:active {
   transform: translateY(0);
 }
+
+.login-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  z-index: 200;
+}
+
+
+/* VEHICLE LIST */
+.vehicle-section {
+  padding: 28px 30px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 60%);
+}
+
+.vehicle-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vehicle-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pill-muted { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+.pill-error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecdd3; }
+
+.dash-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 220px));
+  justify-content: flex-start; /* 👈 aligns like Image 2 */
+  gap: 18px;
+}
+
+.dash-card {
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(15,23,42,0.08);
+}
+
+.dash-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(15,23,42,0.12);
+  border-color: #bfdbfe;
+}
+
+.dash-card-img-wrap {
+  height: 140px; /* 👈 fixed height like Image 2 */
+}
+.dash-card-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.3s ease;
+}
+.dash-card:hover .dash-card-img { transform: scale(1.04); }
+.dash-card-img.placeholder {
+  display: flex; align-items: center; justify-content: center;
+  color: #94a3b8; font-size: 12px;
+}
+
+.dash-card-body {
+  padding: 8px 10px 10px;
+  gap: 2px;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.dash-card-model   { font-size: 13px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; text-transform: uppercase; }
+.dash-card-variant { font-size: 11px; color: #64748b; margin: 0; }
+
+.dash-card-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.dash-chip {
+  padding: 5px 8px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.dash-chip-price {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.dash-chip-cta {
+  border: none;
+  background: linear-gradient(135deg, #0f766e 0%, #0f172a 100%);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.dash-chip-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.22);
+}
+.dash-chip-cta:active { transform: scale(0.96); }
+
+.enquiry-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: radial-gradient(circle at 30% 30%, #60a5fa 0%, #2563eb 45%, #1e3a8a 100%);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(185, 28, 28, 0.24);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.enquiry-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(185, 28, 28, 0.3);
+}
+.enquiry-icon-btn:active { transform: scale(0.95); }
+
+.enquiry-controls {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.enquiry-select {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1.3px solid #d7dee8;
+  background: #fff;
+  font-size: 12px;
+  min-width: 160px;
+  color: #0f172a;
+}
+
+.enquiry-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 400;
+}
+
+.enquiry-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  width: min(420px, 92vw);
+  box-shadow: 0 16px 40px rgba(15,23,42,0.18);
+  border: 1px solid #e5e7eb;
+}
+
+.enquiry-card h3 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.enquiry-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.enquiry-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.enquiry-form input,
+.enquiry-form select {
+  padding: 10px 12px;
+  border: 1.4px solid #e5e7eb;
+  border-radius: 10px;
+  font-size: 13px;
+  background: #f9fafb;
+}
+
+.enquiry-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+.enquiry-btn {
+  margin-top: 6px;
+  align-self: flex-start;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #0f766e;
+  background: #ecfdf3;
+  color: #0f766e;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.enquiry-btn:hover {
+  background: #d1fae5;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+}
+
+.enquiry-btn:active { transform: scale(0.97); }
 
 /* ─── MOBILE RESPONSIVE ADDITIONS ─── */
 
