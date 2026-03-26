@@ -1,4 +1,41 @@
 /* ─── Comparison Manage Page ───────────────────────────────── */
+/* RIGHT SIDE */
+.dash-nav-right {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  gap: 14px;
+}
+
+/* USER PILL */
+.dash-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f3f4f6;
+}
+
+/* LOGOUT BUTTON */
+.dash-btn-logout {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dash-btn-logout:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
 
 .mgr-page {
   min-height: 100vh;

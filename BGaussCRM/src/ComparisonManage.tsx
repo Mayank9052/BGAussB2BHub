@@ -96,7 +96,7 @@ export default function ComparisonManage() {
     setLoading(true);
     try {
       const [cfgRes, scootRes, modRes] = await Promise.all([
-        axios.get<ConfigItem[]>("/api/Comparison/list-all"),   // returns all incl inactive
+        axios.get<ConfigItem[]>("/api/Comparison/list-all"),
         axios.get<ScootyOption[]>("/api/ScootyInventory/models-list"),
         axios.get<ModelOption[]>("/api/ScootyInventory/models"),
       ]);
@@ -186,39 +186,67 @@ export default function ComparisonManage() {
     <div className="mgr-page">
 
       {/* ── NAVBAR ── */}
-      <header className="dash-navbar">
-        <div className="dash-nav-left">
-          <button className="cmpd-back-btn" onClick={() => navigate("/comparison")}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          </button>
-          <img src={logo} className="dash-nav-logo" alt="BGauss" />
-          <div className="dash-nav-brand">
-            <span className="dash-brand-name">BGauss Portal</span>
-            <span className="dash-brand-page">Manage Comparisons</span>
-          </div>
-        </div>
-        <div className="dash-nav-right">
-          <div className="dash-user-pill">
-            <div className="dash-avatar">{initials}</div>
-            <div className="dash-user-info">
-              <span className="dash-user-name">{username}</span>
-              <span className="dash-user-role">{role}</span>
-            </div>
-          </div>
-          <div className="dash-actions">
-            <button className="dash-icon-btn dash-btn-logout" onClick={handleLogout}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
+        <header className="dash-navbar">
+          <div className="dash-nav-left">
+            
+            {/* Back Button */}
+            <button className="cmpd-back-btn" onClick={() => navigate("/comparison")} >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="15 18 9 12 15 6"/>
               </svg>
             </button>
-          </div>
-        </div>
-      </header>
 
+            {/* Logo */}
+            <img src={logo} className="dash-nav-logo" alt="BGauss" />
+
+            {/* Brand + Page */}
+            <div className="dash-nav-brand">
+              <span className="dash-brand-name">BGauss Portal</span>
+
+              <span className="dash-brand-page">
+                {/* ✅ NEW DASHBOARD ICON */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" rx="2"/>
+                  <rect x="14" y="3" width="7" height="7" rx="2"/>
+                  <rect x="14" y="14" width="7" height="7" rx="2"/>
+                  <rect x="3" y="14" width="7" height="7" rx="2"/>
+                </svg>
+
+                Manage Comparisons
+              </span>
+            </div>
+          </div>
+
+          {/* RIGHT SIDE */}
+          <div className="dash-nav-right">
+
+            {/* User */}
+            <div className="dash-user-pill">
+              <div className="dash-avatar">{initials}</div>
+              <div className="dash-user-info">
+                <span className="dash-user-name">{username}</span>
+                <span className="dash-user-role">{role}</span>
+              </div>
+            </div>
+
+            {/* ✅ ONLY LOGOUT BUTTON */}
+            <div className="dash-actions">
+                <div className="tooltip-wrapper">
+                  <button
+                    className="dash-icon-btn dash-btn-logout"
+                    onClick={handleLogout}
+                    title="Logout"   
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                      <polyline points="16 17 21 12 16 7"/>
+                      <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+          </div>
+        </header>
       <main className="mgr-main">
 
         {error && <div className="dash-error">⚠️ {error}</div>}
