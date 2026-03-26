@@ -14,10 +14,32 @@ type VehicleModel = {
   imageUrl: string | null;
 };
 
-
-/* ================= API ================= */
-
+/* ================= HELPERS ================= */
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const fetchVehiclesInBackground = async (
+  setVehicles: (v: VehicleModel[]) => void
+) => {
+  const maxRetries = 10;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch("/api/LoginVehicle/models");
+      if (!res.ok) throw new Error(`Server responded ${res.status}`);
+      const data: VehicleModel[] = await res.json();
+
+      sessionStorage.setItem("vehicles", JSON.stringify(data));
+      setVehicles(data);
+      return;
+
+    } catch {
+      if (attempt < maxRetries) {
+        await sleep(2000 * attempt);
+      }
+      // silently give up — no error state, no UI disruption
+    }
+  }
+};
 
 /* ================= COMPONENT ================= */
 const LoginPage = () => {
@@ -27,9 +49,11 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [showModal, setShowModal] = useState(false);
 
-  const [vehicles, setVehicles] = useState<VehicleModel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState("");
+  // Initialise immediately from cache — page opens instantly with existing data
+  const [vehicles, setVehicles] = useState<VehicleModel[]>(() => {
+    const cached = sessionStorage.getItem("vehicles");
+    return cached ? JSON.parse(cached) : [];
+  });
 
   const [showEnquiry, setShowEnquiry] = useState(false);
   const [enquiryModel, setEnquiryModel] = useState<number | "">("");
@@ -37,16 +61,27 @@ const LoginPage = () => {
   const [enquiryPhone, setEnquiryPhone] = useState("");
   const [enquiryCity, setEnquiryCity] = useState("");
 
+  /* ================= SILENT BACKGROUND FETCH ================= */
+  useEffect(() => {
+    fetchVehiclesInBackground(setVehicles);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchVehiclesInBackground(setVehicles);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   /* ================= LOGIN ================= */
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (identifier && password) {
       let role = "user";
-
-      if (identifier.toLowerCase() === "admin") {
-        role = "admin";
-      }
+      if (identifier.toLowerCase() === "admin") role = "admin";
 
       localStorage.setItem("token", "session");
       localStorage.setItem("role", role);
@@ -81,63 +116,25 @@ const LoginPage = () => {
     setShowEnquiry(false);
   };
 
-  /* ================= LOAD VEHICLES ================= */
- /* ================= LOAD VEHICLES ================= */
-useEffect(() => {
-  const load = async () => {
-    setLoading(true);
-    setFetchError("");
-
-    const maxRetries = 3;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const res = await fetch("/api/LoginVehicle/models");
-
-        if (!res.ok) {
-          throw new Error(`Server responded ${res.status}`);
-        }
-
-        const data: VehicleModel[] = await res.json();
-        setVehicles(data);
-        setFetchError("");
-        setLoading(false);  // ✅ stop loading on SUCCESS
-        return;             // ✅ exit immediately, no more retries
-
-      } catch (err) {
-        if (attempt === maxRetries) {
-          setFetchError(
-            err instanceof Error ? err.message : "Failed to load vehicles"
-          );
-          setLoading(false); // ✅ stop loading on FINAL failure
-        } else {
-          await sleep(400 * attempt);
-        }
-      }
-    }
-  };
-
-  load();
-}, []);
   /* ================= UI ================= */
   return (
     <div className="page">
+
       {/* ===== NAVBAR ===== */}
       <header className="pro-navbar">
         <div className="pro-left">
           <img src={logo} alt="BGauss" className="pro-logo" />
           <div className="pro-text">
             <span className="pro-brand">BGauss Portal</span>
-            <span className="pro-page">Dashboard</span>
+            <span className="pro-page">Login</span>
           </div>
         </div>
-
         <div className="pro-right">
           <button
             className="nav-login-circle"
             onClick={() => setShowModal((v) => !v)}
-             aria-label="Login"
-             title="Login"
+            aria-label="Login"
+            title="Login"
           >
             ↪
           </button>
@@ -149,83 +146,65 @@ useEffect(() => {
         <div className="vehicle-header">
           <h3>Available Models</h3>
 
-          {loading && <span className="pill pill-muted">Loading...</span>}
-          {fetchError && <span className="pill pill-error">{fetchError}</span>}
-
-          {!loading && !fetchError && (
-            <div className="enquiry-controls">
-              <button
-                className="enquiry-icon-btn"
-                onClick={() => openEnquiry()}
-                aria-label="Enquire"
-                title="Enquire"
-              >
-                ?
-              </button>
-            </div>
-          )}
+          <div className="enquiry-controls">
+            <button
+              className="enquiry-icon-btn"
+              onClick={() => openEnquiry()}
+              aria-label="Enquire"
+              title="Enquire"
+            >
+              ?
+            </button>
+          </div>
         </div>
 
-        {!loading && !fetchError && (
-          <div className="dash-card-grid">
-            {vehicles.map((v) => (
-              <div className="dash-card" key={v.scootyId}>
-                <div className="dash-card-img-wrap">
-                  {v.imageUrl ? (
-                    <img
-                      src={
-                          v.imageUrl.startsWith("http")
-                            ? v.imageUrl
-                            : `http://localhost:5181${v.imageUrl}`
-                      }
-                      alt={v.modelName}
-                      className="dash-card-img"
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = noImage;
-                      }}
-                    />
-                  ) : (
-                    <div className="dash-card-img placeholder">
-                      No image
-                    </div>
-                  )}
-                </div>
+        <div className="dash-card-grid">
+          {vehicles.map((v) => (
+            <div className="dash-card" key={v.scootyId}>
+              <div className="dash-card-img-wrap">
+                {v.imageUrl ? (
+                  <img
+                    src={
+                      v.imageUrl.startsWith("http")
+                        ? v.imageUrl
+                        : `http://localhost:5181${v.imageUrl}`
+                    }
+                    alt={v.modelName}
+                    className="dash-card-img"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = noImage;
+                    }}
+                  />
+                ) : (
+                  <div className="dash-card-img placeholder">No image</div>
+                )}
+              </div>
 
-                <div className="dash-card-body">
-                  <h3 className="dash-card-model">{v.modelName}</h3>
-                  <p className="dash-card-variant">{v.variantName}</p>
-
-                  <div className="dash-card-chips">
-                    <span className="dash-chip dash-chip-price">
-                      {v.price != null
-                        ? `₹${Number(v.price).toLocaleString("en-IN")}`
-                        : "Price on request"}
-                    </span>
-                  </div>
+              <div className="dash-card-body">
+                <h3 className="dash-card-model">{v.modelName}</h3>
+                <p className="dash-card-variant">{v.variantName}</p>
+                <div className="dash-card-chips">
+                  <span className="dash-chip dash-chip-price">
+                    {v.price != null
+                      ? `₹${Number(v.price).toLocaleString("en-IN")}`
+                      : "Price on request"}
+                  </span>
                 </div>
               </div>
-            ))}
+            </div>
+          ))}
 
-            {vehicles.length === 0 && (
-              <div className="pill pill-muted">
-                No vehicles found.
-              </div>
-            )}
-          </div>
-        )}
+          {vehicles.length === 0 && (
+            <div className="pill pill-muted">No vehicles found.</div>
+          )}
+        </div>
       </section>
 
       {/* ===== ENQUIRY MODAL ===== */}
       {showEnquiry && (
-        <div
-          className="enquiry-modal"
-          onClick={() => setShowEnquiry(false)}
-        >
-          <div
-            className="enquiry-card"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="enquiry-modal" onClick={() => setShowEnquiry(false)}>
+          <div className="enquiry-card" onClick={(e) => e.stopPropagation()}>
             <h3>Vehicle Enquiry</h3>
 
             <form className="enquiry-form" onSubmit={submitEnquiry}>
@@ -234,17 +213,13 @@ useEffect(() => {
                 <select
                   value={enquiryModel}
                   onChange={(e) =>
-                    setEnquiryModel(
-                      e.target.value ? Number(e.target.value) : ""
-                    )
+                    setEnquiryModel(e.target.value ? Number(e.target.value) : "")
                   }
                   required
                 >
                   <option value="">Choose a model</option>
                   {modelOptions.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
+                    <option key={m.id} value={m.id}>{m.name}</option>
                   ))}
                 </select>
               </label>
@@ -284,11 +259,7 @@ useEffect(() => {
                 >
                   Cancel
                 </button>
-
-                <button
-                  type="submit"
-                  className="dash-chip dash-chip-cta"
-                >
+                <button type="submit" className="dash-chip dash-chip-cta">
                   Submit
                 </button>
               </div>
@@ -299,14 +270,8 @@ useEffect(() => {
 
       {/* ===== LOGIN MODAL ===== */}
       {showModal && (
-        <div
-          className="login-modal"
-          onClick={() => setShowModal(false)}
-        >
-          <div
-            className="login-container"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="login-modal" onClick={() => setShowModal(false)}>
+          <div className="login-container" onClick={(e) => e.stopPropagation()}>
             <form className="login-card" onSubmit={handleLogin}>
               <h2>Dealer Login</h2>
 
@@ -335,6 +300,7 @@ useEffect(() => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
