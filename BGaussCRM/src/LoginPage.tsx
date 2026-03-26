@@ -14,7 +14,25 @@ type VehicleModel = {
   imageUrl: string | null;
 };
 
-/* ================= HELPERS ================= */
+type EnquiryPayload = {
+  modelId: number;
+  name: string;
+  phone: string;
+  city: string;
+};
+
+type LoginPayload = {
+  username: string;
+  password: string;
+};
+
+type LoginResponse = {
+  token: string;
+  role: string;
+  username: string;
+};
+
+/* ================= API HELPERS ================= */
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const fetchVehiclesInBackground = async (
@@ -31,14 +49,40 @@ const fetchVehiclesInBackground = async (
       sessionStorage.setItem("vehicles", JSON.stringify(data));
       setVehicles(data);
       return;
-
     } catch {
       if (attempt < maxRetries) {
         await sleep(2000 * attempt);
       }
-      // silently give up — no error state, no UI disruption
     }
   }
+};
+
+const postEnquiry = async (payload: EnquiryPayload): Promise<void> => {
+  const res = await fetch("/api/Enquiry", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "Unknown error");
+    throw new Error(errorText || `Server responded ${res.status}`);
+  }
+};
+
+const postLogin = async (payload: LoginPayload): Promise<LoginResponse> => {
+  const res = await fetch("/api/Auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text().catch(() => "Invalid credentials");
+    throw new Error(errorText || `Login failed with status ${res.status}`);
+  }
+
+  return res.json();
 };
 
 /* ================= COMPONENT ================= */
@@ -48,8 +92,9 @@ const LoginPage = () => {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 
-  // Initialise immediately from cache — page opens instantly with existing data
   const [vehicles, setVehicles] = useState<VehicleModel[]>(() => {
     const cached = sessionStorage.getItem("vehicles");
     return cached ? JSON.parse(cached) : [];
@@ -60,6 +105,8 @@ const LoginPage = () => {
   const [enquiryName, setEnquiryName] = useState("");
   const [enquiryPhone, setEnquiryPhone] = useState("");
   const [enquiryCity, setEnquiryCity] = useState("");
+  const [enquiryLoading, setEnquiryLoading] = useState(false);
+  const [enquiryError, setEnquiryError] = useState("");
 
   /* ================= SILENT BACKGROUND FETCH ================= */
   useEffect(() => {
@@ -72,24 +119,35 @@ const LoginPage = () => {
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   /* ================= LOGIN ================= */
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError("");
 
-    if (identifier && password) {
-      let role = "user";
-      if (identifier.toLowerCase() === "admin") role = "admin";
+    if (!identifier || !password) {
+      setLoginError("Please enter your username and password.");
+      return;
+    }
 
-      localStorage.setItem("token", "session");
-      localStorage.setItem("role", role);
-      localStorage.setItem("username", identifier);
+    setLoginLoading(true);
+    try {
+      const data = await postLogin({ username: identifier, password });
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.role);
+      localStorage.setItem("username", data.username);
 
       navigate("/dashboard");
-    } else {
-      alert("Enter credentials");
+    } catch (err: unknown) {
+      setLoginError(
+        err instanceof Error ? err.message : "Login failed. Please try again."
+      );
+    } finally {
+      setLoginLoading(false);
     }
   };
 
@@ -101,19 +159,53 @@ const LoginPage = () => {
   /* ================= ENQUIRY ================= */
   const openEnquiry = (modelId?: number) => {
     setEnquiryModel(modelId ?? "");
+    setEnquiryError("");
     setShowEnquiry(true);
   };
 
-  const submitEnquiry = (e: React.FormEvent) => {
+  const resetEnquiryForm = () => {
+    setEnquiryModel("");
+    setEnquiryName("");
+    setEnquiryPhone("");
+    setEnquiryCity("");
+    setEnquiryError("");
+  };
+
+  const submitEnquiry = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEnquiryError("");
 
     if (!enquiryName || !enquiryPhone || enquiryModel === "") {
-      alert("Please fill model, name and phone.");
+      setEnquiryError("Please fill in model, name, and phone.");
       return;
     }
 
-    alert("Enquiry submitted. We will contact you soon.");
-    setShowEnquiry(false);
+    if (!/^\d{10}$/.test(enquiryPhone)) {
+      setEnquiryError("Phone must be exactly 10 digits.");
+      return;
+    }
+
+    setEnquiryLoading(true);
+    try {
+      await postEnquiry({
+        modelId: enquiryModel as number,
+        name: enquiryName.trim(),
+        phone: enquiryPhone.trim(),
+        city: enquiryCity.trim(),
+      });
+
+      alert("Enquiry submitted successfully! We will contact you soon.");
+      resetEnquiryForm();
+      setShowEnquiry(false);
+    } catch (err: unknown) {
+      setEnquiryError(
+        err instanceof Error
+          ? err.message
+          : "Failed to submit enquiry. Please try again."
+      );
+    } finally {
+      setEnquiryLoading(false);
+    }
   };
 
   /* ================= UI ================= */
@@ -132,7 +224,10 @@ const LoginPage = () => {
         <div className="pro-right">
           <button
             className="nav-login-circle"
-            onClick={() => setShowModal((v) => !v)}
+            onClick={() => {
+              setShowModal((v) => !v);
+              setLoginError("");
+            }}
             aria-label="Login"
             title="Login"
           >
@@ -145,7 +240,6 @@ const LoginPage = () => {
       <section className="vehicle-section">
         <div className="vehicle-header">
           <h3>Available Models</h3>
-
           <div className="enquiry-controls">
             <button
               className="enquiry-icon-btn"
@@ -203,9 +297,13 @@ const LoginPage = () => {
 
       {/* ===== ENQUIRY MODAL ===== */}
       {showEnquiry && (
-        <div className="enquiry-modal" onClick={() => setShowEnquiry(false)}>
+        <div className="enquiry-modal" onClick={() => { setShowEnquiry(false); resetEnquiryForm(); }}>
           <div className="enquiry-card" onClick={(e) => e.stopPropagation()}>
             <h3>Vehicle Enquiry</h3>
+
+            {enquiryError && (
+              <div className="form-error">{enquiryError}</div>
+            )}
 
             <form className="enquiry-form" onSubmit={submitEnquiry}>
               <label>
@@ -216,6 +314,7 @@ const LoginPage = () => {
                     setEnquiryModel(e.target.value ? Number(e.target.value) : "")
                   }
                   required
+                  disabled={enquiryLoading}
                 >
                   <option value="">Choose a model</option>
                   {modelOptions.map((m) => (
@@ -230,6 +329,7 @@ const LoginPage = () => {
                   value={enquiryName}
                   onChange={(e) => setEnquiryName(e.target.value)}
                   required
+                  disabled={enquiryLoading}
                 />
               </label>
 
@@ -237,9 +337,14 @@ const LoginPage = () => {
                 Phone
                 <input
                   value={enquiryPhone}
-                  onChange={(e) => setEnquiryPhone(e.target.value)}
+                  onChange={(e) =>
+                    setEnquiryPhone(e.target.value.replace(/\D/g, ""))
+                  }
                   maxLength={10}
                   required
+                  disabled={enquiryLoading}
+                  inputMode="numeric"
+                  placeholder="10-digit number"
                 />
               </label>
 
@@ -248,19 +353,25 @@ const LoginPage = () => {
                 <input
                   value={enquiryCity}
                   onChange={(e) => setEnquiryCity(e.target.value)}
+                  disabled={enquiryLoading}
                 />
               </label>
 
               <div className="enquiry-actions">
                 <button
                   type="button"
-                  onClick={() => setShowEnquiry(false)}
+                  onClick={() => { setShowEnquiry(false); resetEnquiryForm(); }}
                   className="dash-chip"
+                  disabled={enquiryLoading}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="dash-chip dash-chip-cta">
-                  Submit
+                <button
+                  type="submit"
+                  className="dash-chip dash-chip-cta"
+                  disabled={enquiryLoading}
+                >
+                  {enquiryLoading ? "Submitting…" : "Submit"}
                 </button>
               </div>
             </form>
@@ -275,6 +386,10 @@ const LoginPage = () => {
             <form className="login-card" onSubmit={handleLogin}>
               <h2>Dealer Login</h2>
 
+              {loginError && (
+                <div className="form-error">{loginError}</div>
+              )}
+
               <div className="input-group">
                 <label>Username</label>
                 <input
@@ -282,6 +397,8 @@ const LoginPage = () => {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   required
+                  disabled={loginLoading}
+                  autoComplete="username"
                 />
               </div>
 
@@ -292,10 +409,14 @@ const LoginPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={loginLoading}
+                  autoComplete="current-password"
                 />
               </div>
 
-              <button className="login-btn">Login</button>
+              <button className="login-btn" disabled={loginLoading}>
+                {loginLoading ? "Logging in…" : "Login"}
+              </button>
             </form>
           </div>
         </div>

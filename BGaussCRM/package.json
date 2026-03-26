@@ -7,8 +7,7 @@
     "dev": "vite",
     "client": "vite",
     "server": "dotnet run --project ../bgausscrm.api/BgaussCRM.API.csproj",
-    "dev-all": "concurrently \"dotnet run --project ../bgausscrm.api/BgaussCRM.API.csproj\" \"npm run dev:wait\"",
-    "dev:wait": "node -e \"setTimeout(() => { require('child_process').execSync('npm run dev', {stdio: 'inherit'}) }, 1000  )\"" , 
+    "dev-all": "concurrently \"dotnet run --project ../bgausscrm.api/BgaussCRM.API.csproj\" \"vite\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
