@@ -12,12 +12,14 @@
     linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
   color: #0f172a;
   font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: visible;
 }
 
 /* ── NAVBAR ────────────────────────────────── */
 .pro-navbar {
   position: sticky;
   top: 0;
+  z-index: 50; /* ✅ balanced (not too low, not too high) */
   width: 100%;
   height: 64px;
   background: rgba(255,255,255,0.97);
@@ -29,7 +31,8 @@
   align-items: center;
   padding: 0 28px;
   gap: 16px;
-  z-index: 200;
+  overflow: visible;        /* ✅ required */
+  isolation: isolate;       /* ✅ required */
 }
 
 .vehicle-details-pro-navbar {
@@ -40,7 +43,7 @@
 .pro-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   flex-shrink: 0;
 }
 
@@ -50,9 +53,26 @@
   object-fit: contain;
 }
 
-.pro-text { display: flex; flex-direction: column; gap: 1px; }
-.pro-brand { font-size: 14px; font-weight: 700; color: #0f172a; white-space: nowrap; }
-.pro-page  { font-size: 11px; color: #6b7280; white-space: nowrap; }
+.pro-text { 
+ display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px; /* 👈 important fix */
+  line-height: 1.1;
+}
+.pro-brand { 
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: 0.2px;
+  white-space: nowrap; 
+}
+.pro-page  { 
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap; 
+}
 
 .pro-right { display: flex; align-items: center; }
 
@@ -109,13 +129,19 @@
 /* Icon buttons */
 .vd-icon-btn {
   position: relative;
-  width: 40px; height: 40px;
-  border-radius: 50%; border: none;
+  z-index: 2; /* ✅ slightly above navbar content */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   transition: transform 0.18s, box-shadow 0.18s, filter 0.18s;
 }
+
 .vd-icon-btn svg { width: 18px; height: 18px; pointer-events: none; }
 .vd-icon-btn:hover:not(:disabled)  { transform: translateY(-2px); filter: brightness(1.08); }
 .vd-icon-btn:active:not(:disabled) { transform: scale(0.92); }
@@ -137,24 +163,8 @@
 .vd-btn-prev:hover:not(:disabled),
 .vd-btn-next:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(15,118,110,0.5); }
 
-/* Tooltip */
-.vd-icon-btn::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 8px); left: 50%;
-  transform: translateX(-50%) scale(0.85);
-  background: #0f172a; color: #fff;
-  font-size: 11px; font-weight: 600;
-  padding: 4px 10px; border-radius: 6px;
-  white-space: nowrap; opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s, transform 0.15s;
-  z-index: 400;
-}
-.vd-icon-btn:hover:not(:disabled)::after {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
+
+
 
 /* Hide old text buttons */
 .vehicle-details-back-btn { display: none !important; }

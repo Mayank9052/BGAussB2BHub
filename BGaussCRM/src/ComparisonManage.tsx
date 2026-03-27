@@ -186,62 +186,86 @@ export default function ComparisonManage() {
     <div className="mgr-page">
 
       {/* ── NAVBAR ── */}
-        <header className="dash-navbar">
-          <div className="dash-nav-left">
-            
-            {/* Back Button */}
-            <button className="cmpd-back-btn" onClick={() => navigate("/comparison")} >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+      <header className="dash-navbar">
+
+        {/* LEFT */}
+        <div className="dash-nav-left">
+          <img src={logo} className="dash-nav-logo" alt="BGauss" />
+          <div className="dash-nav-brand">
+            <span className="dash-brand-name">BGauss Portal</span>
+            <span className="dash-brand-page">
+              Manage Comparisons
+            </span>
+          </div>
+        </div>
+
+        {/* RIGHT */}
+        <div className="dash-nav-right">
+
+          {/* User pill */}
+          <div className="dash-user-pill">
+            <div className="dash-avatar">{initials}</div>
+            <div className="dash-user-info">
+              <span className="dash-user-name">{username}</span>
+              <span className="dash-user-role">{role}</span>
+            </div>
+          </div>
+
+          <div className="dash-actions">
+
+            {/* Dashboard */}
+            <button className="dash-icon-btn dash-btn-dashboard"
+                    onClick={() => navigate("/dashboard")}
+                    aria-label="Dashboard"
+                    data-tip="Dashboard">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" stroke="white"/>
+                <line x1="9" y1="3" x2="9" y2="21" stroke="white"/>
+                <line x1="15" y1="3" x2="15" y2="21" stroke="white"/>
+                <line x1="9" y1="9" x2="21" y2="9" stroke="white"/>
+                <line x1="9" y1="15" x2="21" y2="15" stroke="white"/>
+              </svg>
+            </button>
+
+            {/* Comparisons */}
+            <button className="dash-icon-btn dash-btn-comparison"
+                    onClick={() => navigate("/comparison")}
+                    aria-label="Comparisons"
+                    data-tip="Comparisons">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/>
+                <path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="9 8 4 12 9 16"/>
+                <polyline points="15 8 20 12 15 16"/>
+              </svg>
+            </button>
+
+            {/* Back */}
+            <button className="dash-icon-btn cmpd-back-btn"
+                    onClick={() => navigate("/comparison")}
+                    aria-label="Go Back"
+                    data-tip="Go Back">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
             </button>
 
-            {/* Logo */}
-            <img src={logo} className="dash-nav-logo" alt="BGauss" />
+            {/* Logout */}
+            <button className="dash-icon-btn dash-btn-logout"
+                    onClick={handleLogout}
+                    aria-label="Logout"
+                    data-tip="Logout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
 
-            {/* Brand + Page */}
-            <div className="dash-nav-brand">
-              <span className="dash-brand-name">BGauss Portal</span>
-
-              <span className="dash-brand-page">
-                {/* ✅ NEW DASHBOARD ICON */}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7" rx="2"/>
-                  <rect x="14" y="3" width="7" height="7" rx="2"/>
-                  <rect x="14" y="14" width="7" height="7" rx="2"/>
-                  <rect x="3" y="14" width="7" height="7" rx="2"/>
-                </svg>
-
-                Manage Comparisons
-              </span>
-            </div>
           </div>
+        </div>
 
-          {/* RIGHT SIDE */}
-          <div className="dash-nav-right">
-
-            {/* User */}
-            <div className="dash-user-pill">
-              <div className="dash-avatar">{initials}</div>
-              <div className="dash-user-info">
-                <span className="dash-user-name">{username}</span>
-                <span className="dash-user-role">{role}</span>
-              </div>
-            </div>
-
-            {/* ✅ ONLY LOGOUT BUTTON */}
-                <button className="dash-icon-btn dash-btn-logout" 
-                        onClick={handleLogout} 
-                        aria-label="Logout"
-                        data-tip="Logout">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                      <polyline points="16 17 21 12 16 7"/>
-                      <line x1="21" y1="12" x2="9" y2="12"/>
-                  </svg>
-              </button>
-          </div>
-        </header>
+      </header>
       <main className="mgr-main">
 
         {error && <div className="dash-error">⚠️ {error}</div>}

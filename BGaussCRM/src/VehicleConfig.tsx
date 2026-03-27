@@ -1,7 +1,7 @@
 import "./VehicleConfig.css";
 import logo from "./assets/logo.jpg";
 import { useNavigate } from "react-router-dom";
-
+import Tooltip from "./Tooltip";
 export default function VehicleConfig() {
   const navigate = useNavigate();
 
@@ -95,31 +95,45 @@ export default function VehicleConfig() {
 
           {/* ── NAV ICON BUTTONS ── */}
           <div className="vc-icon-group">
-
-            <button className="vc-icon-btn btn-vc-dashboard" data-tip="Dashboard" aria-label="Dashboard" onClick={() => navigate("/dashboard")}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 12L12 3l9 9"/>
-                <path d="M9 21V12h6v9"/>
-              </svg>
-            </button>
-
-            <button className="vc-icon-btn btn-vc-modules" data-tip="Modules" aria-label="Modules" onClick={() => navigate("/modules")}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </button>
-
-            <button className="vc-icon-btn btn-vc-logout" data-tip="Logout" aria-label="Logout" onClick={handleLogout}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </button>
-
+            <Tooltip text="Dashboard">
+              <button
+                className="vc-icon-btn btn-vc-dashboard"
+                aria-label="Dashboard"
+                onClick={() => navigate("/dashboard")}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12L12 3l9 9"/>
+                  <path d="M9 21V12h6v9"/>
+                </svg>
+              </button>
+            </Tooltip>
+            <Tooltip text="Modules">
+              <button
+                className="vc-icon-btn btn-vc-modules"
+                aria-label="Modules"
+                onClick={() => navigate("/modules")}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+              </button>
+            </Tooltip>
+            <Tooltip text="Logout">
+              <button
+                className="vc-icon-btn btn-vc-logout"
+                aria-label="Logout"
+                onClick={handleLogout}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            </Tooltip>
           </div>
         </div>
       </header>

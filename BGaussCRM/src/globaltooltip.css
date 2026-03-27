@@ -1,0 +1,27 @@
+/* GLOBAL TOOLTIP */
+.global-tooltip {
+  position: fixed;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 5px;
+  white-space: nowrap;
+  z-index: 999999;
+  pointer-events: none;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  animation: tooltipFade 0.12s ease;
+}
+
+@keyframes tooltipFade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}

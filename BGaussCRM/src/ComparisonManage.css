@@ -1,13 +1,67 @@
-/* ─── Comparison Manage Page ───────────────────────────────── */
+/* ── NAVBAR ───────────────────────────── */
+.dash-navbar {
+  height: 64px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+
+/* LEFT SIDE */
+.dash-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* tight horizontal spacing */
+  flex-shrink: 0;
+}
+
+/* LOGO */
+.dash-nav-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+/* BRAND BLOCK */
+.dash-nav-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  line-height: 1.1;
+}
+
+/* BRAND NAME */
+.dash-brand-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+/* PAGE NAME */
+.dash-brand-page {
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* OPTIONAL DIVIDER */
+.dash-nav-divider {
+  width: 1px;
+  height: 26px;
+  background: #e5e7eb;
+  margin: 0 6px;
+}
+
 /* RIGHT SIDE */
 .dash-nav-right {
   display: flex;
   align-items: center;
   margin-left: auto;
   gap: 14px;
-  overflow: visible;
-  position: relative;
-  z-index: 400;
 }
 
 /* USER PILL */
@@ -20,13 +74,11 @@
   background: #f3f4f6;
 }
 
-/* LOGOUT BUTTON */
-.dash-btn-logout {
+/* ICON BUTTONS */
+.dash-icon-btn {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: #ef4444;
-  color: white;
   border: none;
   display: flex;
   align-items: center;
@@ -35,11 +87,16 @@
   transition: all 0.2s ease;
 }
 
+/* LOGOUT BUTTON */
+.dash-btn-logout {
+  background: #ef4444;
+  color: white;
+}
+
 .dash-btn-logout:hover {
   transform: scale(1.08);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
 }
-
 .dash-icon-btn {
   overflow: visible; 
 }
