@@ -6,6 +6,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import EmiCalculator from "./EmiCalculator";
+import Tooltip from "./Tooltip";
 
 const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "";
 
@@ -159,7 +160,6 @@ export default function VehicleDetails() {
   const normalizeImageField = <T extends { imageUrl?: string | null; imagePath?: string | null }>(
     item: T
   ): T & { imageUrl: string | null } => ({ ...item, imageUrl: item.imageUrl ?? item.imagePath ?? null });
-
   // ── Fetch likes ───────────────────────────────────────────
   const fetchTotalLikes = useCallback(async () => {
     if (!username) return;
@@ -185,7 +185,6 @@ export default function VehicleDetails() {
       setReviewSummary(res.data.summary);
     } catch { /* silent */ }
   }, []);
-
   // ── Fetch page ────────────────────────────────────────────
   useEffect(() => {
     if (!id) { setError("Vehicle not found."); setLoading(false); return; }
@@ -400,17 +399,46 @@ export default function VehicleDetails() {
               <span className="desktop-user-role">{role}</span>
             </div>
           </div>
-          <button className="vd-icon-btn vd-btn-dashboard" onClick={goToDashboard} aria-label="Dashboard" data-tip="Dashboard">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/></svg>
+          <Tooltip text="Dashboard">
+            <button
+              className="vd-icon-btn vd-btn-dashboard"
+              onClick={goToDashboard}
+              aria-label="Dashboard"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 12L12 3l9 9"/>
+                <path d="M9 21V12h6v9"/>
+              </svg>
+            </button>
+          </Tooltip>
+
+          <Tooltip text="Previous Vehicle">
+            <button
+                className="vd-icon-btn vd-btn-prev"
+                onClick={goToPrevious}
+                disabled={isPrevDisabled}
+                aria-label="Previous"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
+              </button>
+          </Tooltip>
+
+       <Tooltip text="Next Vehicle">
+           <button
+              className="vd-icon-btn vd-btn-next"
+              onClick={goToNext}
+              disabled={isNextDisabled}
+              aria-label="Next"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
           </button>
-          <button className="vd-icon-btn vd-btn-prev" onClick={goToPrevious} disabled={isPrevDisabled} aria-label="Prev" data-tip="Prev Vehicle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-          <button className="vd-icon-btn vd-btn-next" onClick={goToNext} disabled={isNextDisabled} aria-label="Next" data-tip="Next Vehicle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-          </button>
-        </div>
-      </header>
+        </Tooltip>
+      </div>  
+    </header>
 
       {/* MAIN */}
       <main className="vehicle-details-main">
