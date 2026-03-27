@@ -12,9 +12,13 @@ public partial class AppDbContext : DbContext
     {
     }
 
+    public virtual DbSet<AreaScootyStock> AreaScootyStocks { get; set; }
+
     public virtual DbSet<B2bcustomer> B2bcustomers { get; set; }
 
     public virtual DbSet<City> Cities { get; set; }
+
+    public virtual DbSet<CityArea> CityAreas { get; set; }
 
     public virtual DbSet<ComparisonConfig> ComparisonConfigs { get; set; }
 
@@ -44,8 +48,39 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<VehicleVariant> VehicleVariants { get; set; }
 
+    public virtual DbSet<VwAreaStockSummary> VwAreaStockSummaries { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<AreaScootyStock>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__AreaScoo__3214EC071BF5D263");
+
+            entity.ToTable("AreaScootyStock");
+
+            entity.HasIndex(e => e.StockAvailable, "IX_AreaStock_Available");
+
+            entity.HasIndex(e => e.CityAreaId, "IX_AreaStock_CityAreaId");
+
+            entity.HasIndex(e => e.ScootyId, "IX_AreaStock_ScootyID");
+
+            entity.HasIndex(e => new { e.ScootyId, e.CityAreaId }, "UQ_AreaStock_Scooty_Area").IsUnique();
+
+            entity.Property(e => e.ScootyId).HasColumnName("ScootyID");
+            entity.Property(e => e.StockAvailable).HasComputedColumnSql("(case when [StockQuantity]>(0) then CONVERT([bit],(1)) else CONVERT([bit],(0)) end)", true);
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+
+            entity.HasOne(d => d.CityArea).WithMany(p => p.AreaScootyStocks)
+                .HasForeignKey(d => d.CityAreaId)
+                .HasConstraintName("FK_AreaStock_CityArea");
+
+            entity.HasOne(d => d.Scooty).WithMany(p => p.AreaScootyStocks)
+                .HasForeignKey(d => d.ScootyId)
+                .HasConstraintName("FK_AreaStock_Scooty");
+        });
+
         modelBuilder.Entity<B2bcustomer>(entity =>
         {
             entity.HasKey(e => e.CustomerId).HasName("PK__B2BCusto__A4AE64B836156658");
@@ -90,7 +125,24 @@ public partial class AppDbContext : DbContext
             entity.HasIndex(e => e.CityName, "UQ_Cities_Name").IsUnique();
 
             entity.Property(e => e.CityName).HasMaxLength(100);
+            entity.Property(e => e.PincodePrefix).HasMaxLength(3);
             entity.Property(e => e.StateName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<CityArea>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__CityArea__3214EC071D347759");
+
+            entity.HasIndex(e => e.CityId, "IX_CityAreas_CityId");
+
+            entity.HasIndex(e => e.Pincode, "IX_CityAreas_Pincode");
+
+            entity.Property(e => e.AreaName).HasMaxLength(200);
+            entity.Property(e => e.Pincode).HasMaxLength(10);
+
+            entity.HasOne(d => d.City).WithMany(p => p.CityAreas)
+                .HasForeignKey(d => d.CityId)
+                .HasConstraintName("FK_CityAreas_City");
         });
 
         modelBuilder.Entity<ComparisonConfig>(entity =>
@@ -222,7 +274,7 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.ScootyId).HasName("PK__ScootyIn__03A960B0B6CC067B");
 
-            entity.ToTable("ScootyInventory");
+            entity.ToTable("ScootyInventory", tb => tb.HasTrigger("trg_ScootyInventory_StockAvailable"));
 
             entity.HasIndex(e => new { e.ModelId, e.VariantId }, "IDX_Scooty_Model_Variant");
 
@@ -375,6 +427,27 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__VehicleV__3214EC0778F2FB2C");
 
+            entity.Property(e => e.VariantName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<VwAreaStockSummary>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_AreaStockSummary");
+
+            entity.Property(e => e.AreaName).HasMaxLength(200);
+            entity.Property(e => e.CityName).HasMaxLength(100);
+            entity.Property(e => e.ColourName).HasMaxLength(50);
+            entity.Property(e => e.ImageUrl)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.ModelName).HasMaxLength(100);
+            entity.Property(e => e.Pincode).HasMaxLength(10);
+            entity.Property(e => e.Price).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.ScootyId).HasColumnName("ScootyID");
+            entity.Property(e => e.StateName).HasMaxLength(100);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
             entity.Property(e => e.VariantName).HasMaxLength(100);
         });
 

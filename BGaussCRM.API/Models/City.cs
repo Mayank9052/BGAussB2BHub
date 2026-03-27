@@ -13,5 +13,9 @@ public partial class City
 
     public bool IsPopular { get; set; }
 
+    public string? PincodePrefix { get; set; }
+
+    public virtual ICollection<CityArea> CityAreas { get; set; } = new List<CityArea>();
+
     public virtual ICollection<RoadPrice> RoadPrices { get; set; } = new List<RoadPrice>();
 }

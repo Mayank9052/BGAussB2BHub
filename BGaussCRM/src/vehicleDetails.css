@@ -1393,3 +1393,95 @@
   white-space: nowrap;
 }
 .vd-compare-btn:hover { background: #eff6ff; }
+
+/* =============================================
+   APPEND TO BOTTOM OF vehicleDetails.css
+   Area stock banner + breadcrumb area chip
+   + two-button EMI row
+   ============================================= */
+
+/* ── Breadcrumb area chip ── */
+.vd-breadcrumb-area {
+  color: #059669;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ── Area stock banner (sidebar) ── */
+.vd-area-stock-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f0fdf4;
+  border: 1.5px solid #6ee7b7;
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.vd-area-stock-banner svg {
+  color: #059669;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.vd-area-stock-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.vd-area-stock-qty {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.vd-area-stock-qty.in  { color: #059669; }
+.vd-area-stock-qty.out { color: #dc2626; }
+
+/* Out-of-stock chip variant */
+.out-of-stock-chip {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #fca5a5 !important;
+}
+
+/* ── EMI two-button row ── */
+.vd-emi-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.vd-emi-offer-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 12px 10px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #ef4444, #991b1b);
+  color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+  transition: transform 0.18s, box-shadow 0.18s;
+  white-space: nowrap; font-family: inherit; letter-spacing: 0.01em;
+}
+.vd-emi-offer-btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(239, 68, 68, 0.45); }
+.vd-emi-offer-btn:active { transform: scale(0.97); }
+.vd-emi-offer-btn svg    { flex-shrink: 0; }
+
+.vd-emi-calc-btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 12px 10px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #1e3a8a);
+  color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: transform 0.18s, box-shadow 0.18s;
+  white-space: nowrap; font-family: inherit; letter-spacing: 0.01em;
+}
+.vd-emi-calc-btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37, 99, 235, 0.45); }
+.vd-emi-calc-btn:active { transform: scale(0.97); }
+.vd-emi-calc-btn svg    { flex-shrink: 0; }
+
+@media (max-width: 360px) {
+  .vd-emi-btn-row { grid-template-columns: 1fr; }
+}
