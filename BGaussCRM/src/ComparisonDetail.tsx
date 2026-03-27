@@ -201,8 +201,8 @@ export default function ComparisonDetail() {
         axios.get<ComparisonData>(`/api/Comparison/${s2}`),
       ]);
       setLeft(r1.data); setRight(r2.data);
-      fetchVariants(r1.data.modelName, s1, "left");
-      fetchVariants(r2.data.modelName, s2, "right");
+      fetchVariants(s1, "left");
+      fetchVariants(s2, "right");
     } catch {
       setError("Failed to load comparison data.");
     } finally {
@@ -211,7 +211,7 @@ export default function ComparisonDetail() {
   };
 
   /* Fetch all scooties for this model so user can switch variant */
-  const fetchVariants = async (modelName: string, currentId: number, side: "left" | "right") => {
+  const fetchVariants = async (currentId: number, side: "left" | "right") => {
     try {
       /* Use the models-list endpoint filtered by modelName, or a dedicated endpoint */
       const res = await axios.get<VariantOption[]>(`/api/Comparison/variants-by-scooty/${currentId}`);
