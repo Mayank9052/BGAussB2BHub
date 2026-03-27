@@ -335,11 +335,6 @@ export default function ComparisonDetail() {
       {/* ── NAVBAR ── */}
       <header className="dash-navbar">
         <div className="dash-nav-left">
-          <button className="cmpd-back-btn" onClick={() => navigate(-1)}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          </button>
           <img src={logo} className="dash-nav-logo" alt="BGauss" />
           <div className="dash-nav-brand">
             <span className="dash-brand-name">BGauss Portal</span>
@@ -354,9 +349,23 @@ export default function ComparisonDetail() {
               <span className="dash-user-role">{role}</span>
             </div>
           </div>
+
+          {/* Back button — moved to right */}
+          <button className="dash-icon-btn cmpd-back-btn"
+                  onClick={() => navigate(-1)}
+                  data-tip="Go Back"
+                  aria-label="Go Back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+
           <div className="dash-actions">
-            <button className="dash-icon-btn dash-btn-logout" onClick={handleLogout} aria-label="Logout">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <button className="dash-icon-btn dash-btn-logout" 
+                    onClick={handleLogout} 
+                    aria-label="Logout" 
+                    data-tip="Logout">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>

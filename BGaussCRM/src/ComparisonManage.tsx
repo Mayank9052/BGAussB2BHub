@@ -230,21 +230,16 @@ export default function ComparisonManage() {
             </div>
 
             {/* ✅ ONLY LOGOUT BUTTON */}
-            <div className="dash-actions">
-                <div className="tooltip-wrapper">
-                  <button
-                    className="dash-icon-btn dash-btn-logout"
-                    onClick={handleLogout}
-                    title="Logout"   
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <button className="dash-icon-btn dash-btn-logout" 
+                        onClick={handleLogout} 
+                        aria-label="Logout"
+                        data-tip="Logout">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                       <polyline points="16 17 21 12 16 7"/>
                       <line x1="21" y1="12" x2="9" y2="12"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
+                  </svg>
+              </button>
           </div>
         </header>
       <main className="mgr-main">

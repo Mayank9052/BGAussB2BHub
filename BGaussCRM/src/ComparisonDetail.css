@@ -17,18 +17,25 @@
 
 /* ── Back button ── */
 .cmpd-back-btn {
-  background: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6b7280, #374151);
+  color: white;
   border: none;
-  cursor: pointer;
-  padding: 6px;
   display: flex;
   align-items: center;
-  color: #374151;
-  border-radius: 6px;
-  margin-right: 4px;
-  transition: background 0.15s;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
-.cmpd-back-btn:hover { background: #f3f4f6; }
+
+.cmpd-back-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.4);
+  background: linear-gradient(135deg, #4b5563, #1f2937);
+} 
 
 /* ── HERO card ── */
 .cmpd-hero-card {
