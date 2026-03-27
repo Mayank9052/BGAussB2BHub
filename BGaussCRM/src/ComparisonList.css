@@ -1,4 +1,13 @@
 /* ─── Comparison List Page ─────────────────────────────────── */
+.dash-btn-dashboard {
+  background: linear-gradient(135deg, #4ade80, #16a34a);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4);
+}
+
+.dash-btn-dashboard:hover {
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.5);
+}
 
 .cmp-list-page {
   min-height: 100vh;
@@ -216,3 +225,4 @@
   .cmp-card { width: 100%; }
   .cmp-list-title { font-size: 1.2rem; }
 }
+

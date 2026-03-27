@@ -5,6 +5,9 @@
   align-items: center;
   margin-left: auto;
   gap: 14px;
+  overflow: visible;
+  position: relative;
+  z-index: 400;
 }
 
 /* USER PILL */
@@ -35,6 +38,10 @@
 .dash-btn-logout:hover {
   transform: scale(1.08);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+.dash-icon-btn {
+  overflow: visible; 
 }
 
 .mgr-page {

@@ -716,6 +716,15 @@
   }
 }
 
+.dash-btn-comparison {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(109, 40, 217, 0.4);
+}
+
+.dash-btn-comparison:hover {
+  box-shadow: 0 8px 20px rgba(109, 40, 217, 0.5);
+}
 /* 640px — hide search in navbar center, show below title */
 @media (max-width: 640px) {
   .dash-navbar { padding: 0 12px; height: 56px; gap: 8px; }
