@@ -1,7 +1,7 @@
 import "./vehicleDetails.css";
 import logo from "./assets/logo.jpg";
 import noImage from "./assets/No-Image.jpg";
-
+import Tooltip from "./Tooltip";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
@@ -489,7 +489,7 @@ export default function VehicleDetails() {
               <span className="desktop-user-role">{role}</span>
             </div>
           </div>
-
+         <Tooltip text="Dashboard">
           <button className="vd-icon-btn vd-btn-dashboard"
             onClick={goToDashboard} aria-label="Dashboard" data-tip="Dashboard">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -497,7 +497,9 @@ export default function VehicleDetails() {
               <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
             </svg>
           </button>
-
+        </Tooltip>
+        
+        <Tooltip text="Prev Vehicle">
           <button className="vd-icon-btn vd-btn-prev"
             onClick={goToPrevious} disabled={isPrevDisabled}
             aria-label="Prev" data-tip="Prev Vehicle">
@@ -506,7 +508,9 @@ export default function VehicleDetails() {
               <polyline points="15 18 9 12 15 6"/>
             </svg>
           </button>
+        </Tooltip>
 
+        <Tooltip text="Next Vehicle">
           <button className="vd-icon-btn vd-btn-next"
             onClick={goToNext} disabled={isNextDisabled}
             aria-label="Next" data-tip="Next Vehicle">
@@ -515,6 +519,7 @@ export default function VehicleDetails() {
               <polyline points="9 18 15 12 9 6"/>
             </svg>
           </button>
+        </Tooltip>
         </div>
       </header>
 

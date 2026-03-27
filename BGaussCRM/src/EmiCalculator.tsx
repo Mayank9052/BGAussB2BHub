@@ -55,7 +55,7 @@ export default function EmiCalculator({ scootyId, modelName, variantName, basePr
   // ── Calculator state ──────────────────────────────────────
   const onRoadTotal = roadPrice?.onRoadPrice ?? basePrice ?? 0;
   const minDown     = Math.round(onRoadTotal * MIN_DOWN_PCT);
-  const maxDown = Math.round(onRoadTotal);
+  const maxDown     = Math.round(onRoadTotal * 0.9);
 
   const [downPayment,   setDownPayment]   = useState(minDown);
   const [duration,      setDuration]      = useState(3);
@@ -211,52 +211,27 @@ export default function EmiCalculator({ scootyId, modelName, variantName, basePr
 
       {/* Calculator body */}
       <div className="emi-calc-body">
+
         {/* Down Payment */}
         <div className="emi-field">
           <div className="emi-field-header">
             <label className="emi-label">Down Payment</label>
-            <div className="emi-value-box">
-              ₹ {formatINR(downPayment)}
-            </div>
+            <div className="emi-value-box">₹ {formatINR(downPayment)}</div>
           </div>
-
           <input
             type="range"
             className="emi-slider"
             min={minDown}
             max={maxDown}
             step={1000}
-            value={downPayment}
-            onChange={(e) => {
-              let value = Number(e.target.value);
-
-              // ✅ Strict validation
-              if (value < minDown) value = minDown;
-              if (value > maxDown) value = maxDown;
-
-              setDownPayment(value);
-            }}
-            style={{
-              '--pct': `${
-                maxDown > minDown
-                  ? ((downPayment - minDown) / (maxDown - minDown)) * 100
-                  : 0
-              }%`,
-            } as React.CSSProperties}
+            value={Math.min(downPayment, maxDown)}
+            onChange={(e) => setDownPayment(Number(e.target.value))}
+            style={{ '--pct': `${((downPayment - minDown) / (maxDown - minDown)) * 100}%` } as React.CSSProperties}
           />
-
-          {/* ✅ Improved Labels */}
           <div className="emi-slider-labels">
-            <span>₹ {formatINR(minDown)} (Min 10%)</span>
-            <span>₹ {formatINR(maxDown)} (Full Price)</span>
+            <span>₹ {formatINR(minDown)}</span>
+            <span>₹ {formatINR(maxDown)}</span>
           </div>
-
-          {/* ✅ Optional UX Hint */}
-          {downPayment === maxDown && (
-            <p className="emi-hint success">
-              🎉 You are paying full amount — No EMI required
-            </p>
-          )}
         </div>
 
         {/* Duration */}
