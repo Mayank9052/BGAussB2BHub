@@ -421,24 +421,88 @@ namespace BGaussCRM.API.Controllers
         // GET UNIQUE MODEL LIST (ONLY 1 IMAGE PER MODEL)
         // =============================
         [HttpGet("models-list")]
-        public async Task<IActionResult> GetUniqueModels()
+        public async Task<IActionResult> GetUniqueModels(
+            [FromQuery] string? pincode = null,
+            [FromQuery] int?    cityId  = null)
         {
+            // ── Resolve area IDs from pincode or cityId ──
+            List<int>? areaIds = null;
+
+            if (!string.IsNullOrWhiteSpace(pincode))
+            {
+                var cleanPin = pincode.Trim();
+
+                // Try exact match
+                var area = await _context.CityAreas
+                    .FirstOrDefaultAsync(a => a.Pincode == cleanPin);
+
+                // Prefix fallback
+                if (area == null && cleanPin.Length >= 3)
+                    area = await _context.CityAreas
+                        .FirstOrDefaultAsync(a => a.Pincode.StartsWith(cleanPin.Substring(0, 3)));
+
+                if (area != null)
+                    areaIds = new List<int> { area.Id };
+            }
+            else if (cityId.HasValue)
+            {
+                areaIds = await _context.CityAreas
+                    .Where(a => a.CityId == cityId.Value)
+                    .Select(a => a.Id)
+                    .ToListAsync();
+            }
+
+            // ── With location context: use area-specific stock ──
+            if (areaIds != null && areaIds.Count > 0)
+            {
+                var areaStockData = await _context.AreaScootyStocks
+                    .Include(s => s.Scooty).ThenInclude(x => x.Model)
+                    .Include(s => s.Scooty).ThenInclude(x => x.Variant)
+                    .Where(s => areaIds.Contains(s.CityAreaId)
+                            && s.StockQuantity > 0
+                            && s.Scooty.ImageUrl != null)
+                    .ToListAsync();
+
+                // One entry per model (highest stock)
+                var grouped = areaStockData
+                    .GroupBy(s => s.Scooty.ModelId)
+                    .Select(g => g.OrderByDescending(s => s.StockQuantity).First())
+                    .Select(s => new
+                    {
+                        ScootyId       = s.ScootyId,
+                        ModelId        = s.Scooty.ModelId,
+                        ModelName      = s.Scooty.Model.ModelName,
+                        VariantName    = s.Scooty.Variant.VariantName,
+                        ImageUrl       = s.Scooty.ImageUrl,
+                        StockAvailable = s.StockAvailable,
+                        StockQuantity  = s.StockQuantity,
+                        Price          = s.Scooty.Price,
+                        RangeKm        = s.Scooty.RangeKm
+                    })
+                    .ToList();
+
+                return Ok(grouped);
+            }
+
+            // ── No location: global list ──
             var data = await _context.ScootyInventories
                 .Include(x => x.Model)
                 .Include(x => x.Variant)
-                .Where(x => x.ImageUrl != null)
+                .Where(x => x.ImageUrl != null && x.StockAvailable)
                 .GroupBy(x => x.ModelId)
                 .Select(g => g
                     .OrderByDescending(x => x.ScootyId)
                     .Select(x => new
                     {
                         x.ScootyId,
-                        ModelId = x.ModelId,
-                        ModelName = x.Model.ModelName,
-                        VariantName = x.Variant.VariantName,
+                        ModelId        = x.ModelId,
+                        ModelName      = x.Model.ModelName,
+                        VariantName    = x.Variant.VariantName,
                         x.ImageUrl,
                         x.StockAvailable,
-                        x.Price
+                        x.StockQuantity,
+                        x.Price,
+                        x.RangeKm
                     })
                     .FirstOrDefault()
                 )
@@ -451,7 +515,10 @@ namespace BGaussCRM.API.Controllers
         // GET DETAILS FOR CLICKED SCOOTY ONLY
         // =============================
         [HttpGet("details/{id}")]
-        public async Task<IActionResult> GetScootyDetails(int id)
+        public async Task<IActionResult> GetScootyDetails(
+            int id,
+            [FromQuery] string? pincode = null,
+            [FromQuery] int?    cityId  = null)
         {
             var data = await _context.ScootyInventories
                 .Include(x => x.Model)
@@ -462,20 +529,103 @@ namespace BGaussCRM.API.Controllers
                 {
                     x.ImageUrl,
                     x.ScootyId,
-                    ModelName = x.Model.ModelName,
+                    ModelName   = x.Model.ModelName,
                     VariantName = x.Variant.VariantName,
-                    ColourName = x.Colour != null ? x.Colour.ColourName : null,
+                    ColourName  = x.Colour != null ? x.Colour.ColourName : null,
                     x.Price,
                     x.BatterySpecs,
                     x.RangeKm,
-                    x.StockAvailable
+                    x.StockAvailable,
+                    x.StockQuantity,
+                    // New spec fields
+                    x.MaxPowerKw,
+                    x.BrakeFront,
+                    x.BrakeRear,
+                    x.BrakingType,
+                    x.WheelSize,
+                    x.WheelType,
+                    x.ChargingTimeHrs,
+                    x.StartingType,
+                    x.Speedometer
                 })
                 .FirstOrDefaultAsync();
 
-            if (data == null)
-                return NotFound();
+            if (data == null) return NotFound();
 
-            return Ok(data);
+            // ── Resolve area-specific stock if location provided ──
+            object? areaStockInfo = null;
+
+            if (!string.IsNullOrWhiteSpace(pincode) || cityId.HasValue)
+            {
+                List<int> areaIds = new();
+
+                if (!string.IsNullOrWhiteSpace(pincode))
+                {
+                    var cleanPin = pincode.Trim();
+                    var area = await _context.CityAreas
+                        .FirstOrDefaultAsync(a => a.Pincode == cleanPin);
+                    if (area == null && cleanPin.Length >= 3)
+                        area = await _context.CityAreas
+                            .FirstOrDefaultAsync(a => a.Pincode.StartsWith(cleanPin.Substring(0, 3)));
+                    if (area != null) areaIds.Add(area.Id);
+                }
+                else if (cityId.HasValue)
+                {
+                    areaIds = await _context.CityAreas
+                        .Where(a => a.CityId == cityId.Value)
+                        .Select(a => a.Id)
+                        .ToListAsync();
+                }
+
+                if (areaIds.Count > 0)
+                {
+                    var areaStock = await _context.AreaScootyStocks
+                        .Include(s => s.CityArea).ThenInclude(a => a.City)
+                        .Where(s => s.ScootyId == id && areaIds.Contains(s.CityAreaId))
+                        .Select(s => new
+                        {
+                            s.CityAreaId,
+                            AreaName      = s.CityArea.AreaName,
+                            Pincode       = s.CityArea.Pincode,
+                            CityName      = s.CityArea.City.CityName,
+                            s.StockQuantity,
+                            s.StockAvailable
+                        })
+                        .FirstOrDefaultAsync();
+
+                    areaStockInfo = areaStock;
+                }
+            }
+
+            // Return merged result
+            return Ok(new
+            {
+                data.ImageUrl,
+                data.ScootyId,
+                data.ModelName,
+                data.VariantName,
+                data.ColourName,
+                data.Price,
+                data.BatterySpecs,
+                data.RangeKm,
+                // If area-specific stock exists, use it; else use global
+                StockAvailable = areaStockInfo != null
+                    ? ((dynamic)areaStockInfo).StockAvailable
+                    : data.StockAvailable,
+                StockQuantity  = areaStockInfo != null
+                    ? (int)((dynamic)areaStockInfo).StockQuantity
+                    : data.StockQuantity,
+                data.MaxPowerKw,
+                data.BrakeFront,
+                data.BrakeRear,
+                data.BrakingType,
+                data.WheelSize,
+                data.WheelType,
+                data.ChargingTimeHrs,
+                data.StartingType,
+                data.Speedometer,
+                AreaStock = areaStockInfo  // null if no location context
+            });
         }
 
         // =============================

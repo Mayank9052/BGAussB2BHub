@@ -41,6 +41,10 @@ public partial class ScootyInventory
 
     public string? Speedometer { get; set; }
 
+    public int StockQuantity { get; set; }
+
+    public virtual ICollection<AreaScootyStock> AreaScootyStocks { get; set; } = new List<AreaScootyStock>();
+
     public virtual VehicleColour? Colour { get; set; }
 
     public virtual ICollection<ComparisonConfig> ComparisonConfigScooty1s { get; set; } = new List<ComparisonConfig>();

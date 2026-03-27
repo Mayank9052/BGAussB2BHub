@@ -70,7 +70,7 @@ export default function ComparisonManage() {
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
 
-  /* Add pair form */
+  /* Add Comparison form */
   const [scooty1Id, setScooty1Id] = useState<number | "">("");
   const [scooty2Id, setScooty2Id] = useState<number | "">("");
   const [addMsg,    setAddMsg]    = useState("");
@@ -110,7 +110,7 @@ export default function ComparisonManage() {
     }
   };
 
-  /* ── Add pair ── */
+  /* ── Add Comparison ── */
   const handleAdd = async () => {
     if (scooty1Id === "" || scooty2Id === "") {
       setAddMsg("Please select both scooties."); return;
@@ -126,7 +126,7 @@ export default function ComparisonManage() {
       await fetchAll();
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err) && err.response?.data
-        ? String(err.response.data) : "Failed to add pair.";
+        ? String(err.response.data) : "Failed to add comparison.";
       setAddMsg(`❌ ${msg}`);
     } finally {
       setAdding(false);
@@ -272,7 +272,7 @@ export default function ComparisonManage() {
 
         <div className="mgr-grid">
 
-          {/* ── LEFT: Add pair + Brochure ── */}
+          {/* ── LEFT: Add Comparison + Brochure ── */}
           <div className="mgr-left">
 
             {/* Add Comparison Pair */}
@@ -354,7 +354,7 @@ export default function ComparisonManage() {
                   onClick={handleAdd}
                   disabled={adding || scooty1Id === "" || scooty2Id === ""}
                 >
-                  {adding ? "Adding…" : "Add Pair"}
+                  {adding ? "Adding…" : "Add Comparison"}
                 </button>
               </div>
             </div>
@@ -444,7 +444,7 @@ export default function ComparisonManage() {
             </div>
           </div>
 
-          {/* ── RIGHT: Existing pairs table ── */}
+          {/* ── RIGHT: Existing Comparisons table ── */}
           <div className="mgr-right">
             <div className="mgr-card mgr-card--full">
               <div className="mgr-card-header">
@@ -453,7 +453,7 @@ export default function ComparisonManage() {
                   <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
                   <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
                 </svg>
-                <h2>Existing Pairs</h2>
+                <h2>Existing Comparisons</h2>
                 <span className="mgr-count">{configs.length}</span>
               </div>
 
@@ -469,14 +469,14 @@ export default function ComparisonManage() {
                 </div>
               ) : configs.length === 0 ? (
                 <div className="mgr-empty">
-                  <p>No comparison pairs yet. Add one on the left.</p>
+                  <p>No comparison yet. Add one on the left.</p>
                 </div>
               ) : (
                 <div className="mgr-table-wrap">
 
                   {/* Header */}
                   <div className="mgr-row mgr-row--head">
-                    <div className="mgr-col mgr-col--pair">Comparison Pair</div>
+                    <div className="mgr-col mgr-col--pair">Comparison</div>
                     <div className="mgr-col mgr-col--status">Status</div>
                     <div className="mgr-col mgr-col--actions">Actions</div>
                   </div>

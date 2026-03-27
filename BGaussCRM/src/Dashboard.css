@@ -822,3 +822,152 @@
   }
 }
    
+
+/* =============================================
+   APPEND TO dashboard.css
+   Stock quantity badge + updated pin search
+   ============================================= */
+
+/* Stock qty badge on card image */
+.dash-stock-qty-badge {
+  position: absolute;
+  top: 8px; right: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px; font-weight: 700;
+  background: #dcfce7; color: #166534;
+  border: 1px solid #6ee7b7;
+  backdrop-filter: blur(4px);
+}
+
+.dash-stock-qty-badge:has-text("Sold out"),
+.dash-stock-qty-badge[data-sold="true"] {
+  background: #fee2e2; color: #991b1b; border-color: #fca5a5;
+}
+
+/* ── All pincode CSS (also in dashboard_pincode.css) ── */
+.dash-pin-wrap { position: relative; flex-shrink: 0; }
+
+.dash-pin-bar {
+  display: flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 12px;
+  background: #f3f4f6; border: 1.5px solid #e5e7eb;
+  border-radius: 999px;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  width: 200px; cursor: text;
+}
+.dash-pin-bar:focus-within {
+  border-color: #2563eb; background: #fff;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.dash-pin-bar.has-result { border-color: #059669; background: #f0fdf4; }
+.dash-pin-bar.has-result:focus-within {
+  border-color: #059669; box-shadow: 0 0 0 3px rgba(5,150,105,0.1);
+}
+
+.dash-pin-input {
+  flex: 1; border: none; background: transparent;
+  font-size: 13px; color: #111827; outline: none; min-width: 0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+.dash-pin-input::placeholder { color: #9ca3af; font-size: 12px; }
+
+.dash-pin-clear {
+  background: #e5e7eb; border: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  font-size: 9px; cursor: pointer; color: #6b7280;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.15s;
+}
+.dash-pin-clear:hover { background: #d1d5db; }
+
+.dash-pin-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid #e5e7eb; border-top-color: #2563eb;
+  border-radius: 50%; animation: dashPinSpin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes dashPinSpin { to { transform: rotate(360deg); } }
+
+.dash-pin-active-badge {
+  position: absolute; top: calc(100% + 5px); left: 0;
+  font-size: 11px; font-weight: 600; color: #059669;
+  background: #f0fdf4; border: 1px solid #6ee7b7;
+  border-radius: 20px; padding: 2px 10px;
+  white-space: nowrap; box-shadow: 0 2px 6px rgba(5,150,105,0.1);
+  z-index: 10;
+}
+
+.dash-pin-dropdown {
+  position: absolute; top: calc(100% + 8px); left: 0;
+  width: 310px; background: #fff;
+  border: 1.5px solid #e5e7eb; border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(15,23,42,0.14);
+  z-index: 600; overflow: hidden;
+  animation: dashPinDrop 0.16s ease;
+}
+@keyframes dashPinDrop {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dash-pin-dd-title {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px 14px 8px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: #9ca3af; border-bottom: 1px solid #f1f5f9;
+}
+
+.dash-pin-dd-item {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; width: 100%; padding: 11px 14px;
+  border: none; background: transparent; cursor: pointer; text-align: left;
+  transition: background 0.1s; border-bottom: 1px solid #f8fafc;
+}
+.dash-pin-dd-item:last-child { border-bottom: none; }
+.dash-pin-dd-item:hover { background: #f3f4f6; }
+
+.dash-pin-dd-left { display: flex; flex-direction: column; gap: 2px; }
+.dash-pin-dd-area { font-size: 13px; font-weight: 700; color: #0f172a; }
+.dash-pin-dd-city { font-size: 11px; color: #64748b; }
+.dash-pin-dd-code {
+  font-size: 12px; font-weight: 800; color: #2563eb;
+  background: #eff6ff; border: 1px solid #bfdbfe;
+  padding: 3px 10px; border-radius: 999px; flex-shrink: 0;
+  font-family: monospace;
+}
+
+.dash-pin-no-vehicles {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 18px; background: #fff7ed;
+  border: 1.5px solid #fdba74; border-radius: 12px; margin-bottom: 18px;
+}
+.dash-pin-no-vehicles span { font-size: 26px; flex-shrink: 0; }
+.dash-pin-no-vehicles p { font-size: 13px; color: #92400e; margin: 0 0 4px; }
+.dash-pin-no-vehicles button {
+  background: none; border: none; color: #2563eb;
+  font-size: 13px; font-weight: 600; cursor: pointer; padding: 0;
+}
+
+.dash-clear-pin-btn {
+  padding: 8px 16px; border: 1.5px solid #e5e7eb; border-radius: 999px;
+  background: #fff; color: #374151; font-size: 12px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.15s;
+}
+.dash-clear-pin-btn:hover { background: #f3f4f6; }
+
+.dash-pin-mobile { margin-top: 8px; }
+.dash-pin-mobile .dash-pin-bar { width: 100%; border-radius: 12px; }
+.dash-actions { display: flex; align-items: center; gap: 8px; }
+
+@media (max-width: 900px) {
+  .dash-nav-right .dash-pin-wrap:not(.dash-pin-mobile) { display: none; }
+  .dash-pin-mobile { display: block !important; }
+}
+@media (min-width: 901px) {
+  .dash-pin-mobile { display: none !important; }
+}
+@media (max-width: 640px) {
+  .dash-pin-dropdown { width: calc(100vw - 28px); left: 0; }
+}
