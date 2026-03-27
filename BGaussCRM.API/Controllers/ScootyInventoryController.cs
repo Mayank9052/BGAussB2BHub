@@ -93,9 +93,9 @@ namespace BGaussCRM.API.Controllers
             var dto = new ScootyInventoryDto
             {
                 ScootyId = data.ScootyId,
-                ModelName = data.Model.ModelName,       // Corrected property
-                VariantName = data.Variant?.VariantName, // Corrected property, nullable safety
-                ColourName = data.Colour?.ColourName,    // Corrected property
+                ModelName = data.Model?.ModelName ?? "",
+                VariantName = data.Variant?.VariantName ?? "",
+                ColourName = data.Colour?.ColourName ?? "",   // Corrected property
                 Price = data.Price,
                 StockAvailable = data.StockAvailable,
                 ImageUrl = data.ImageUrl,
