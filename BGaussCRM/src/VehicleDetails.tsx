@@ -30,7 +30,6 @@ interface VehicleDetailsResponse {
   rangeKm:         number | null;
   stockAvailable:  boolean;
   stockQuantity:   number;
-  // Extra spec fields
   maxPowerKw:      number | null;
   brakeFront:      string | null;
   brakeRear:       string | null;
@@ -40,25 +39,24 @@ interface VehicleDetailsResponse {
   chargingTimeHrs: string | null;
   startingType:    string | null;
   speedometer:     string | null;
-  // Area-specific stock context (when pincode/cityId param present)
   areaStock?:      AreaStockInfo | null;
 }
 
 type VehicleDetailsResponseApi = VehicleDetailsResponse & { imagePath?: string | null };
 
 interface InventoryItem {
-  scootyId:      number;
-  modelId:       number;
-  modelName:     string;
-  variantId:     number;
-  variantName:   string;
-  colourId:      number | null;
-  colourName:    string | null;
-  price:         number | null;
-  batterySpecs:  string | null;
-  rangeKm:       number | null;
-  stockAvailable:boolean;
-  imageUrl:      string | null;
+  scootyId:       number;
+  modelId:        number;
+  modelName:      string;
+  variantId:      number;
+  variantName:    string;
+  colourId:       number | null;
+  colourName:     string | null;
+  price:          number | null;
+  batterySpecs:   string | null;
+  rangeKm:        number | null;
+  stockAvailable: boolean;
+  imageUrl:       string | null;
 }
 type InventoryItemApi = InventoryItem & { imagePath?: string | null };
 
@@ -118,12 +116,11 @@ function MiniStars({ value }: { value: number }) {
 
 // ─────────────────────────────────────────────────────────────
 export default function VehicleDetails() {
-  const { id }           = useParams();
-  const navigate         = useNavigate();
-  const [searchParams]   = useSearchParams();
-  const [showEmiCalc, setShowEmiCalc] = useState(false);
+  const { id }         = useParams();
+  const navigate       = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  // ── Read pincode/cityId from URL ──────────────────────────
+  // ── URL params ────────────────────────────────────────────
   const urlPincode = searchParams.get("pincode");
   const urlCityId  = searchParams.get("cityId");
 
@@ -131,6 +128,10 @@ export default function VehicleDetails() {
   const [availableModels, setAvailableModels] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState("");
+
+  // ── EMI calculator — locked until enquiry submitted ───────
+  const [showEmiCalc,    setShowEmiCalc]    = useState(false);
+  const [emiEnquiryDone, setEmiEnquiryDone] = useState(false);
 
   // ── Zoom ──────────────────────────────────────────────────
   const [zoomActive, setZoomActive] = useState(false);
@@ -161,7 +162,7 @@ export default function VehicleDetails() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewMsg,        setReviewMsg]        = useState("");
 
-  // ── EMI modal ─────────────────────────────────────────────
+  // ── EMI enquiry modal ─────────────────────────────────────
   const [emiModalOpen,  setEmiModalOpen]  = useState(false);
   const [emiName,       setEmiName]       = useState("");
   const [emiMobile,     setEmiMobile]     = useState("");
@@ -180,6 +181,17 @@ export default function VehicleDetails() {
   ): T & { imageUrl: string | null } => ({
     ...item, imageUrl: item.imageUrl ?? item.imagePath ?? null,
   });
+
+  // ── Open EMI modal helper ─────────────────────────────────
+  const openEmiModal = () => {
+    setEmiSuccess(false);
+    setEmiMsg("");
+    setEmiName("");
+    setEmiMobile("");
+    setEmiPin("");
+    setEmiWantsLoan(null);
+    setEmiModalOpen(true);
+  };
 
   // ── Likes ─────────────────────────────────────────────────
   const fetchTotalLikes = useCallback(async () => {
@@ -207,7 +219,7 @@ export default function VehicleDetails() {
     } catch { /* silent */ }
   }, []);
 
-  // ── Build details URL with optional location context ──────
+  // ── Build details URL ─────────────────────────────────────
   const buildDetailsUrl = useCallback((scootyId: string) => {
     let url = `/api/ScootyInventory/details/${scootyId}`;
     if (urlPincode) url += `?pincode=${encodeURIComponent(urlPincode)}`;
@@ -215,13 +227,23 @@ export default function VehicleDetails() {
     return url;
   }, [urlPincode, urlCityId]);
 
+  // ── Build nav params ──────────────────────────────────────
+  const buildParams = useCallback(() =>
+    urlPincode ? `?pincode=${encodeURIComponent(urlPincode)}`
+    : urlCityId ? `?cityId=${urlCityId}` : "",
+  [urlPincode, urlCityId]);
+
   // ── Fetch page data ───────────────────────────────────────
   useEffect(() => {
     if (!id) { setError("Vehicle not found."); setLoading(false); return; }
 
     const fetchVehiclePage = async () => {
-      setLoading(true); setError("");
-      setZoomActive(false); setIsLiked(false); setLikeCount(0);
+      setLoading(true);
+      setError("");
+      setZoomActive(false);
+      setIsLiked(false);
+      setLikeCount(0);
+      setShowEmiCalc(false); // reset calculator on vehicle change
 
       try {
         const [detailsRes, inventoryListRes] = await Promise.all([
@@ -253,7 +275,8 @@ export default function VehicleDetails() {
       } catch (e) {
         console.error(e);
         setError("Unable to load vehicle details.");
-        setVehicle(null); setAvailableModels([]);
+        setVehicle(null);
+        setAvailableModels([]);
       } finally {
         setLoading(false);
       }
@@ -316,7 +339,8 @@ export default function VehicleDetails() {
     if (reviewRating === 0) { setReviewMsg("Please select a star rating."); return; }
     if (reviewTitle.trim().length < 5) { setReviewMsg("Title must be at least 5 characters."); return; }
     if (reviewText.trim().length < 10) { setReviewMsg("Review must be at least 10 characters."); return; }
-    setReviewSubmitting(true); setReviewMsg("");
+    setReviewSubmitting(true);
+    setReviewMsg("");
     try {
       await axios.post("/api/VehicleReviews", {
         scootyId:          vehicle.scootyId,
@@ -344,13 +368,14 @@ export default function VehicleDetails() {
     } finally { setReviewSubmitting(false); }
   };
 
-  // ── EMI submit ────────────────────────────────────────────
+  // ── EMI enquiry submit ────────────────────────────────────
   const handleEmiSubmit = async () => {
     if (!vehicle) return;
     if (!emiName.trim())   { setEmiMsg("Please enter your full name."); return; }
     if (!emiMobile.trim()) { setEmiMsg("Please enter your mobile number."); return; }
     if (!emiPin.trim())    { setEmiMsg("Please enter your PIN code."); return; }
-    setEmiSubmitting(true); setEmiMsg("");
+    setEmiSubmitting(true);
+    setEmiMsg("");
     try {
       await axios.post("/api/EmiEnquiry", {
         scootyId:     vehicle.scootyId,
@@ -361,6 +386,7 @@ export default function VehicleDetails() {
         wantsLoan:    emiWantsLoan ?? false,
       });
       setEmiSuccess(true);
+      setEmiEnquiryDone(true); // ← unlock the EMI calculator
     } catch (err: unknown) {
       const e = err as { response?: { data?: string } };
       setEmiMsg(e.response?.data ?? "Submission failed. Please try again.");
@@ -391,23 +417,13 @@ export default function VehicleDetails() {
   const goToPrevious = () => {
     if (!availableModels.length || !vehicle) return;
     const idx = availableModels.findIndex((x) => x.scootyId === vehicle.scootyId);
-    if (idx > 0) {
-      const target = availableModels[idx - 1].scootyId;
-      const params = urlPincode ? `?pincode=${encodeURIComponent(urlPincode)}`
-        : urlCityId ? `?cityId=${urlCityId}` : "";
-      navigate(`/vehicle/${target}${params}`);
-    }
+    if (idx > 0) navigate(`/vehicle/${availableModels[idx - 1].scootyId}${buildParams()}`);
   };
 
   const goToNext = () => {
     if (!availableModels.length || !vehicle) return;
     const idx = availableModels.findIndex((x) => x.scootyId === vehicle.scootyId);
-    if (idx < availableModels.length - 1) {
-      const target = availableModels[idx + 1].scootyId;
-      const params = urlPincode ? `?pincode=${encodeURIComponent(urlPincode)}`
-        : urlCityId ? `?cityId=${urlCityId}` : "";
-      navigate(`/vehicle/${target}${params}`);
-    }
+    if (idx < availableModels.length - 1) navigate(`/vehicle/${availableModels[idx + 1].scootyId}${buildParams()}`);
   };
 
   const formatCurrency = (value: number | null) => {
@@ -422,10 +438,9 @@ export default function VehicleDetails() {
   const isNextDisabled = !vehicle || currentIdx >= availableModels.length - 1;
 
   // ── Derived stock display ─────────────────────────────────
-  // Use area-specific stock if present, else global
-  const displayStock      = vehicle?.areaStock ?? null;
-  const isInStock         = displayStock ? displayStock.stockAvailable : (vehicle?.stockAvailable ?? false);
-  const stockQtyDisplay   = displayStock
+  const displayStock    = vehicle?.areaStock ?? null;
+  const isInStock       = displayStock ? displayStock.stockAvailable : (vehicle?.stockAvailable ?? false);
+  const stockQtyDisplay = displayStock
     ? (displayStock.stockAvailable
         ? `${displayStock.stockQuantity} unit${displayStock.stockQuantity > 1 ? "s" : ""} in ${displayStock.areaName}`
         : `Out of stock in ${displayStock.areaName}`)
@@ -472,8 +487,12 @@ export default function VehicleDetails() {
 
         <div className="pro-right vehicle-details-nav-buttons">
           {username && (
-            <div className="vd-nav-likes" onClick={() => navigate("/my-likes")}
-              title={`${totalLikedCount} liked`} style={{ cursor: "pointer" }}>
+            <div
+              className="vd-nav-likes"
+              onClick={() => navigate("/my-likes")}
+              title={`${totalLikedCount} liked`}
+              style={{ cursor: "pointer" }}
+            >
               <svg viewBox="0 0 24 24"
                 fill={totalLikedCount > 0 ? "currentColor" : "none"}
                 stroke="currentColor" strokeWidth="2"
@@ -491,37 +510,36 @@ export default function VehicleDetails() {
               <span className="desktop-user-role">{role}</span>
             </div>
           </div>
-         <Tooltip text="Dashboard">
-          <button className="vd-icon-btn vd-btn-dashboard"
-            onClick={goToDashboard} aria-label="Dashboard" data-tip="Dashboard">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
-            </svg>
-          </button>
-        </Tooltip>
-        
-        <Tooltip text="Prev Vehicle">
-          <button className="vd-icon-btn vd-btn-prev"
-            onClick={goToPrevious} disabled={isPrevDisabled}
-            aria-label="Prev" data-tip="Prev Vehicle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
-          </button>
-        </Tooltip>
 
-        <Tooltip text="Next Vehicle">
-          <button className="vd-icon-btn vd-btn-next"
-            onClick={goToNext} disabled={isNextDisabled}
-            aria-label="Next" data-tip="Next Vehicle">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-          </button>
-        </Tooltip>
+          <Tooltip text="Dashboard">
+            <button className="vd-icon-btn vd-btn-dashboard"
+              onClick={goToDashboard} aria-label="Dashboard">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
+              </svg>
+            </button>
+          </Tooltip>
+
+          <Tooltip text="Prev Vehicle">
+            <button className="vd-icon-btn vd-btn-prev"
+              onClick={goToPrevious} disabled={isPrevDisabled} aria-label="Prev">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+            </button>
+          </Tooltip>
+
+          <Tooltip text="Next Vehicle">
+            <button className="vd-icon-btn vd-btn-next"
+              onClick={goToNext} disabled={isNextDisabled} aria-label="Next">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </button>
+          </Tooltip>
         </div>
       </header>
 
@@ -683,12 +701,7 @@ export default function VehicleDetails() {
                         className={isSelected
                           ? "vehicle-details-option-card vehicle-details-option-card-active"
                           : "vehicle-details-option-card"}
-                        onClick={() => {
-                          const params = urlPincode
-                            ? `?pincode=${encodeURIComponent(urlPincode)}`
-                            : urlCityId ? `?cityId=${urlCityId}` : "";
-                          navigate(`/vehicle/${item.scootyId}${params}`);
-                        }}
+                        onClick={() => navigate(`/vehicle/${item.scootyId}${buildParams()}`)}
                       >
                         <strong>{item.variantName}</strong>
                         <span>{formatCurrency(item.price)}</span>
@@ -720,7 +733,7 @@ export default function VehicleDetails() {
                     <span>{vehicle.rangeKm ? `${vehicle.rangeKm} km range` : "Range on request"}</span>
                   </div>
 
-                  {/* ── AREA STOCK BANNER ── */}
+                  {/* Area stock banner */}
                   {displayStock && (
                     <div className="vd-area-stock-banner">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -748,41 +761,64 @@ export default function VehicleDetails() {
                   </div>
                 </section>
 
-                {/* ── TWO BUTTONS ROW ── */}
+                {/* ── EMI BUTTONS ── */}
                 <div className="vd-emi-btn-row">
-                  <button
-                    className="vd-emi-offer-btn"
-                    onClick={() => {
-                      setEmiSuccess(false); setEmiMsg("");
-                      setEmiName(""); setEmiMobile(""); setEmiPin("");
-                      setEmiWantsLoan(null); setEmiModalOpen(true);
-                    }}
-                  >
+
+                  {/* Always visible */}
+                  <button className="vd-emi-offer-btn" onClick={openEmiModal}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      stroke="currentColor" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round">
                       <rect x="2" y="5" width="20" height="14" rx="2"/>
                       <line x1="2" y1="10" x2="22" y2="10"/>
                     </svg>
                     Get EMI Offers
                   </button>
 
-                  <button
-                    className="vd-emi-calc-btn"
-                    onClick={() => setShowEmiCalc(p => !p)}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="4" y="2" width="16" height="20" rx="2"/>
-                      <line x1="8" y1="6" x2="16" y2="6"/>
-                      <line x1="8" y1="10" x2="16" y2="10"/>
-                      <line x1="8" y1="14" x2="12" y2="14"/>
-                    </svg>
-                    {showEmiCalc ? "Hide EMI" : "Calculate EMI"}
-                  </button>
+                  {/* Unlocked after enquiry */}
+                  {emiEnquiryDone ? (
+                    <button
+                      className="vd-emi-calc-btn"
+                      onClick={() => setShowEmiCalc(p => !p)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2"
+                        strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="4" y="2" width="16" height="20" rx="2"/>
+                        <line x1="8" y1="6" x2="16" y2="6"/>
+                        <line x1="8" y1="10" x2="16" y2="10"/>
+                        <line x1="8" y1="14" x2="12" y2="14"/>
+                      </svg>
+                      {showEmiCalc ? "Hide EMI" : "Calculate EMI"}
+                    </button>
+                  ) : (
+                    /* Locked — clicking opens EMI modal */
+                    <Tooltip text="Submit EMI enquiry to unlock">
+                      <button
+                        className="vd-emi-calc-btn vd-emi-calc-btn--locked"
+                        onClick={openEmiModal}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2"
+                          strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="11" width="18" height="11" rx="2"/>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                        </svg>
+                        Calculate EMI
+                      </button>
+                    </Tooltip>
+                  )}
                 </div>
 
-                {/* EMI Calculator inline */}
-                {showEmiCalc && (
+                {/* Hint text when locked */}
+                {!emiEnquiryDone && (
+                  <p className="vd-emi-locked-hint">
+                    Submit an EMI enquiry to unlock the calculator.
+                  </p>
+                )}
+
+                {/* EMI Calculator — unlocked + toggled */}
+                {emiEnquiryDone && showEmiCalc && (
                   <EmiCalculator
                     scootyId={vehicle.scootyId}
                     modelName={vehicle.modelName}
@@ -791,6 +827,7 @@ export default function VehicleDetails() {
                   />
                 )}
 
+                {/* Specifications */}
                 <section className="vehicle-details-sidebar-block">
                   <div className="vehicle-details-sidebar-head"><h3>Specifications</h3></div>
                   <div className="vehicle-details-spec-list">
@@ -920,8 +957,18 @@ export default function VehicleDetails() {
                   <div className="vd-emi-success-icon">✅</div>
                   <h3>Enquiry Submitted!</h3>
                   <p>Our team will contact you shortly with EMI options.</p>
-                  <button className="vd-modal-btn-submit"
-                    onClick={() => setEmiModalOpen(false)}>Close</button>
+                  <p className="vd-emi-unlock-note">
+                    EMI Calculator is now unlocked for you.
+                  </p>
+                  <button
+                    className="vd-modal-btn-submit"
+                    onClick={() => {
+                      setEmiModalOpen(false);
+                      setShowEmiCalc(true); // auto-open calculator
+                    }}
+                  >
+                    Calculate EMI Now →
+                  </button>
                 </div>
               ) : (
                 <>
@@ -941,21 +988,27 @@ export default function VehicleDetails() {
                   <p className="vd-emi-sub">
                     Get EMI Offers On {vehicle?.modelName} {vehicle?.variantName}
                   </p>
-                  <p className="vd-emi-note">We only ask these once and your details are safe with us.</p>
+                  <p className="vd-emi-note">
+                    We only ask these once and your details are safe with us.
+                  </p>
 
                   <div className="vd-emi-form">
                     <div className="vd-emi-field">
                       <input className="vd-emi-input" placeholder="PIN Code"
-                        value={emiPin} onChange={(e) => setEmiPin(e.target.value)} maxLength={6} />
+                        value={emiPin}
+                        onChange={(e) => setEmiPin(e.target.value)}
+                        maxLength={6} />
                     </div>
                     <div className="vd-emi-field">
                       <input className="vd-emi-input"
                         placeholder="Full Name (as per PAN / Aadhaar)"
-                        value={emiName} onChange={(e) => setEmiName(e.target.value)} />
+                        value={emiName}
+                        onChange={(e) => setEmiName(e.target.value)} />
                     </div>
                     <div className="vd-emi-field">
                       <input className="vd-emi-input" placeholder="Mobile Number"
-                        value={emiMobile} onChange={(e) => setEmiMobile(e.target.value)}
+                        value={emiMobile}
+                        onChange={(e) => setEmiMobile(e.target.value)}
                         maxLength={10} type="tel" />
                     </div>
                     <div className="vd-emi-loan-row">

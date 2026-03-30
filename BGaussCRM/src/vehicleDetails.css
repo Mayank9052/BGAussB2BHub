@@ -1495,3 +1495,32 @@
 @media (max-width: 360px) {
   .vd-emi-btn-row { grid-template-columns: 1fr; }
 }
+
+/* ── Append these to vehicleDetails.css ─────────────────────── */
+
+/* Locked Calculate EMI button */
+.vd-emi-calc-btn--locked {
+  opacity: 0.55;
+  cursor: pointer;
+}
+.vd-emi-calc-btn--locked:hover {
+  opacity: 0.78;
+  background: #f3f4f6;
+}
+
+/* Hint text below buttons when calculator is locked */
+.vd-emi-locked-hint {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-align: center;
+  margin: -4px 0 8px;
+  padding: 0 4px;
+}
+
+/* Unlock note inside EMI success screen */
+.vd-emi-unlock-note {
+  font-size: 0.82rem;
+  color: #059669;
+  font-weight: 500;
+  margin: 4px 0 16px;
+}
