@@ -16,6 +16,52 @@ import scootyImg from "./assets/Bg0-scooty.png";   // hero scooty
 //interface City { id: number; cityName: string; stateName: string; isPopular: boolean; }
 interface StoreArea { id: number; areaName: string; pincode: string; cityId: number; cityName: string; stateName: string; }
 
+type LoginResponseData = {
+  token?: string;
+  Token?: string;
+  username?: string;
+  Username?: string;
+  role?: string;
+  Role?: string;
+};
+
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return null;
+
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(normalized.length + ((4 - normalized.length % 4) % 4), "=");
+
+    return JSON.parse(window.atob(padded)) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
+const extractRole = (data: LoginResponseData, token: string): string => {
+  const directRole = data.role ?? data.Role;
+  if (typeof directRole === "string" && directRole.trim()) {
+    return directRole.trim().toLowerCase();
+  }
+
+  const payload = decodeJwtPayload(token);
+  const claimKeys = [
+    "role",
+    "Role",
+    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role",
+  ];
+
+  for (const key of claimKeys) {
+    const value = payload?.[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim().toLowerCase();
+    }
+  }
+
+  return "user";
+};
+
 const LoginPage = () => {
   const navigate = useNavigate();
 
@@ -100,14 +146,20 @@ const LoginPage = () => {
     }
     setLoginLoading(true); setLoginError("");
     try {
-      const res = await axios.post("/api/Auth/login", {
+      const res = await axios.post<LoginResponseData>("/api/Auth/login", {
         identifier: identifier.trim(),
         password,
       });
-      const { token, username, role } = res.data;
-      localStorage.setItem("token",    token);
-      localStorage.setItem("username", username ?? identifier);
-      localStorage.setItem("role",     role ?? "user");
+
+      const token = res.data.token ?? res.data.Token;
+      if (!token) throw new Error("Login response did not include a token.");
+
+      const username = res.data.username ?? res.data.Username ?? identifier.trim();
+      const role = extractRole(res.data, token);
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("username", username);
+      localStorage.setItem("role", role);
       setShowLogin(false);
       navigate("/dashboard");
     } catch (err: unknown) {
