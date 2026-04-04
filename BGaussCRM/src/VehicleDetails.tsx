@@ -243,7 +243,7 @@ export default function VehicleDetails() {
       setZoomActive(false);
       setIsLiked(false);
       setLikeCount(0);
-      setShowEmiCalc(false); // reset calculator on vehicle change
+      setShowEmiCalc(false);
 
       try {
         const [detailsRes, inventoryListRes] = await Promise.all([
@@ -386,7 +386,7 @@ export default function VehicleDetails() {
         wantsLoan:    emiWantsLoan ?? false,
       });
       setEmiSuccess(true);
-      setEmiEnquiryDone(true); // ← unlock the EMI calculator
+      setEmiEnquiryDone(true);
     } catch (err: unknown) {
       const e = err as { response?: { data?: string } };
       setEmiMsg(e.response?.data ?? "Submission failed. Please try again.");
@@ -446,29 +446,77 @@ export default function VehicleDetails() {
         : `Out of stock in ${displayStock.areaName}`)
     : (vehicle?.stockAvailable ? "In Stock" : "Out of Stock");
 
-  const specificationItems = vehicle ? [
-    { label: "Model",         value: vehicle.modelName },
-    { label: "Variant",       value: vehicle.variantName },
-    { label: "Colour",        value: vehicle.colourName ?? "Not specified" },
-    { label: "Price",         value: formatCurrency(vehicle.price) },
-    { label: "Range",         value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available" },
-    { label: "Battery",       value: vehicle.batterySpecs ?? "Not available" },
-    { label: "Max Power",     value: vehicle.maxPowerKw ? `${vehicle.maxPowerKw} kW` : "—" },
-    { label: "Charging Time", value: vehicle.chargingTimeHrs ?? "—" },
-    { label: "Brakes Front",  value: vehicle.brakeFront ?? "—" },
-    { label: "Brakes Rear",   value: vehicle.brakeRear ?? "—" },
-    { label: "Braking Type",  value: vehicle.brakingType ?? "—" },
-    { label: "Wheel Size",    value: vehicle.wheelSize ?? "—" },
-    { label: "Wheel Type",    value: vehicle.wheelType ?? "—" },
-    { label: "Starting",      value: vehicle.startingType ?? "—" },
-    { label: "Speedometer",   value: vehicle.speedometer ?? "—" },
+  // ── Specs card grid data ──────────────────────────────────
+  const specsCardItems = vehicle ? [
+    { icon: "⚡", label: "Max Power",     value: vehicle.maxPowerKw      ? `${vehicle.maxPowerKw} kW`   : "—" },
+    { icon: "🔋", label: "Battery",       value: vehicle.batterySpecs    ?? "—" },
+    { icon: "📍", label: "Range",         value: vehicle.rangeKm         ? `${vehicle.rangeKm} km`      : "—" },
+    { icon: "⏱️", label: "Charging Time", value: vehicle.chargingTimeHrs ?? "—" },
+    { icon: "🛞", label: "Wheel Size",    value: vehicle.wheelSize        ?? "—" },
+    { icon: "🔩", label: "Wheel Type",    value: vehicle.wheelType        ?? "—" },
+    { icon: "🛑", label: "Brakes Front",  value: vehicle.brakeFront       ?? "—" },
+    { icon: "🛑", label: "Brakes Rear",   value: vehicle.brakeRear        ?? "—" },
+    { icon: "🔐", label: "Braking Type",  value: vehicle.brakingType      ?? "—" },
+    { icon: "🚀", label: "Starting",      value: vehicle.startingType     ?? "—" },
+    { icon: "🎛️", label: "Speedometer",   value: vehicle.speedometer      ?? "—" },
+    { icon: "🎨", label: "Colour",        value: vehicle.colourName       ?? "—" },
   ] : [];
 
-  const galleryHighlights = vehicle ? [
-    { label: "Range",   value: vehicle.rangeKm ? `${vehicle.rangeKm} km` : "Not available", detail: "Certified riding distance" },
-    { label: "Battery", value: vehicle.batterySpecs ?? "Not available",                      detail: "Current battery specification" },
-    { label: "Colour",  value: vehicle.colourName ?? "Not specified",                        detail: "Selected vehicle finish" },
-    { label: "Stock",   value: isInStock ? "In Stock" : "Out of Stock",                      detail: displayStock ? `${displayStock.areaName} · ${displayStock.pincode}` : "Current inventory status" },
+  // ── Great things — derived from actual vehicle specs ──────
+  const greatThings = vehicle ? [
+    {
+      icon: "⚡",
+      name: "Max Power",
+      desc: vehicle.maxPowerKw
+        ? `Delivers ${vehicle.maxPowerKw} kW of powerful, silent electric performance.`
+        : "Powerful electric motor for smooth city rides.",
+    },
+    {
+      icon: "🔋",
+      name: "Battery",
+      desc: vehicle.batterySpecs
+        ? `Equipped with a ${vehicle.batterySpecs} battery for long-lasting rides.`
+        : "High-capacity battery for extended range.",
+    },
+    {
+      icon: "📍",
+      name: "Range",
+      desc: vehicle.rangeKm
+        ? `Ride up to ${vehicle.rangeKm} km on a single full charge.`
+        : "Impressive range on a single charge.",
+    },
+    {
+      icon: "⏱️",
+      name: "Charging Time",
+      desc: vehicle.chargingTimeHrs
+        ? `Fully charges in just ${vehicle.chargingTimeHrs} — plug in overnight and go.`
+        : "Convenient home charging support.",
+    },
+    {
+      icon: "🛑",
+      name: "Braking System",
+      desc: (() => {
+        const front = vehicle.brakeFront  ?? "";
+        const rear  = vehicle.brakeRear   ?? "";
+        const type  = vehicle.brakingType ?? "";
+        if (front && rear && type) return `${front} front & ${rear} rear with ${type} for superior safety.`;
+        if (front && rear)         return `${front} front & ${rear} rear brakes for confident stopping.`;
+        if (type)                  return `${type} braking system for reliable, safe stopping power.`;
+        return "Advanced braking system for safe, confident rides.";
+      })(),
+    },
+    {
+      icon: "🛞",
+      name: "Wheels",
+      desc: (() => {
+        const size = vehicle.wheelSize ?? "";
+        const type = vehicle.wheelType ?? "";
+        if (size && type) return `${size} ${type} wheels for a stable, comfortable ride.`;
+        if (size)         return `${size} wheels built for urban comfort and grip.`;
+        if (type)         return `${type} wheels for improved handling and style.`;
+        return "Purpose-built wheels for urban riding comfort.";
+      })(),
+    },
   ] : [];
 
   // ── Render ────────────────────────────────────────────────
@@ -491,7 +539,6 @@ export default function VehicleDetails() {
               className="vd-nav-likes"
               onClick={() => navigate("/my-likes")}
               title={`${totalLikedCount} liked`}
-              style={{ cursor: "pointer" }}
             >
               <svg viewBox="0 0 24 24"
                 fill={totalLikedCount > 0 ? "currentColor" : "none"}
@@ -511,31 +558,26 @@ export default function VehicleDetails() {
             </div>
           </div>
 
+          {/* Navigation Buttons */}
           <Tooltip text="Dashboard">
-            <button className="vd-icon-btn vd-btn-dashboard"
-              onClick={goToDashboard} aria-label="Dashboard">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <button className="vd-icon-btn vd-btn-dashboard" onClick={goToDashboard}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
               </svg>
             </button>
           </Tooltip>
 
           <Tooltip text="Prev Vehicle">
-            <button className="vd-icon-btn vd-btn-prev"
-              onClick={goToPrevious} disabled={isPrevDisabled} aria-label="Prev">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <button className="vd-icon-btn vd-btn-prev" onClick={goToPrevious} disabled={isPrevDisabled}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6"/>
               </svg>
             </button>
           </Tooltip>
 
           <Tooltip text="Next Vehicle">
-            <button className="vd-icon-btn vd-btn-next"
-              onClick={goToNext} disabled={isNextDisabled} aria-label="Next">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <button className="vd-icon-btn vd-btn-next" onClick={goToNext} disabled={isNextDisabled}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </button>
@@ -674,16 +716,21 @@ export default function VehicleDetails() {
                 </div>
               </div>
 
-              {/* Gallery highlights */}
-              <div className="vehicle-details-gallery-grid vd-highlights-grid">
-                {galleryHighlights.map((item) => (
-                  <article className="vehicle-details-gallery-card" key={item.label}>
-                    <span>{item.label}</span>
-                    <strong>{item.value}</strong>
-                    <p>{item.detail}</p>
-                  </article>
-                ))}
-              </div>
+              {/* ── SPECS CARD GRID ── */}
+              <section className="vd-specs-card-section">
+                <div className="vehicle-details-sidebar-head">
+                  <h3>Specifications</h3>
+                </div>
+                <div className="vd-specs-card-grid">
+                  {specsCardItems.map((spec) => (
+                    <div className="vd-spec-card" key={spec.label}>
+                      <span className="vd-spec-card-icon">{spec.icon}</span>
+                      <span className="vd-spec-card-label">{spec.label}</span>
+                      <strong className="vd-spec-card-value">{spec.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
               {/* Variants */}
               <section className="vehicle-details-variants-block">
@@ -764,7 +811,6 @@ export default function VehicleDetails() {
                 {/* ── EMI BUTTONS ── */}
                 <div className="vd-emi-btn-row">
 
-                  {/* Always visible */}
                   <button className="vd-emi-offer-btn" onClick={openEmiModal}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                       stroke="currentColor" strokeWidth="2"
@@ -775,7 +821,6 @@ export default function VehicleDetails() {
                     Get EMI Offers
                   </button>
 
-                  {/* Unlocked after enquiry */}
                   {emiEnquiryDone ? (
                     <button
                       className="vd-emi-calc-btn"
@@ -792,7 +837,6 @@ export default function VehicleDetails() {
                       {showEmiCalc ? "Hide EMI" : "Calculate EMI"}
                     </button>
                   ) : (
-                    /* Locked — clicking opens EMI modal */
                     <Tooltip text="Submit EMI enquiry to unlock">
                       <button
                         className="vd-emi-calc-btn vd-emi-calc-btn--locked"
@@ -827,28 +871,25 @@ export default function VehicleDetails() {
                   />
                 )}
 
-                {/* Specifications */}
-                <section className="vehicle-details-sidebar-block">
-                  <div className="vehicle-details-sidebar-head"><h3>Specifications</h3></div>
-                  <div className="vehicle-details-spec-list">
-                    {specificationItems.map((item) => (
-                      <div className="vehicle-details-spec-row" key={item.label}>
-                        <span>{item.label}</span>
-                        <strong>{item.value}</strong>
+                {/* ── GREAT THINGS ABOUT THIS SCOOTER ── */}
+                  {greatThings.length > 0 && (
+                    <div className="vd-great-things">
+                      <p className="vd-great-things-title">Great things about this scooter</p>
+                      <div className="vd-great-things-grid">
+                        {greatThings.map((item) => (
+                          <div className="vd-great-thing-item" key={item.name}>
+                            <div className="vd-great-thing-icon">{item.icon}</div>
+                            {/* CRITICAL: Text Wrapper for proper alignment */}
+                            <div className="vd-great-thing-content">
+                              <p className="vd-great-thing-name">{item.name}</p>
+                              <p className="vd-great-thing-desc">{item.desc}</p>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                    <div className="vehicle-details-spec-row">
-                      <span>Availability</span>
-                      <strong className={isInStock
-                        ? "vehicle-details-stock-text vehicle-details-stock-text-in"
-                        : "vehicle-details-stock-text vehicle-details-stock-text-out"}>
-                        {stockQtyDisplay}
-                      </strong>
                     </div>
-                  </div>
-                </section>
-
-              </div>
+                  )}
+              </div>{/* end sidebar-scroll */}
             </aside>
 
           </section>
@@ -964,7 +1005,7 @@ export default function VehicleDetails() {
                     className="vd-modal-btn-submit"
                     onClick={() => {
                       setEmiModalOpen(false);
-                      setShowEmiCalc(true); // auto-open calculator
+                      setShowEmiCalc(true);
                     }}
                   >
                     Calculate EMI Now →
