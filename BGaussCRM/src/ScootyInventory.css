@@ -3,16 +3,32 @@
   min-height: 100vh;
   background: #eef2f7;
   font-family: 'Segoe UI', Arial, sans-serif;
+  padding-top: 69px;   /* 5px topbar + 64px navbar */
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .scr-topbar {
   height: 5px;
   background: linear-gradient(90deg, #00c9a7, #00b4d8, #0077b6);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
 }
 
 .scr-page .module-btn,
 .scr-page .logout-btn,
 .scr-page .user-name { display: none !important; }
+
+.scr-page .pro-navbar {
+  position: fixed;
+  top: 5px;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
 
 /* ── CONTAINER ── */
 .scr-container {
@@ -579,6 +595,13 @@
   display: none;
 }
 
+.scr-page .pro-navbar {
+    height: 56px;
+    top: 5px;
+  }
+  .scr-page {
+    padding-top: 61px;
+  }
 /* Convert row into card */
 .scr-table tbody tr {
   display: block;

@@ -9,17 +9,31 @@
   min-height: 100vh;
   background: #eef2f7;
   font-family: 'Segoe UI', Arial, sans-serif;
+  padding-top: 75px;
+  height: 100vh;
+  overflow-y: auto;
 }
-
 .vp-topbar {
   height: 5px;
   background: linear-gradient(90deg, #00c9a7, #00b4d8, #0077b6);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
 }
 
 /* Hide legacy nav elements */
 .vp-page .module-btn,
 .vp-page .logout-btn,
 .vp-page .user-name { display: none !important; }
+.vp-page .pro-navbar {
+  position: fixed;
+  top: 5px;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
 
 /* ── CONTAINER ── */
 .vp-container {
@@ -489,6 +503,8 @@
   .vp-container { padding: 16px; gap: 16px; }
   .vp-banner { text-align: center; }
   .vp-mini-search { width: 120px; }
+  .vp-page .pro-navbar { height: 60px; top: 5px; }
+  .vp-page { padding-top: 65px; }
 }
 
 @media (max-width: 560px) {
