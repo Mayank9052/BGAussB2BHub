@@ -183,15 +183,15 @@ export default function VehicleDetails() {
   });
 
   // ── Open EMI modal helper ─────────────────────────────────
-  const openEmiModal = () => {
-    setEmiSuccess(false);
-    setEmiMsg("");
-    setEmiName("");
-    setEmiMobile("");
-    setEmiPin("");
-    setEmiWantsLoan(null);
-    setEmiModalOpen(true);
-  };
+  // const openEmiModal = () => {
+  //   setEmiSuccess(false);
+  //   setEmiMsg("");
+  //   setEmiName("");
+  //   setEmiMobile("");
+  //   setEmiPin("");
+  //   setEmiWantsLoan(null);
+  //   setEmiModalOpen(true);
+  // };
 
   // ── Likes ─────────────────────────────────────────────────
   const fetchTotalLikes = useCallback(async () => {
@@ -809,7 +809,7 @@ export default function VehicleDetails() {
                 </section>
 
                 {/* ── EMI BUTTONS ── */}
-                <div className="vd-emi-btn-row">
+                {/* <div className="vd-emi-btn-row">
 
                   <button className="vd-emi-offer-btn" onClick={openEmiModal}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -852,24 +852,24 @@ export default function VehicleDetails() {
                       </button>
                     </Tooltip>
                   )}
-                </div>
+                </div> */}
 
                 {/* Hint text when locked */}
-                {!emiEnquiryDone && (
+                {/* {!emiEnquiryDone && (
                   <p className="vd-emi-locked-hint">
                     Submit an EMI enquiry to unlock the calculator.
                   </p>
-                )}
+                )} */}
 
                 {/* EMI Calculator — unlocked + toggled */}
-                {emiEnquiryDone && showEmiCalc && (
+                {/* {emiEnquiryDone && showEmiCalc && (
                   <EmiCalculator
                     scootyId={vehicle.scootyId}
                     modelName={vehicle.modelName}
                     variantName={vehicle.variantName}
                     basePrice={vehicle.price}
                   />
-                )}
+                )} */}
 
                 {/* ── GREAT THINGS ABOUT THIS SCOOTER ── */}
                   {greatThings.length > 0 && (
