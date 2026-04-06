@@ -5,7 +5,7 @@ import Tooltip from "./Tooltip";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import EmiCalculator from "./EmiCalculator";
+//import EmiCalculator from "./EmiCalculator";
 
 const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "";
 
@@ -130,8 +130,8 @@ export default function VehicleDetails() {
   const [error,   setError]   = useState("");
 
   // ── EMI calculator — locked until enquiry submitted ───────
-  const [showEmiCalc,    setShowEmiCalc]    = useState(false);
-  const [emiEnquiryDone, setEmiEnquiryDone] = useState(false);
+  //const [showEmiCalc,    setShowEmiCalc]    = useState(false);
+  //const [emiEnquiryDone, setEmiEnquiryDone] = useState(false);
 
   // ── Zoom ──────────────────────────────────────────────────
   const [zoomActive, setZoomActive] = useState(false);
@@ -243,7 +243,7 @@ export default function VehicleDetails() {
       setZoomActive(false);
       setIsLiked(false);
       setLikeCount(0);
-      setShowEmiCalc(false);
+      //setShowEmiCalc(false);
 
       try {
         const [detailsRes, inventoryListRes] = await Promise.all([
@@ -386,7 +386,7 @@ export default function VehicleDetails() {
         wantsLoan:    emiWantsLoan ?? false,
       });
       setEmiSuccess(true);
-      setEmiEnquiryDone(true);
+      //setEmiEnquiryDone(true);
     } catch (err: unknown) {
       const e = err as { response?: { data?: string } };
       setEmiMsg(e.response?.data ?? "Submission failed. Please try again.");
@@ -1005,7 +1005,7 @@ export default function VehicleDetails() {
                     className="vd-modal-btn-submit"
                     onClick={() => {
                       setEmiModalOpen(false);
-                      setShowEmiCalc(true);
+                      //setShowEmiCalc(true);
                     }}
                   >
                     Calculate EMI Now →
