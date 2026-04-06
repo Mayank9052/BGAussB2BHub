@@ -775,7 +775,7 @@ export default function VehicleDetails() {
 
                   <div className="vehicle-details-sidebar-rating">
                     <span className={isInStock ? "" : "out-of-stock-chip"}>
-                      {isInStock ? "In Stock" : "Out of Stock"}
+                      {stockQtyDisplay}
                     </span>
                     <span>{vehicle.rangeKm ? `${vehicle.rangeKm} km range` : "Range on request"}</span>
                   </div>
