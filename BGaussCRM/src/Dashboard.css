@@ -5,6 +5,7 @@
 /* ── PAGE ──────────────────────────────────── */
 .dashboard {
   min-height: 100vh;
+  padding-top: 64px; /* offset for fixed navbar */
   background:
     radial-gradient(circle at 8% 8%, rgba(37,99,235,0.07), transparent 28%),
     radial-gradient(circle at 92% 85%, rgba(16,185,129,0.05), transparent 28%),
@@ -15,8 +16,11 @@
 
 /* ── NAVBAR ────────────────────────────────── */
 .dash-navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 300;
   height: 64px;
   background: rgba(255,255,255,0.97);
@@ -27,6 +31,7 @@
   align-items: center;
   gap: 14px;
   padding: 0 28px;
+  box-sizing: border-box;
 }
 
 /* Left */
@@ -626,140 +631,17 @@
 .dash-btn-submit:hover:not(:disabled) { box-shadow: 0 8px 20px rgba(37,99,235,0.45); }
 .dash-btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
 
-/* ── RESPONSIVE ────────────────────────────── */
-
-/* 1200px */
-@media (max-width: 1200px) {
-  .dash-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-}
-
-/* 900px — hide user pill text */
-@media (max-width: 900px) {
-  .dash-user-name { max-width: 80px; }
-}
-
-/* 768px — switch to hamburger */
-@media (max-width: 768px) {
-  .dash-navbar { 
-    padding: 0 16px; 
-    height: 60px; 
-    gap: 10px; 
-  }
-  .dash-mobile-icons {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  /* LEFT SIDE */
-  .dash-nav-left {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  /* BRAND */
-  .dash-brand-name { 
-    font-size: 12px; 
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .dash-brand-page {
-    display: none; /* cleaner UI */
-  }
-
-  /* USER */
-  .dash-user-name { 
-    display: none; /* only avatar */
-  }
-
-  .dash-user-pill { 
-    padding: 0;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    justify-content: center;
-  }
-
-  .dash-avatar { 
-    width: 30px; 
-    height: 30px; 
-    font-size: 11px; 
-  }
-
-  /* ICON BUTTONS */
-  .dash-icon-btn {
-    width: 34px;
-    height: 34px;
-  }
-
-  .dash-icon-btn svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  /* OTHER LAYOUT */
-  .dash-main { 
-    padding: 18px 12px 36px; 
-  }
-
-  .dash-title-left h1 { 
-    font-size: 22px; 
-  }
-
-  .dash-grid { 
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
-    gap: 10px; 
-  }
-}
-
+/* ── COMPARISON BUTTON ─────────────────────── */
 .dash-btn-comparison {
   background: linear-gradient(135deg, #8b5cf6, #6d28d9);
   color: #fff;
   box-shadow: 0 4px 14px rgba(109, 40, 217, 0.4);
 }
-
 .dash-btn-comparison:hover {
   box-shadow: 0 8px 20px rgba(109, 40, 217, 0.5);
 }
-/* 640px — hide search in navbar center, show below title */
-@media (max-width: 640px) {
-  .dash-navbar { padding: 0 12px; height: 56px; gap: 8px; }
-  .dash-nav-center { display: none; }
-  .dash-mobile-search { display: block; }
-  .dash-brand-name { font-size: 13px; }
-  .dash-brand-page { font-size: 10px; }
-  .dash-user-info { display: none; }
-  .dash-user-pill { padding: 5px; border-radius: 50%; }
-  .dash-avatar { width: 30px; height: 30px; font-size: 11px; }
-  .dash-main { padding: 14px 12px 32px; }
-  .dash-title-left h1 { font-size: 20px; }
-  .dash-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .dash-add-btn { width: 40px; height: 40px; }
-  .dash-add-btn svg { width: 18px; height: 18px; }
-}
 
-/* 400px — very small phones */
-@media (max-width: 400px) {
-  .dash-navbar { padding: 0 10px; height: 52px; gap: 6px; }
-  .dash-nav-logo { height: 28px; }
-  .dash-brand-name { font-size: 12px; }
-  .dash-brand-page { display: none; }
-  .dash-avatar { width: 26px; height: 26px; font-size: 10px; }
-  .dash-user-pill { padding: 4px; }
-  .dash-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .dash-title-left h1 { font-size: 18px; }
-  .dash-main { padding: 12px 10px 28px; }
-  .dash-form-row { grid-template-columns: 1fr; }
-}
-
-/* =========================================
-   ✅ UNIFIED NAVBAR ACTIONS (DESKTOP + MOBILE)
-   ========================================= */
-
+/* ── ACTIONS ───────────────────────────────── */
 .dash-actions {
   display: flex;
   align-items: center;
@@ -772,63 +654,7 @@
   display: none !important;
 }
 
-/* Desktop */
-@media (min-width: 769px) {
-  .dash-actions {
-    gap: 10px;
-  }
-
-  .dash-icon-btn {
-    width: 40px;
-    height: 40px;
-  }
-}
-
-/* Mobile */
-@media (max-width: 768px) {
-
-  /* Navbar compact */
-  .dash-navbar {
-    padding: 0 12px;
-    height: 56px;
-  }
-
-  /* Only avatar */
-  .dash-user-name {
-    display: none;
-  }
-
-  .dash-user-pill {
-    padding: 0;
-    width: 34px;
-    height: 34px;
-    justify-content: center;
-  }
-
-  .dash-avatar {
-    width: 30px;
-    height: 30px;
-  }
-
-  /* Icons smaller */
-  .dash-icon-btn {
-    width: 34px;
-    height: 34px;
-  }
-
-  .dash-icon-btn svg {
-    width: 16px;
-    height: 16px;
-  }
-}
-   
-
-/* =============================================
-   APPEND TO dashboard.css
-   Stock quantity badge + updated pin search
-   ============================================= */
-
-/* Stock qty badge on card image */
+/* ── STOCK QUANTITY BADGE ──────────────────── */
 .dash-stock-qty-badge {
   position: absolute;
   top: 8px; right: 8px;
@@ -840,12 +666,7 @@
   backdrop-filter: blur(4px);
 }
 
-.dash-stock-qty-badge:has-text("Sold out"),
-.dash-stock-qty-badge[data-sold="true"] {
-  background: #fee2e2; color: #991b1b; border-color: #fca5a5;
-}
-
-/* ── All pincode CSS (also in dashboard_pincode.css) ── */
+/* ── PINCODE SEARCH ────────────────────────── */
 .dash-pin-wrap { position: relative; flex-shrink: 0; }
 
 .dash-pin-bar {
@@ -959,15 +780,127 @@
 
 .dash-pin-mobile { margin-top: 8px; }
 .dash-pin-mobile .dash-pin-bar { width: 100%; border-radius: 12px; }
-.dash-actions { display: flex; align-items: center; gap: 8px; }
 
+/* ── RESPONSIVE ────────────────────────────── */
+
+/* 1200px */
+@media (max-width: 1200px) {
+  .dash-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+}
+
+/* 900px — hide user pill text, hide desktop pincode */
 @media (max-width: 900px) {
+  .dash-user-name { max-width: 80px; }
   .dash-nav-right .dash-pin-wrap:not(.dash-pin-mobile) { display: none; }
   .dash-pin-mobile { display: block !important; }
 }
+
 @media (min-width: 901px) {
   .dash-pin-mobile { display: none !important; }
 }
+
+/* 768px */
+@media (max-width: 768px) {
+  .dashboard { padding-top: 56px; }
+
+  .dash-navbar {
+    padding: 0 16px;
+    height: 56px;
+    gap: 10px;
+  }
+
+  .dash-mobile-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dash-nav-left {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .dash-brand-name {
+    font-size: 12px;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dash-brand-page { display: none; }
+
+  .dash-user-name { display: none; }
+
+  .dash-user-pill {
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .dash-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+
+  .dash-icon-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  .dash-icon-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .dash-main { padding: 18px 12px 36px; }
+
+  .dash-title-left h1 { font-size: 22px; }
+
+  .dash-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .dash-actions { gap: 6px; }
+}
+
+/* 640px — hide search in navbar center, show below title */
 @media (max-width: 640px) {
+  .dashboard { padding-top: 56px; }
+
+  .dash-navbar { padding: 0 12px; height: 56px; gap: 8px; }
+  .dash-nav-center { display: none; }
+  .dash-mobile-search { display: block; }
+  .dash-brand-name { font-size: 13px; }
+  .dash-brand-page { font-size: 10px; }
+  .dash-user-info { display: none; }
+  .dash-user-pill { padding: 5px; border-radius: 50%; }
+  .dash-avatar { width: 30px; height: 30px; font-size: 11px; }
+  .dash-main { padding: 14px 12px 32px; }
+  .dash-title-left h1 { font-size: 20px; }
+  .dash-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .dash-add-btn { width: 40px; height: 40px; }
+  .dash-add-btn svg { width: 18px; height: 18px; }
   .dash-pin-dropdown { width: calc(100vw - 28px); left: 0; }
+}
+
+/* 400px — very small phones */
+@media (max-width: 400px) {
+  .dashboard { padding-top: 52px; }
+
+  .dash-navbar { padding: 0 10px; height: 52px; gap: 6px; }
+  .dash-nav-logo { height: 28px; }
+  .dash-brand-name { font-size: 12px; }
+  .dash-brand-page { display: none; }
+  .dash-avatar { width: 26px; height: 26px; font-size: 10px; }
+  .dash-user-pill { padding: 4px; }
+  .dash-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dash-title-left h1 { font-size: 18px; }
+  .dash-main { padding: 12px 10px 28px; }
+  .dash-form-row { grid-template-columns: 1fr; }
 }

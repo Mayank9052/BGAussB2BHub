@@ -2,12 +2,20 @@
 .b2b-page {
   min-height: 100vh;
   background: #eef2f7;
-  font-family: 'Segoe UI', Arial, sans-serif;
+  font-family: 'Segoe UI', Arial, sans-serif; 
+  overflow-y: auto;
+  height: 100vh;
+
 }
 
 .b2b-topbar {
   height: 5px;
   background: linear-gradient(90deg, #3b82f6, #6366f1, #1e3a8a);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;  
 }
 
 /* Hide legacy navbar elements */
@@ -398,10 +406,15 @@
 /* ── NAVBAR FIX (UPDATED) ── */
 
 .pro-navbar {
-  display: flex;
+ display: flex;
   align-items: center;
   justify-content: space-between;
   height: 64px;
+  position: fixed;
+  top: 5px;
+  left: 0;
+  right: 0;
+  z-index: 1000;
   padding: 0 16px;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
@@ -490,6 +503,7 @@
   /* NAVBAR MOBILE FIX */
   .pro-navbar {
     height: 56px;
+    top: 5px;
     padding: 0 10px;
   }
 

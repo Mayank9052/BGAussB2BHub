@@ -9,16 +9,32 @@
   min-height: 100vh;
   background: #eef2f7;
   font-family: 'Segoe UI', Arial, sans-serif;
+  padding-top: 75px;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .cp-topbar {
   height: 5px;
   background: linear-gradient(90deg, #00c9a7, #00b4d8, #0077b6);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1001;
 }
 
 .cp-page .module-btn,
 .cp-page .logout-btn,
 .cp-page .user-name { display: none !important; }
+
+.cp-page .pro-navbar {
+  position: fixed;
+  top: 5px;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
 
 /* ── CONTAINER ── */
 .cp-container {
@@ -628,5 +644,8 @@
     height: 36px;
     justify-content: center;
   }
+
+  .cp-page .pro-navbar { height: 60px; top: 5px; }
+  .cp-page { padding-top: 65px; }
 
 }
