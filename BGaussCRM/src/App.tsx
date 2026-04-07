@@ -112,7 +112,7 @@ function App() {
         <Route path="/reviews/:id"          element={<VehicleReviews />} />
         <Route path="/emi-calculator/:id"   element={<EmiCalculatorWrapper />} />
         <Route path="/comparison"           element={<ComparisonList />} />
-        <Route path="/comparison/:id1/:id2" element={<ComparisonDetail />} />
+        <Route path="/comparison/:id1/:id2/:id3?" element={<ComparisonDetail />} />
         <Route path="/comparison/manage"    element={<ComparisonManage />} />
 
       </Routes>

@@ -13,7 +13,11 @@ public partial class ComparisonConfig
 
     public bool IsActive { get; set; }
 
+    public int? Scooty3Id { get; set; }
+
     public virtual ScootyInventory Scooty1 { get; set; } = null!;
 
     public virtual ScootyInventory Scooty2 { get; set; } = null!;
+
+    public virtual ScootyInventory? Scooty3 { get; set; }
 }

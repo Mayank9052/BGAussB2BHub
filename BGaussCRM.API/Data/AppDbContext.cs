@@ -162,6 +162,11 @@ public partial class AppDbContext : DbContext
                 .HasForeignKey(d => d.Scooty2Id)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ComparisonConfigs_Scooty2");
+
+            entity.HasOne(d => d.Scooty3).WithMany(p => p.ComparisonConfigScooty3s)
+                .HasForeignKey(d => d.Scooty3Id)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ComparisonConfigs_Scooty3");
         });
 
         modelBuilder.Entity<EmiEnquiry>(entity =>
