@@ -427,6 +427,21 @@ export default function Dashboard() {
 
           {/* Actions */}
           <div className="dash-actions">
+              <button
+                  className="dash-icon-btn dash-btn-comparison"
+                  onClick={() => navigate("/comparison")}
+                  aria-label="Compare"
+                  data-tip="Compare"
+                  >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="3" width="8" height="18" rx="1"/>
+                    <rect x="14" y="3" width="8" height="18" rx="1"/>
+                    <line x1="10" y1="8" x2="14" y2="8"/>
+                    <line x1="10" y1="12" x2="14" y2="12"/>
+                    <line x1="10" y1="16" x2="14" y2="16"/>
+                  </svg>
+              </button>
             {role === "admin" && (
               <button className="dash-icon-btn dash-btn-modules"
                 onClick={() => navigate("/modules")} aria-label="Modules" data-tip="Modules">

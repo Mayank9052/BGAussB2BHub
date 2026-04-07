@@ -139,12 +139,30 @@ const LoginPage = () => {
     return () => clearTimeout(t);
   }, [storeQuery]);
 
+    useEffect(() => {
+    const handleStorageChange = () => {
+      const token = localStorage.getItem("token");
+      // If token is gone, reset any local login states
+      if (!token) {
+        setIdentifier("");
+        setPassword("");
+        // Optionally force a reload to clear any sensitive cached data
+        // window.location.reload(); 
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
   // ── Login ──────────────────────────────────────────────
   const handleLogin = async () => {
     if (!identifier.trim() || !password.trim()) {
-      setLoginError("Please enter your credentials."); return;
+      setLoginError("Please enter your credentials.");
+      return;
     }
-    setLoginLoading(true); setLoginError("");
+    setLoginLoading(true);
+    setLoginError("");
+
     try {
       const res = await axios.post<LoginResponseData>("/api/Auth/login", {
         identifier: identifier.trim(),
@@ -152,26 +170,31 @@ const LoginPage = () => {
       });
 
       const token = res.data.token ?? res.data.Token;
-      if (!token) throw new Error("Login response did not include a token.");
+      if (!token) throw new Error("No token received.");
 
       const username = res.data.username ?? res.data.Username ?? identifier.trim();
       const role = extractRole(res.data, token);
 
+      // 1. Update Storage
       localStorage.setItem("token", token);
       localStorage.setItem("username", username);
       localStorage.setItem("role", role);
-      setShowLogin(false);
-      navigate("/dashboard");
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: string | { message?: string } } };
-      const msg = typeof e.response?.data === "string"
-        ? e.response.data
-        : (e.response?.data as { message?: string })?.message
-          ?? "Invalid credentials. Please try again.";
-      setLoginError(msg);
-    } finally { setLoginLoading(false); }
-  };
 
+      // 2. Clear local UI state
+      setShowLogin(false);
+
+      // 3. Navigate & Force a soft state refresh if needed
+      // Using replace: true prevents the user from clicking "back" into the login modal
+      navigate("/dashboard", { replace: true });
+      
+    } catch (err: any) {
+      console.error("Login Error:", err);
+      setLoginError(err.response?.data?.message || "Invalid credentials.");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+  
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setActiveSection(id);

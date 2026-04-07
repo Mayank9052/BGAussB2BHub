@@ -23,14 +23,20 @@ import EmiCalculatorWrapper from "./EmiCalculatorWrapper";
 import ComparisonList   from "./ComparisonList";
 import ComparisonDetail from "./ComparisonDetail";
 import ComparisonManage from "./ComparisonManage";
+import { Navigate, useLocation } from "react-router-dom";
 
 /* ── Auth guards ──────────────────────────── */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem("token");
-  if (!token) return <LoginPage />;
+  const location = useLocation();
+
+  if (!token) {
+    // Redirect to login, but save the current location they were trying to go to
+    return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
   return <>{children}</>;
 };
-
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const role = localStorage.getItem("role");
   if (role !== "admin") return <Dashboard />;
