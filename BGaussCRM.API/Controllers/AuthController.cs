@@ -75,7 +75,7 @@ namespace BGaussCRM.API.Controllers
             return Ok(new LoginResponse
             {
                 Username = user.Username,
-                Token = token
+                Token = token    
             });
         }
 
