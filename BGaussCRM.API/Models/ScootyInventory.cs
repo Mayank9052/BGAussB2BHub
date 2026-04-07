@@ -51,6 +51,8 @@ public partial class ScootyInventory
 
     public virtual ICollection<ComparisonConfig> ComparisonConfigScooty2s { get; set; } = new List<ComparisonConfig>();
 
+    public virtual ICollection<ComparisonConfig> ComparisonConfigScooty3s { get; set; } = new List<ComparisonConfig>();
+
     public virtual ICollection<EmiEnquiry> EmiEnquiries { get; set; } = new List<EmiEnquiry>();
 
     public virtual VehicleModel Model { get; set; } = null!;
