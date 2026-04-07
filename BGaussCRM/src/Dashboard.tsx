@@ -477,16 +477,6 @@ export default function Dashboard() {
                 </svg>
               </button>
             )}
-            <button className="dash-icon-btn dash-btn-comparison"
-              onClick={() => navigate("/comparison")}
-              aria-label="Comparisons" data-tip="Comparisons">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/>
-                <path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-                <polyline points="9 8 4 12 9 16"/>
-                <polyline points="15 8 20 12 15 16"/>
-              </svg>
-            </button>
             <button className="dash-icon-btn dash-btn-logout"
               onClick={handleLogout}
               aria-label="Logout" data-tip="Logout">
