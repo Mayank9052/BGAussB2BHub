@@ -1,3 +1,6 @@
+// FILE: Controllers/ComparisonController.cs
+// Full rewrite supporting optional 3rd bike in all endpoints
+
 using BGaussCRM.API.Data;
 using BGaussCRM.API.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -10,18 +13,18 @@ namespace BGaussCRM.API.Controllers
     [ApiController]
     public class ComparisonController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContext        _context;
         private readonly IWebHostEnvironment _environment;
 
         public ComparisonController(AppDbContext context, IWebHostEnvironment environment)
         {
-            _context = context;
+            _context     = context;
             _environment = environment;
         }
 
         // =============================================
         // GET /api/Comparison/list
-        // Returns all active comparison cards (screenshot 1)
+        // Active comparisons for the list page
         // =============================================
         [HttpGet("list")]
         public async Task<IActionResult> GetComparisonList()
@@ -32,19 +35,62 @@ namespace BGaussCRM.API.Controllers
                 .Include(c => c.Scooty1).ThenInclude(s => s.Variant)
                 .Include(c => c.Scooty2).ThenInclude(s => s.Model)
                 .Include(c => c.Scooty2).ThenInclude(s => s.Variant)
+                .Include(c => c.Scooty3!).ThenInclude(s => s.Model)
+                .Include(c => c.Scooty3!).ThenInclude(s => s.Variant)
                 .Select(c => new
                 {
                     c.Id,
-                    c.Scooty1Id,
-                    c.Scooty2Id,
-                    Model1Name   = c.Scooty1.Model.ModelName,
-                    Model2Name   = c.Scooty2.Model.ModelName,
-                    Variant1Name = c.Scooty1.Variant.VariantName,
-                    Variant2Name = c.Scooty2.Variant.VariantName,
-                    Price1       = c.Scooty1.Price,
-                    Price2       = c.Scooty2.Price,
-                    Image1Url    = c.Scooty1.ImageUrl,
-                    Image2Url    = c.Scooty2.ImageUrl,
+                    c.Scooty1Id,  c.Scooty2Id,  c.Scooty3Id,
+                    Model1Name    = c.Scooty1.Model.ModelName,
+                    Model2Name    = c.Scooty2.Model.ModelName,
+                    Model3Name    = c.Scooty3 != null ? c.Scooty3.Model.ModelName : null,
+                    Variant1Name  = c.Scooty1.Variant.VariantName,
+                    Variant2Name  = c.Scooty2.Variant.VariantName,
+                    Variant3Name  = c.Scooty3 != null ? c.Scooty3.Variant.VariantName : null,
+                    Price1        = c.Scooty1.Price,
+                    Price2        = c.Scooty2.Price,
+                    Price3        = c.Scooty3 != null ? c.Scooty3.Price : null,
+                    Image1Url     = c.Scooty1.ImageUrl,
+                    Image2Url     = c.Scooty2.ImageUrl,
+                    Image3Url     = c.Scooty3 != null ? c.Scooty3.ImageUrl : null,
+                })
+                .ToListAsync();
+
+            return Ok(configs);
+        }
+
+        // =============================================
+        // GET /api/Comparison/list-all
+        // All comparisons (including inactive) — admin panel
+        // =============================================
+        [HttpGet("list-all")]
+        public async Task<IActionResult> GetComparisonListAll()
+        {
+            var configs = await _context.ComparisonConfigs
+                .Include(c => c.Scooty1).ThenInclude(s => s.Model)
+                .Include(c => c.Scooty1).ThenInclude(s => s.Variant)
+                .Include(c => c.Scooty2).ThenInclude(s => s.Model)
+                .Include(c => c.Scooty2).ThenInclude(s => s.Variant)
+                .Include(c => c.Scooty3!).ThenInclude(s => s.Model)
+                .Include(c => c.Scooty3!).ThenInclude(s => s.Variant)
+                .OrderByDescending(c => c.IsActive).ThenBy(c => c.Id)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Scooty1Id,  c.Scooty2Id,  c.Scooty3Id,
+                    c.IsActive,
+                    Model1Name    = c.Scooty1.Model.ModelName,
+                    Model2Name    = c.Scooty2.Model.ModelName,
+                    Model3Name    = c.Scooty3 != null ? c.Scooty3.Model.ModelName : null,
+                    Variant1Name  = c.Scooty1.Variant.VariantName,
+                    Variant2Name  = c.Scooty2.Variant.VariantName,
+                    Variant3Name  = c.Scooty3 != null ? c.Scooty3.Variant.VariantName : null,
+                    Price1        = c.Scooty1.Price,
+                    Price2        = c.Scooty2.Price,
+                    Price3        = c.Scooty3 != null ? c.Scooty3.Price : null,
+                    Image1Url     = c.Scooty1.ImageUrl,
+                    Image2Url     = c.Scooty2.ImageUrl,
+                    Image3Url     = c.Scooty3 != null ? c.Scooty3.ImageUrl : null,
                 })
                 .ToListAsync();
 
@@ -53,7 +99,7 @@ namespace BGaussCRM.API.Controllers
 
         // =============================================
         // GET /api/Comparison/{scootyId}
-        // Returns all data for ONE scooty for the comparison detail page
+        // Full data for ONE scooty in the detail page
         // =============================================
         [HttpGet("{scootyId:int}")]
         public async Task<IActionResult> GetComparisonData(int scootyId)
@@ -64,116 +110,83 @@ namespace BGaussCRM.API.Controllers
                 .Include(s => s.Colour)
                 .Include(s => s.VehicleReviews)
                 .Include(s => s.RoadPrices)
-                .Include(s => s.ScootySpec)               // ScootySpecs navigation
+                .Include(s => s.ScootySpec)
                 .FirstOrDefaultAsync(s => s.ScootyId == scootyId);
 
             if (scooty == null)
                 return NotFound($"Scooty ID {scootyId} not found.");
 
-            // Average rating from VehicleReview
-            var avgRating    = scooty.VehicleReviews.Any()
-                ? scooty.VehicleReviews.Average(r => r.Rating)
-                : 0.0;
-            var reviewCount  = scooty.VehicleReviews.Count;
+            var avgRating   = scooty.VehicleReviews.Any()
+                ? scooty.VehicleReviews.Average(r => r.Rating) : 0.0;
+            var reviewCount = scooty.VehicleReviews.Count;
+            var insurance   = scooty.RoadPrices.FirstOrDefault()?.InsuranceAmount;
+            var exShowroom  = scooty.RoadPrices.FirstOrDefault()?.ExShowroomPrice;
 
-            // Insurance from first RoadPrice record (use lowest city or first)
-            var insurance    = scooty.RoadPrices.FirstOrDefault()?.InsuranceAmount;
-
-            // ExShowroom from RoadPrice
-            var exShowroom   = scooty.RoadPrices.FirstOrDefault()?.ExShowroomPrice;
-
-            // Brochure for this model
             var brochure = await _context.VehicleBrochures
                 .Where(b => b.ModelId == scooty.ModelId)
                 .OrderByDescending(b => b.UploadedAt)
                 .Select(b => b.BrochureUrl)
                 .FirstOrDefaultAsync();
 
-            // Colours for this model + variant
             var colours = await _context.VehicleColours
                 .Where(c => c.ModelId == scooty.ModelId && c.VariantId == scooty.VariantId)
                 .Select(c => new { c.ColourName, c.HexCode })
                 .ToListAsync();
 
-            var specs = scooty.ScootySpec; // ScootySpec entity (nullable)
+            var specs = scooty.ScootySpec;
 
-            var result = new
+            return Ok(new
             {
                 scooty.ScootyId,
-                ModelName    = scooty.Model.ModelName,
-                VariantName  = scooty.Variant.VariantName,
+                ModelName        = scooty.Model.ModelName,
+                VariantName      = scooty.Variant.VariantName,
                 scooty.ImageUrl,
                 scooty.Price,
-
-                // Basic Info
-                BrandName         = "BGauss",
-                AvgRating         = Math.Round(avgRating, 1),
-                ReviewCount       = reviewCount,
-                ExShowroomPrice   = exShowroom,
-                InsuranceAmount   = insurance,
-                FuelType          = specs?.FuelType ?? "Electric",
-
-                // Performance
+                BrandName        = "BGauss",
+                AvgRating        = Math.Round(avgRating, 1),
+                ReviewCount      = reviewCount,
+                ExShowroomPrice  = exShowroom,
+                InsuranceAmount  = insurance,
+                FuelType         = specs?.FuelType ?? "Electric",
                 scooty.MaxPowerKw,
                 scooty.RangeKm,
                 scooty.ChargingTimeHrs,
-                RidingModes  = specs?.RidingModes,
-                ReverseMode  = specs?.ReverseMode ?? false,
-                CruiseControl = specs?.CruiseControl ?? false,
-
-                // Brakes & Wheels
+                RidingModes      = specs?.RidingModes,
+                ReverseMode      = specs?.ReverseMode ?? false,
+                CruiseControl    = specs?.CruiseControl ?? false,
                 scooty.BrakeFront,
                 scooty.BrakeRear,
                 scooty.BrakingType,
                 scooty.WheelSize,
                 scooty.WheelType,
-
-                // Features
                 scooty.StartingType,
                 scooty.Speedometer,
-                UsbCharging = specs?.UsbCharging ?? false,
-
-                // Colours
-                Colours = colours,
-
-                // Brochure
-                BrochureUrl = brochure,
-
-                // Warranty
-                BatteryWarranty = specs?.BatteryWarranty,
-                MotorWarranty   = specs?.MotorWarranty,
-            };
-
-            return Ok(result);
+                UsbCharging      = specs?.UsbCharging ?? false,
+                Colours          = colours,
+                BrochureUrl      = brochure,
+                BatteryWarranty  = specs?.BatteryWarranty,
+                MotorWarranty    = specs?.MotorWarranty,
+            });
         }
 
         // =============================================
         // GET /api/Comparison/variants-by-scooty/{scootyId}
-        // Returns all variant options for the same MODEL as this scooty
-        // Powers the variant dropdown in comparison detail (screenshot 3)
+        // All variants of the same model — for variant dropdown
         // =============================================
         [HttpGet("variants-by-scooty/{scootyId:int}")]
         public async Task<IActionResult> GetVariantsByScooty(int scootyId)
         {
-            // Find the modelId of this scooty
             var scooty = await _context.ScootyInventories
                 .Where(s => s.ScootyId == scootyId)
                 .Select(s => new { s.ModelId })
                 .FirstOrDefaultAsync();
 
-            if (scooty == null)
-                return NotFound();
+            if (scooty == null) return NotFound();
 
-            // Return all scooties in the same model as selectable variants
             var variants = await _context.ScootyInventories
                 .Include(s => s.Variant)
                 .Where(s => s.ModelId == scooty.ModelId)
-                .Select(s => new
-                {
-                    s.ScootyId,
-                    VariantName = s.Variant.VariantName,
-                    s.Price,
-                })
+                .Select(s => new { s.ScootyId, VariantName = s.Variant.VariantName, s.Price })
                 .ToListAsync();
 
             return Ok(variants);
@@ -181,28 +194,32 @@ namespace BGaussCRM.API.Controllers
 
         // =============================================
         // POST /api/Comparison/config
-        // Admin: Create a new comparison pair (for ComparisonConfig table)
+        // Create comparison pair — supports 2 or 3 bikes
         // =============================================
         [HttpPost("config")]
         public async Task<IActionResult> CreateConfig([FromBody] CreateComparisonConfigDto dto)
         {
-            var s1Exists = await _context.ScootyInventories.AnyAsync(s => s.ScootyId == dto.Scooty1Id);
-            var s2Exists = await _context.ScootyInventories.AnyAsync(s => s.ScootyId == dto.Scooty2Id);
+            if (!await _context.ScootyInventories.AnyAsync(s => s.ScootyId == dto.Scooty1Id))
+                return BadRequest($"Scooty1 ID {dto.Scooty1Id} not found.");
+            if (!await _context.ScootyInventories.AnyAsync(s => s.ScootyId == dto.Scooty2Id))
+                return BadRequest($"Scooty2 ID {dto.Scooty2Id} not found.");
+            if (dto.Scooty3Id.HasValue &&
+                !await _context.ScootyInventories.AnyAsync(s => s.ScootyId == dto.Scooty3Id.Value))
+                return BadRequest($"Scooty3 ID {dto.Scooty3Id} not found.");
 
-            if (!s1Exists) return BadRequest($"Scooty1 ID {dto.Scooty1Id} not found.");
-            if (!s2Exists) return BadRequest($"Scooty2 ID {dto.Scooty2Id} not found.");
-
-            // Prevent duplicate pairs
+            // Prevent exact duplicate pairs
             var exists = await _context.ComparisonConfigs.AnyAsync(c =>
-                (c.Scooty1Id == dto.Scooty1Id && c.Scooty2Id == dto.Scooty2Id) ||
-                (c.Scooty1Id == dto.Scooty2Id && c.Scooty2Id == dto.Scooty1Id));
+                c.Scooty1Id == dto.Scooty1Id &&
+                c.Scooty2Id == dto.Scooty2Id &&
+                c.Scooty3Id == dto.Scooty3Id);
 
-            if (exists) return BadRequest("This comparison pair already exists.");
+            if (exists) return BadRequest("This comparison already exists.");
 
             _context.ComparisonConfigs.Add(new ComparisonConfig
             {
                 Scooty1Id = dto.Scooty1Id,
                 Scooty2Id = dto.Scooty2Id,
+                Scooty3Id = dto.Scooty3Id,   // nullable — null for 2-bike
                 IsActive  = true,
             });
 
@@ -212,7 +229,6 @@ namespace BGaussCRM.API.Controllers
 
         // =============================================
         // PUT /api/Comparison/config/{id}/toggle
-        // Admin: Toggle active/inactive
         // =============================================
         [HttpPut("config/{id:int}/toggle")]
         public async Task<IActionResult> ToggleConfig(int id)
@@ -238,60 +254,22 @@ namespace BGaussCRM.API.Controllers
         }
 
         // =============================================
-        // GET /api/Comparison/list-all
-        // Returns ALL pairs including inactive (admin manage page)
-        // =============================================
-        [HttpGet("list-all")]
-        public async Task<IActionResult> GetComparisonListAll()
-        {
-            var configs = await _context.ComparisonConfigs
-                .Include(c => c.Scooty1).ThenInclude(s => s.Model)
-                .Include(c => c.Scooty1).ThenInclude(s => s.Variant)
-                .Include(c => c.Scooty2).ThenInclude(s => s.Model)
-                .Include(c => c.Scooty2).ThenInclude(s => s.Variant)
-                .OrderByDescending(c => c.IsActive)
-                .ThenBy(c => c.Id)
-                .Select(c => new
-                {
-                    c.Id,
-                    c.Scooty1Id,
-                    c.Scooty2Id,
-                    c.IsActive,
-                    Model1Name   = c.Scooty1.Model.ModelName,
-                    Model2Name   = c.Scooty2.Model.ModelName,
-                    Variant1Name = c.Scooty1.Variant.VariantName,
-                    Variant2Name = c.Scooty2.Variant.VariantName,
-                    Price1       = c.Scooty1.Price,
-                    Price2       = c.Scooty2.Price,
-                    Image1Url    = c.Scooty1.ImageUrl,
-                    Image2Url    = c.Scooty2.ImageUrl,
-                })
-                .ToListAsync();
-
-            return Ok(configs);
-        }
-
-
-        // =============================================
         // POST /api/Comparison/brochure/upload
-        // Admin: Upload brochure PDF for a model
         // =============================================
         [HttpPost("brochure/upload")]
-        public async Task<IActionResult> UploadBrochure([FromForm] int modelId, [FromForm] IFormFile file)
+        public async Task<IActionResult> UploadBrochure(
+            [FromForm] int modelId, [FromForm] IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
-
             if (!file.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                 return BadRequest("Only PDF files are allowed.");
-
-            var modelExists = await _context.VehicleModels.AnyAsync(m => m.Id == modelId);
-            if (!modelExists) return BadRequest($"Model ID {modelId} not found.");
+            if (!await _context.VehicleModels.AnyAsync(m => m.Id == modelId))
+                return BadRequest($"Model ID {modelId} not found.");
 
             var rootPath = _environment.WebRootPath
                 ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-
-            var folder = Path.Combine(rootPath, "Brochures");
+            var folder   = Path.Combine(rootPath, "Brochures");
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
             var fileName = $"brochure_model_{modelId}_{Guid.NewGuid()}.pdf";
@@ -306,7 +284,7 @@ namespace BGaussCRM.API.Controllers
             {
                 ModelId    = modelId,
                 BrochureUrl = url,
-                UploadedAt = DateTime.UtcNow,
+                UploadedAt  = DateTime.UtcNow,
             });
 
             await _context.SaveChangesAsync();

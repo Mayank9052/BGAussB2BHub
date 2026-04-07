@@ -112,6 +112,9 @@ export default function Dashboard() {
   const [stockAvailable, setStockAvailable] = useState(true);
   const [imageFile,      setImageFile]      = useState<File | null>(null);
   const [imagePreview,   setImagePreview]   = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate     = useNavigate();
@@ -292,6 +295,16 @@ export default function Dashboard() {
   const openSheet  = () => { resetForm(); void fetchModels(); setSheetOpen(true); };
   const closeSheet = () => { setSheetOpen(false); setSubmitMsg(""); };
 
+  useEffect(() => {
+      if (!mobileMenuOpen) return;
+      const close = (e: MouseEvent) => {
+        if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node))
+        setMobileMenuOpen(false);
+     };
+      const t = setTimeout(() => document.addEventListener("mousedown", close), 50);
+      return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
+    }, [mobileMenuOpen]);
+
   const resetForm = () => {
     setModelId(""); setVariantId(""); setColourId("");
     setPrice(""); setBatterySpecs(""); setRangeKm("");
@@ -331,6 +344,8 @@ export default function Dashboard() {
 
       {/* ═══ NAVBAR ══════════════════════════════════════════ */}
       <header className="dash-navbar">
+
+        {/* LEFT — logo + brand */}
         <div className="dash-nav-left">
           <img src={logo} className="dash-nav-logo" alt="BGauss" />
           <div className="dash-nav-brand">
@@ -339,29 +354,36 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* CENTER — model search */}
+        {/* CENTER — search (hidden on mobile via CSS) */}
         <div className="dash-nav-center">
           <div className="dash-search-bar">
             <svg width="15" height="15" fill="none" stroke="#9ca3af" strokeWidth="2" viewBox="0 0 24 24">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
-            <input className="dash-search-input" type="text"
+            <input
+              className="dash-search-input"
+              type="text"
               placeholder="Search model, variant…"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)} />
-            {searchQuery && <button className="dash-search-clear" onClick={() => setSearchQuery("")}>✕</button>}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button className="dash-search-clear" onClick={() => setSearchQuery("")}>✕</button>
+            )}
           </div>
           {searchQuery && (
             <span className="dash-search-count">
-              {filteredVehicles.length === 0 ? "No results" : `${filteredVehicles.length} result${filteredVehicles.length > 1 ? "s" : ""}`}
+              {filteredVehicles.length === 0
+                ? "No results"
+                : `${filteredVehicles.length} result${filteredVehicles.length > 1 ? "s" : ""}`}
             </span>
           )}
         </div>
 
-        {/* RIGHT — pincode/city search + user + actions */}
+        {/* RIGHT */}
         <div className="dash-nav-right">
 
-          {/* PINCODE / CITY SEARCH */}
+          {/* Pincode search — hidden below 1024px via CSS, shown in mobile-search area */}
           <div className="dash-pin-wrap" ref={pincodeRef}>
             <div className={`dash-pin-bar${activeLocation ? " has-result" : ""}`}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -404,7 +426,8 @@ export default function Dashboard() {
                   Matching areas
                 </div>
                 {pincodeSuggestions.map((area) => (
-                  <button key={area.id} className="dash-pin-dd-item" onClick={() => void handleLocationSelect(area)}>
+                  <button key={area.id} className="dash-pin-dd-item"
+                    onClick={() => void handleLocationSelect(area)}>
                     <div className="dash-pin-dd-left">
                       <span className="dash-pin-dd-area">{area.areaName}</span>
                       <span className="dash-pin-dd-city">{area.cityName}, {area.stateName}</span>
@@ -425,7 +448,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Desktop action buttons — hidden on mobile via CSS */}
           <div className="dash-actions">
               <button
                   className="dash-icon-btn dash-btn-comparison"
@@ -444,7 +467,8 @@ export default function Dashboard() {
               </button>
             {role === "admin" && (
               <button className="dash-icon-btn dash-btn-modules"
-                onClick={() => navigate("/modules")} aria-label="Modules" data-tip="Modules">
+                onClick={() => navigate("/modules")}
+                aria-label="Modules" data-tip="Modules">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="3" width="7" height="7" rx="1"/>
                   <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -453,13 +477,106 @@ export default function Dashboard() {
                 </svg>
               </button>
             )}
-            <button className="dash-icon-btn dash-btn-logout" onClick={handleLogout} aria-label="Logout" data-tip="Logout">
+            <button className="dash-icon-btn dash-btn-comparison"
+              onClick={() => navigate("/comparison")}
+              aria-label="Comparisons" data-tip="Comparisons">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/>
+                <path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="9 8 4 12 9 16"/>
+                <polyline points="15 8 20 12 15 16"/>
+              </svg>
+            </button>
+            <button className="dash-icon-btn dash-btn-logout"
+              onClick={handleLogout}
+              aria-label="Logout" data-tip="Logout">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
             </button>
+          </div>
+
+          {/* ── Mobile hamburger — shown below 768px via CSS ── */}
+          <div className="dash-mobile-wrap" ref={mobileMenuRef}>
+            <button
+              className={`dash-hamburger${mobileMenuOpen ? " open" : ""}`}
+              onClick={() => setMobileMenuOpen(o => !o)}
+              aria-label="Menu"
+            >
+              <span /><span /><span />
+            </button>
+
+            {/* Dropdown menu */}
+            <div className={`dash-mobile-dd${mobileMenuOpen ? " open" : ""}`}>
+
+              {/* User info row */}
+              <div className="dash-mdd-user">
+                <div className="dash-mdd-avatar">{initials}</div>
+                <div>
+                  <span className="dash-mdd-name">{username || "User"}</span>
+                  <span className="dash-mdd-role">{role || "user"}</span>
+                </div>
+              </div>
+
+              <div className="dash-mdd-divider" />
+
+              {/* Modules — admin only */}
+              {role === "admin" && (
+                <button className="dash-mdd-item"
+                  onClick={() => { navigate("/modules"); setMobileMenuOpen(false); }}>
+                  <div className="dash-mdd-icon blue">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="3" width="7" height="7" rx="1"/>
+                      <rect x="14" y="3" width="7" height="7" rx="1"/>
+                      <rect x="3" y="14" width="7" height="7" rx="1"/>
+                      <rect x="14" y="14" width="7" height="7" rx="1"/>
+                    </svg>
+                  </div>
+                  <div className="dash-mdd-text">
+                    <span className="dash-mdd-title">Modules</span>
+                    <span className="dash-mdd-sub">Admin panel</span>
+                  </div>
+                </button>
+              )}
+
+              {/* Comparisons */}
+              <button className="dash-mdd-item"
+                onClick={() => { navigate("/comparison"); setMobileMenuOpen(false); }}>
+                <div className="dash-mdd-icon blue" style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M10 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/>
+                    <path d="M14 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="9 8 4 12 9 16"/>
+                    <polyline points="15 8 20 12 15 16"/>
+                  </svg>
+                </div>
+                <div className="dash-mdd-text">
+                  <span className="dash-mdd-title">Comparisons</span>
+                  <span className="dash-mdd-sub">Compare vehicles</span>
+                </div>
+              </button>
+
+              <div className="dash-mdd-divider" />
+
+              {/* Logout */}
+              <button className="dash-mdd-item dash-mdd-item--logout"
+                onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
+                <div className="dash-mdd-icon red">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                </div>
+                <div className="dash-mdd-text">
+                  <span className="dash-mdd-title">Logout</span>
+                  <span className="dash-mdd-sub">Sign out</span>
+                </div>
+              </button>
+
+            </div>
           </div>
 
         </div>
