@@ -115,7 +115,6 @@ export default function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate     = useNavigate();
   const username = localStorage.getItem("username") ?? "";
@@ -296,14 +295,14 @@ export default function Dashboard() {
   const closeSheet = () => { setSheetOpen(false); setSubmitMsg(""); };
 
   useEffect(() => {
-      if (!mobileMenuOpen) return;
-      const close = (e: MouseEvent) => {
-        if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node))
+    if (!mobileMenuOpen) return;
+    const close = (e: MouseEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node))
         setMobileMenuOpen(false);
-     };
-      const t = setTimeout(() => document.addEventListener("mousedown", close), 50);
-      return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
-    }, [mobileMenuOpen]);
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", close), 50);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", close); };
+  }, [mobileMenuOpen]);
 
   const resetForm = () => {
     setModelId(""); setVariantId(""); setColourId("");
@@ -383,7 +382,7 @@ export default function Dashboard() {
         {/* RIGHT */}
         <div className="dash-nav-right">
 
-          {/* Pincode search — hidden below 1024px via CSS, shown in mobile-search area */}
+          {/* Pincode search */}
           <div className="dash-pin-wrap" ref={pincodeRef}>
             <div className={`dash-pin-bar${activeLocation ? " has-result" : ""}`}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -448,23 +447,37 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Desktop action buttons — hidden on mobile via CSS */}
+          {/* Desktop action buttons */}
           <div className="dash-actions">
-              <button
-                  className="dash-icon-btn dash-btn-comparison"
-                  onClick={() => navigate("/comparison")}
-                  aria-label="Compare"
-                  data-tip="Compare"
-                  >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="8" height="18" rx="1"/>
-                    <rect x="14" y="3" width="8" height="18" rx="1"/>
-                    <line x1="10" y1="8" x2="14" y2="8"/>
-                    <line x1="10" y1="12" x2="14" y2="12"/>
-                    <line x1="10" y1="16" x2="14" y2="16"/>
-                  </svg>
-              </button>
+            <button
+              className="dash-icon-btn dash-btn-dashboard"
+              onClick={() => navigate("/dashboard")}
+              aria-label="Dashboard"
+              data-tip="Dashboard"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="9" y1="3" x2="9" y2="21" />
+                <line x1="15" y1="3" x2="15" y2="21" />
+                <line x1="9" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="15" x2="21" y2="15" />
+              </svg>
+            </button>
+            <button
+              className="dash-icon-btn dash-btn-comparison"
+              onClick={() => navigate("/comparison")}
+              aria-label="Compare"
+              data-tip="Compare"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="8" height="18" rx="1"/>
+                <rect x="14" y="3" width="8" height="18" rx="1"/>
+                <line x1="10" y1="8" x2="14" y2="8"/>
+                <line x1="10" y1="12" x2="14" y2="12"/>
+                <line x1="10" y1="16" x2="14" y2="16"/>
+              </svg>
+            </button>
             {role === "admin" && (
               <button className="dash-icon-btn dash-btn-modules"
                 onClick={() => navigate("/modules")}
@@ -488,7 +501,7 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* ── Mobile hamburger — shown below 768px via CSS ── */}
+          {/* ── Mobile hamburger ── */}
           <div className="dash-mobile-wrap" ref={mobileMenuRef}>
             <button
               className={`dash-hamburger${mobileMenuOpen ? " open" : ""}`}
@@ -498,10 +511,7 @@ export default function Dashboard() {
               <span /><span /><span />
             </button>
 
-            {/* Dropdown menu */}
             <div className={`dash-mobile-dd${mobileMenuOpen ? " open" : ""}`}>
-
-              {/* User info row */}
               <div className="dash-mdd-user">
                 <div className="dash-mdd-avatar">{initials}</div>
                 <div>
@@ -512,7 +522,22 @@ export default function Dashboard() {
 
               <div className="dash-mdd-divider" />
 
-              {/* Modules — admin only */}
+              <button className="dash-mdd-item"
+                onClick={() => { navigate("/dashboard"); setMobileMenuOpen(false); }}>
+                <div className="dash-mdd-icon green">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="9" y1="3" x2="9" y2="21" />
+                    <line x1="15" y1="3" x2="15" y2="21" />
+                    <line x1="9" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="15" x2="21" y2="15" />
+                  </svg>
+                </div>
+                <div className="dash-mdd-text">
+                  <span className="dash-mdd-title">Dashboard</span>
+                  <span className="dash-mdd-sub">Home</span>
+                </div>
+              </button>
               {role === "admin" && (
                 <button className="dash-mdd-item"
                   onClick={() => { navigate("/modules"); setMobileMenuOpen(false); }}>
@@ -531,7 +556,6 @@ export default function Dashboard() {
                 </button>
               )}
 
-              {/* Comparisons */}
               <button className="dash-mdd-item"
                 onClick={() => { navigate("/comparison"); setMobileMenuOpen(false); }}>
                 <div className="dash-mdd-icon blue" style={{ background: "linear-gradient(135deg,#8b5cf6,#6d28d9)" }}>
@@ -550,7 +574,6 @@ export default function Dashboard() {
 
               <div className="dash-mdd-divider" />
 
-              {/* Logout */}
               <button className="dash-mdd-item dash-mdd-item--logout"
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>
                 <div className="dash-mdd-icon red">
@@ -565,7 +588,6 @@ export default function Dashboard() {
                   <span className="dash-mdd-sub">Sign out</span>
                 </div>
               </button>
-
             </div>
           </div>
 
@@ -575,6 +597,7 @@ export default function Dashboard() {
       {/* ═══ CONTENT ══════════════════════════════════════════ */}
       <main className="dash-main">
 
+        {/* ── TITLE ROW — title + all actions on one line ── */}
         <div className="dash-title-row">
           <div className="dash-title-left">
             <h1>
@@ -589,10 +612,18 @@ export default function Dashboard() {
                 : `${filteredVehicles.length} vehicle${filteredVehicles.length !== 1 ? "s" : ""}`}
             </span>
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+
+          {/* RIGHT SIDE — all actions grouped */}
+          <div className="dash-title-actions">
             {activeLocation && (
               <button className="dash-clear-pin-btn" onClick={clearLocation}>✕ Clear location</button>
             )}
+            <button
+              className="s01-primary-btn"
+              onClick={() => navigate("/vehicle-entry")}
+            >
+              + New Vehicle Entry
+            </button>
             <button className="dash-add-btn" onClick={openSheet} title="Add Item">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
                 strokeLinecap="round" strokeLinejoin="round">
@@ -677,7 +708,6 @@ export default function Dashboard() {
                   loading={index < 6 ? "eager" : "lazy"} decoding="async"
                   onError={(e) => { e.currentTarget.src = noImage; }}
                   alt={v.modelName} />
-                {/* Stock quantity badge when in location mode */}
                 {activeLocation && v.stockQuantity !== undefined && (
                   <span className="dash-stock-qty-badge">
                     {v.stockQuantity > 0 ? `${v.stockQuantity} left` : "Sold out"}

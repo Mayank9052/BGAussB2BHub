@@ -7,7 +7,9 @@ import { Routes, Route } from "react-router-dom";
 import SplashScreen from "./SplashScreen";
 import LoginPage from "./LoginPage";
 import Dashboard from "./Dashboard";
+import VehicleEntry from "./Vehicleentry";
 import VehicleDetails from "./VehicleDetails";
+import NewVehicleDetails from "./NewVehicleDetails";
 import Modules from "./Modules";
 import B2BCustomer from "./B2BCustomer";
 import ScootyInventory from "./ScootyInventory";
@@ -75,9 +77,19 @@ function App() {
           <ProtectedRoute><Dashboard /></ProtectedRoute>
         } />
 
+        <Route path="/vehicle/new" element={
+          <ProtectedRoute><NewVehicleDetails /></ProtectedRoute>
+        } />
+
         <Route path="/vehicle/:id" element={
           <ProtectedRoute><VehicleDetails /></ProtectedRoute>
         } />
+
+        <Route
+          path="/vehicle-entry"
+          element={
+            <ProtectedRoute><VehicleEntry /></ProtectedRoute>
+          }/>
 
         {/* ADMIN ONLY */}
         <Route path="/modules" element={
