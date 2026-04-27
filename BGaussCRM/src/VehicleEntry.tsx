@@ -22,6 +22,22 @@ interface VehicleEntryForm {
   notes: string;
 }
 
+interface CustomerRequest {
+  id: number;
+  customerName: string;
+  mobileNumber: string;
+  email?: string;
+  city: string;
+  state?: string;
+  gender?: string;
+  preferredModel?: string;
+  requestType?: string;
+  preferredContact?: string;
+  notes?: string;
+  createdAt: string;
+  status: string;
+}
+
 const emptyForm: VehicleEntryForm = {
   customerName: "",
   mobileNumber: "",
@@ -56,6 +72,12 @@ export default function VehicleEntry() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const [form, setForm] = useState<VehicleEntryForm>(emptyForm);
+  const [requests, setRequests] = useState<CustomerRequest[]>([]);
+  const [tableSearch, setTableSearch] = useState("");
+  const [editingRequestId, setEditingRequestId] = useState<number | null>(null);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [savingRequest, setSavingRequest] = useState(false);
+  const [requestError, setRequestError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -86,9 +108,94 @@ export default function VehicleEntry() {
     navigate("/");
   };
 
+  const fetchRequests = async () => {
+    setLoadingRequests(true);
+    setRequestError("");
+
+    try {
+      const response = await axios.get<CustomerRequest[]>('/api/CustomerRequests');
+      setRequests(response.data);
+    } catch (err: unknown) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data
+          ? String(err.response.data)
+          : "Failed to load existing customer requests.";
+      setRequestError(message);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
   const handleFieldChange = (field: keyof VehicleEntryForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  const handleEdit = (request: CustomerRequest) => {
+    setEditingRequestId(request.id);
+    setForm({
+      customerName: request.customerName,
+      mobileNumber: request.mobileNumber,
+      email: request.email ?? "",
+      city: request.city,
+      state: request.state ?? "",
+      gender: (request.gender as Gender) || "",
+      preferredModel: request.preferredModel ?? "",
+      requestType: (request.requestType as RequestType) || "",
+      preferredContact: request.preferredContact ?? "",
+      notes: request.notes ?? "",
+    });
+    setSuccessMessage("");
+    setErrorMessage("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRequestId(null);
+    setForm(emptyForm);
+    setSuccessMessage("");
+    setErrorMessage("");
+  };
+
+  const handleDelete = async (request: CustomerRequest) => {
+    if (!window.confirm("Delete this customer request?")) return;
+
+    try {
+      await axios.delete(`/api/CustomerRequests/${request.id}`);
+      setSuccessMessage("Customer request deleted successfully.");
+      setErrorMessage("");
+      if (editingRequestId === request.id) {
+        handleCancelEdit();
+      }
+      await fetchRequests();
+    } catch (err: unknown) {
+      const message =
+        axios.isAxiosError(err) && err.response?.data
+          ? String(err.response.data)
+          : "Failed to delete customer request.";
+      setErrorMessage(message);
+      setSuccessMessage("");
+    }
+  };
+
+  const filteredRequests = requests.filter((request) => {
+    const query = tableSearch.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      request.customerName,
+      request.mobileNumber,
+      request.email || "",
+      request.city,
+      request.state || "",
+      request.requestType || "",
+      request.preferredModel || "",
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
 
   const handleSubmit = async () => {
     if (!form.customerName.trim() || !form.mobileNumber.trim() || !form.city.trim()) {
@@ -97,8 +204,9 @@ export default function VehicleEntry() {
       return;
     }
 
+    setSavingRequest(true);
     try {
-      await axios.post("/api/CustomerRequests", {
+      const payload = {
         customerName:     form.customerName,
         mobileNumber:     form.mobileNumber,
         email:            form.email || undefined,
@@ -109,19 +217,31 @@ export default function VehicleEntry() {
         requestType:      form.requestType || undefined,
         preferredContact: form.preferredContact || undefined,
         notes:            form.notes || undefined,
-      });
+      };
 
-      setSuccessMessage("Customer request submitted successfully. Opening vehicle details form...");
+      if (editingRequestId !== null) {
+        await axios.put(`/api/CustomerRequests/${editingRequestId}`, payload);
+        setSuccessMessage("Customer request updated successfully.");
+      } else {
+        await axios.post("/api/CustomerRequests", payload);
+        setSuccessMessage("Customer request submitted successfully.");
+      }
+
       setErrorMessage("");
       setForm(emptyForm);
-      navigate("/vehicle/new");
+      setEditingRequestId(null);
+      await fetchRequests();
     } catch (err: unknown) {
       const message =
         axios.isAxiosError(err) && err.response?.data
           ? String(err.response.data)
-          : "Failed to submit customer request.";
+          : editingRequestId !== null
+            ? "Failed to update customer request."
+            : "Failed to submit customer request.";
       setErrorMessage(message);
       setSuccessMessage("");
+    } finally {
+      setSavingRequest(false);
     }
   };
 
@@ -216,9 +336,13 @@ export default function VehicleEntry() {
           {/* Card header with + icon — matches screenshot */}
           <div className="ve-form-card-header">
             <div className="ve-form-card-icon">+</div>
-            <p className="ve-form-card-title">Add New Customer Request</p>
+            <p className="ve-form-card-title">
+              {editingRequestId !== null ? "Edit Customer Request" : "Add New Customer Request"}
+            </p>
             <p className="ve-form-card-subtitle">
-              Fill in the details to register a new customer request
+              {editingRequestId !== null
+                ? "Update the selected request details or cancel to start fresh."
+                : "Fill in the details to register a new customer request."}
             </p>
           </div>
 
@@ -330,16 +454,102 @@ export default function VehicleEntry() {
             <div className="ve-form-nav">
               <button
                 className="ve-btn-ghost"
-                onClick={() => navigate("/dashboard")}
+                onClick={editingRequestId !== null ? handleCancelEdit : () => navigate("/dashboard")}
+                type="button"
               >
-                Cancel
+                {editingRequestId !== null ? "Cancel Edit" : "Cancel"}
               </button>
-              <button className="ve-btn-primary" onClick={handleSubmit}>
-                Submit Request
+              <button className="ve-btn-primary" onClick={handleSubmit} type="button" disabled={savingRequest}>
+                {editingRequestId !== null ? (savingRequest ? "Updating…" : "Update Request") : (savingRequest ? "Saving…" : "Submit Request")}
               </button>
             </div>
           </div>
         </div>
+
+        <section className="ve-request-table-card">
+          <div className="ve-request-table-header">
+            <div className="ve-table-title">
+              <div className="ve-table-title-icon">📝</div>
+              <div>
+                <h3>Customer Requests</h3>
+                <p>Manage customer requests created from this form.</p>
+              </div>
+            </div>
+
+            <div className="ve-table-controls">
+              <div className="ve-search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.35-4.35" />
+                </svg>
+                <input
+                  type="text"
+                  className="ve-search"
+                  placeholder="Search name, mobile, city…"
+                  value={tableSearch}
+                  onChange={(e) => setTableSearch(e.target.value)}
+                />
+              </div>
+              <span className="ve-count-pill">{filteredRequests.length} records</span>
+            </div>
+
+            <button className="ve-btn-ghost" onClick={fetchRequests} type="button">
+              Refresh
+            </button>
+          </div>
+
+          {loadingRequests ? (
+            <div className="ve-request-table-loading">Loading requests…</div>
+          ) : requestError ? (
+            <div className="ve-alert error">{requestError}</div>
+          ) : requests.length === 0 ? (
+            <div className="ve-request-table-empty">No customer requests found yet.</div>
+          ) : (
+            <div className="ve-request-table-scroll">
+              <table className="ve-request-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Mobile</th>
+                    <th>City</th>
+                    <th>Request Type</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requests.map((request, idx) => (
+                    <tr key={request.id} className={editingRequestId === request.id ? "ve-row-editing" : ""}>
+                      <td>{idx + 1}</td>
+                      <td>{request.customerName}</td>
+                      <td>{request.mobileNumber}</td>
+                      <td>{request.city}</td>
+                      <td>{request.requestType || "-"}</td>
+                      <td>
+                        <span className={`ve-status-chip status-${request.status.toLowerCase()}`}>
+                          {request.status}
+                        </span>
+                      </td>
+                      <td>{new Date(request.createdAt).toLocaleString()}</td>
+                      <td>
+                        <div className="ve-row-acts">
+                          <button className="ve-act-btn ve-act-edit" onClick={() => handleEdit(request)} type="button">
+                            Edit
+                          </button>
+                          <button className="ve-act-btn ve-act-del" onClick={() => handleDelete(request)} type="button">
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </main>
     </div>
   );

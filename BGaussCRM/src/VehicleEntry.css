@@ -332,17 +332,18 @@
    HERO BANNER — matches screenshot gradient
 ───────────────────────────────────────────── */
 .ve-main {
-  max-width: 1200px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 30px 24px 40px;
+  padding: 30px 18px 36px;
 }
 
 /* Hero banner — light blue gradient like screenshot */
 .ve-page-header {
+  max-width: 1060px;
+  margin: 0 auto 28px;
   background: linear-gradient(135deg, #e8f0fe 0%, #dbeafe 50%, #eff6ff 100%);
   border-radius: 18px;
-  padding: 36px 24px;
-  margin-bottom: 28px;
+  padding: 32px 24px;
   text-align: center;
   border: 1px solid #bfdbfe;
 }
@@ -370,24 +371,28 @@
   border-radius: 16px;
   border: 1px solid #e5e7eb;
   box-shadow: 0 4px 20px rgba(15,23,42,0.07);
-  max-width: 860px;
+  width: 100%;
+  max-width: 1040px;
   margin: 0 auto;
   overflow: hidden;
 }
 
 /* Card header with + icon — matches screenshot */
 .ve-form-card-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 28px 24px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+  gap: 16px;
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
 }
 
 .ve-form-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
   background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: #fff;
   display: flex;
@@ -395,22 +400,23 @@
   justify-content: center;
   font-size: 24px;
   font-weight: 300;
-  margin-bottom: 10px;
-  box-shadow: 0 6px 16px rgba(37,99,235,0.3);
+  box-shadow: 0 8px 20px rgba(37,99,235,0.25);
+  margin: 0 auto;
 }
 
 .ve-form-card-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1e3a8a;
-  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
 }
 
 .ve-form-card-subtitle {
   font-size: 13px;
-  color: #2563eb;
+  color: #475569;
   font-weight: 500;
-  margin: 0;
+  margin: 4px 0 0;
+  line-height: 1.5;
 }
 
 /* Inner padding for fields */
@@ -442,7 +448,7 @@
 .ve-grid-2 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
+  gap: 10px;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   overflow: hidden;
@@ -611,6 +617,244 @@
 
 .ve-btn-add:hover {
   filter: brightness(1.08);
+}
+
+.ve-request-table-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.07);
+  padding: 24px;
+  margin: 28px auto 0;
+  max-width: 1040px;
+}
+
+.ve-request-table-header {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  justify-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ve-table-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ve-table-title-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #dbeafe, #c7d2fe);
+  color: #1d4ed8;
+  font-size: 18px;
+}
+
+.ve-request-table-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.ve-request-table-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.ve-table-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-self: end;
+}
+
+.ve-search-wrap {
+  position: relative;
+}
+
+.ve-search-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.ve-search {
+  width: 220px;
+  height: 38px;
+  padding: 0 14px 0 36px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+}
+
+.ve-search:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+
+.ve-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  height: 34px;
+  border-radius: 999px;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ve-request-table-scroll {
+  overflow-x: auto;
+}
+
+.ve-request-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+  font-size: 13px;
+}
+
+.ve-request-table thead {
+  background: #f8fafc;
+}
+
+.ve-request-table th,
+.ve-request-table td {
+  padding: 14px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid #e5e7eb;
+  color: #334155;
+  text-align: center;
+}
+
+.ve-request-table th {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #475569;
+  text-align: center;
+  border-right: 1px solid #e5e7eb;
+}
+
+.ve-request-table th:last-child,
+.ve-request-table td:last-child {
+  border-right: none;
+}
+
+.ve-request-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.ve-request-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.ve-row-editing {
+  background: #eff6ff;
+}
+
+.ve-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-new {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-inprogress {
+  background: #fef3c7;
+  color: #ca8a04;
+}
+
+.status-closed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.ve-row-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.ve-act-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease;
+}
+
+.ve-act-btn:hover {
+  transform: translateY(-1px);
+}
+
+.ve-act-edit {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.ve-act-edit:hover {
+  background: #dbeafe;
+}
+
+.ve-act-del {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.ve-act-del:hover {
+  background: #fee2e2;
+}
+
+.ve-request-table-empty,
+.ve-request-table-loading {
+  padding: 20px 18px;
+  color: #475569;
+  background: #f8fafc;
+  border-radius: 12px;
+  text-align: center;
 }
 
 /* ─────────────────────────────────────────────
