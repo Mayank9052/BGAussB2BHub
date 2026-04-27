@@ -3,24 +3,26 @@
 ───────────────────────────────────────────── */
 .ve-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8fafc, #eef3f8);
+  background: #f0f4f8;
   font-family: "Segoe UI", system-ui;
 }
 
 /* ─────────────────────────────────────────────
-   SHARED NAVBAR
+   NAVBAR — matches screenshot exactly
 ───────────────────────────────────────────── */
 .pro-navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 24px;
+  padding: 10px 24px;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
   position: sticky;
   top: 0;
   z-index: 100;
   gap: 12px;
+  box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+  overflow: visible;        /* ✅ allows tooltip to escape navbar */
 }
 
 .pro-left,
@@ -31,25 +33,34 @@
   flex-wrap: wrap;
 }
 
+/* BG logo square — matches screenshot */
 .pro-logo {
-  width: 46px;
-  height: 46px;
-  display: block;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   object-fit: contain;
-  border-radius: 14px;
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
+  border-radius: 10px;
+  background: #1e3a8a;
+  border: none;
+  box-shadow: 0 4px 12px rgba(30,58,138,0.25);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
 }
 
 .pro-text {
   display: flex;
   flex-direction: column;
+  line-height: 1.3;
 }
 
 .pro-brand {
   font-size: 14px;
   font-weight: 700;
+  color: #111827;
 }
 
 .pro-page {
@@ -57,79 +68,179 @@
   color: #6b7280;
 }
 
-.dash-actions {
+/* ── Right side icon buttons ── */
+.pro-right {
+  gap: 10px;
+}
+
+.vc-icon-group {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.dash-icon-btn {
-  width: 38px;
-  height: 38px;
-  border: none;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #111827;
+/* Shared circular button base */
+.vc-icon-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.vc-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.vc-icon-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.vc-icon-btn:active {
+  transform: scale(0.92);
+}
+
+/* Grid / modules icon — blue */
+.btn-vc-modules {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+}
+
+/* Home / dashboard icon — blue */
+.btn-vc-dashboard {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+}
+
+/* Logout icon — red */
+.btn-vc-logout {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(239,68,68,0.35);
+}
+
+/* Also cover mod-icon-btn used in JSX */
+.mod-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.mod-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.mod-icon-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.mod-icon-btn:active {
+  transform: scale(0.92);
+}
+
+.btn-mod-dashboard {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+}
+
+/* dash-icon-btn used in older JSX */
+.dash-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.18s ease, filter 0.18s ease;
 }
 
 .dash-icon-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   pointer-events: none;
 }
 
 .dash-icon-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.08);
+  transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
 .dash-icon-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
 }
 
 .dash-btn-logout {
-  background: #ef4444;
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
   color: #fff;
+  box-shadow: 0 6px 16px rgba(239,68,68,0.35);
 }
 
-.module-btn,
-.logout-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 10px 16px;
+/* ── Tooltip via data-tip attr ── */
+.vc-icon-btn[data-tip],
+.mod-icon-btn[data-tip],
+.dash-icon-btn[data-tip] {
+  overflow: visible;
+}
+
+.vc-icon-btn::after,
+.mod-icon-btn::after,
+.dash-icon-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 48px;   
+  bottom: -34px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: #0f172a;
+  color: #fff;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11px;
   font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 999;
 }
 
-.module-btn {
-  background: #f3f4f6;
-  color: #111827;
+.vc-icon-btn:hover::after,
+.mod-icon-btn:hover::after,
+.dash-icon-btn:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
 }
 
-.module-btn:hover {
-  background: #e5e7eb;
-}
-
-.logout-btn {
-  background: #ef4444;
-  color: #fff;
-}
-
-.logout-btn:hover {
-  filter: brightness(1.05);
-}
-
+/* ── User avatar pill — matches screenshot (orange circle) ── */
 .vc-user-info {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
   background: #f3f4f6;
   border-radius: 999px;
 }
@@ -138,27 +249,41 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #2563eb;
+  background: linear-gradient(135deg, #f97316, #ea580c); /* orange like screenshot */
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 13px;
 }
 
-.vc-user-name,
-.vc-user-role {
-  display: block;
+.vc-user-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
 }
 
 .vc-user-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
+  color: #111827;
+  display: block;
 }
 
 .vc-user-role {
   font-size: 11px;
   color: #6b7280;
+  display: block;
+}
+
+/* ── Hamburger ── */
+.dash-hamburger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: none;
 }
 
 .dash-hamburger span {
@@ -167,6 +292,7 @@
   width: 20px;
   background: #111827;
   margin: 4px 0;
+  transition: 0.2s;
 }
 
 .dash-mobile-dd {
@@ -177,16 +303,33 @@
   display: block;
   position: absolute;
   right: 10px;
-  top: 60px;
+  top: 64px;
   background: #fff;
   border: 1px solid #e5e7eb;
-  padding: 12px;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.1);
+  z-index: 200;
+}
+
+.dash-mobile-dd.open button {
+  display: block;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.dash-mobile-dd.open button:hover {
+  background: #f3f4f6;
 }
 
 /* ─────────────────────────────────────────────
-   MAIN CONTENT
+   HERO BANNER — matches screenshot gradient
 ───────────────────────────────────────────── */
 .ve-main {
   max-width: 1200px;
@@ -194,37 +337,91 @@
   padding: 30px 24px 40px;
 }
 
+/* Hero banner — light blue gradient like screenshot */
 .ve-page-header {
-  margin-bottom: 20px;
-  padding: 0 8px;
+  background: linear-gradient(135deg, #e8f0fe 0%, #dbeafe 50%, #eff6ff 100%);
+  border-radius: 18px;
+  padding: 36px 24px;
+  margin-bottom: 28px;
+  text-align: center;
+  border: 1px solid #bfdbfe;
 }
 
 .ve-page-header h2 {
   font-size: 28px;
   font-weight: 800;
+  color: #1e3a8a;
   letter-spacing: -0.02em;
+  margin: 0 0 6px;
 }
 
 .ve-page-header p {
   font-size: 14px;
-  color: #475569;
-  max-width: 640px;
-  margin: 10px auto 0;
+  color: #2563eb;
+  font-weight: 500;
+  margin: 0;
 }
 
+/* ─────────────────────────────────────────────
+   FORM CARD — matches screenshot card style
+───────────────────────────────────────────── */
 .ve-form-wrapper {
   background: #ffffff;
-  padding: 24px;
-  border-radius: 20px;
+  border-radius: 16px;
   border: 1px solid #e5e7eb;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-  max-width: 720px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.07);
+  max-width: 860px;
   margin: 0 auto;
+  overflow: hidden;
 }
 
+/* Card header with + icon — matches screenshot */
+.ve-form-card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 24px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ve-form-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 300;
+  margin-bottom: 10px;
+  box-shadow: 0 6px 16px rgba(37,99,235,0.3);
+}
+
+.ve-form-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin: 0 0 4px;
+}
+
+.ve-form-card-subtitle {
+  font-size: 13px;
+  color: #2563eb;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Inner padding for fields */
+.ve-form-body {
+  padding: 24px;
+}
+
+/* ── Alerts ── */
 .ve-alert {
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: 10px;
   margin-bottom: 18px;
   font-size: 13px;
 }
@@ -241,190 +438,234 @@
   border: 1px solid #fecaca;
 }
 
+/* ── Field grid — uppercase labels like screenshot ── */
 .ve-grid-2 {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0;
 }
 
 .ve-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ve-field:nth-child(3n) {
+  border-right: none;
+}
+
+/* Last row — remove bottom border */
+.ve-field:nth-last-child(-n+3) {
+  border-bottom: none;
 }
 
 .ve-field label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 10px 14px 4px;
 }
 
 .ve-field input,
 .ve-field select,
 .ve-field textarea {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  background: #f9fafb;
+  padding: 6px 14px 12px;
+  border: none;
+  background: #fff;
   font: inherit;
+  font-size: 14px;
+  color: #111827;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.ve-field select,
-.ve-field textarea {
-  width: 100%;
+.ve-field input::placeholder,
+.ve-field textarea::placeholder {
+  color: #9ca3af;
+  font-size: 13px;
 }
 
 .ve-field input:focus,
 .ve-field select:focus,
 .ve-field textarea:focus {
-  border-color: #2563eb;
-  background: #fff;
-  outline: none;
+  background: #f8faff;
 }
 
 .ve-field textarea {
   resize: vertical;
-  min-height: 110px;
+  min-height: 90px;
 }
 
 .ve-full-width {
   grid-column: 1 / -1;
+  border-right: none !important;
 }
 
+/* ── Section dividers ── */
 .ve-section-divider {
   margin: 20px 0 10px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
+/* ── Gender chips ── */
 .ve-radio-group {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 
 .ve-radio-chip {
-  padding: 8px 14px;
+  padding: 7px 16px;
   border-radius: 999px;
   border: 1px solid #e5e7eb;
   cursor: pointer;
-  transition: 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: #fff;
+  transition: all 0.15s ease;
+}
+
+.ve-radio-chip:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
 }
 
 .ve-radio-chip.selected {
   background: #2563eb;
-  color: white;
+  color: #fff;
   border-color: #2563eb;
+  font-weight: 600;
 }
 
+/* ── Bottom nav ── */
 .ve-form-nav {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 24px;
   flex-wrap: wrap;
   gap: 12px;
 }
 
 .ve-btn-primary {
-  background: #2563eb;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   color: #fff;
-  padding: 10px 18px;
+  padding: 11px 24px;
   border-radius: 10px;
   border: none;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.ve-btn-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .ve-btn-ghost {
   background: #fff;
   border: 1px solid #e5e7eb;
-  padding: 10px 18px;
+  padding: 11px 24px;
   border-radius: 10px;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  transition: background 0.15s ease;
 }
 
+.ve-btn-ghost:hover {
+  background: #f3f4f6;
+}
+
+/* ── Add button style (matching screenshot blue Add btn) ── */
+.ve-btn-add {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(37,99,235,0.25);
+  transition: filter 0.15s ease;
+}
+
+.ve-btn-add:hover {
+  filter: brightness(1.08);
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
 @media (max-width: 768px) {
   .ve-grid-2 {
     grid-template-columns: 1fr;
   }
 
+  .ve-field {
+    border-right: none !important;
+  }
+
+  .ve-field:nth-last-child(-n+3) {
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .ve-field:last-child {
+    border-bottom: none;
+  }
+
   .pro-navbar {
-    padding: 16px 16px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 18px;
-  }
-
-  .pro-left,
-  .pro-right {
-    width: 100%;
-  }
-
-  .pro-left {
-    justify-content: flex-start;
-    gap: 12px;
-  }
-
-  .pro-logo {
-    width: 40px;
-    height: 40px;
-  }
-
-  .pro-text {
-    min-width: 0;
-  }
-
-  .pro-right {
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .dash-actions {
-    width: 100%;
-    justify-content: flex-start;
+    padding: 12px 16px;
     flex-wrap: wrap;
     gap: 10px;
   }
 
-  .vc-user-info {
-    width: 100%;
-    justify-content: flex-start;
-    padding: 8px 10px;
-    margin-top: 6px;
+  .pro-left {
+    flex: 1;
   }
 
   .vc-user-text {
     display: none;
   }
 
+  .dash-hamburger {
+    display: block;
+  }
+
   .dash-mobile-wrap {
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 4px;
+    position: relative;
   }
 
   .ve-main {
-    padding: 16px 16px 30px;
-  }
-
-  .ve-form-wrapper {
-    padding: 22px;
-    border-radius: 24px;
-    margin-top: 10px;
+    padding: 16px 14px 30px;
   }
 
   .ve-page-header {
-    text-align: center;
-  }
-
-  .ve-page-header p {
-    margin-left: auto;
-    margin-right: auto;
+    padding: 24px 16px;
+    border-radius: 14px;
   }
 
   .ve-page-header h2 {
-    font-size: 24px;
+    font-size: 22px;
   }
 
   .ve-form-nav {
@@ -435,10 +676,6 @@
   .ve-btn-ghost,
   .ve-btn-primary {
     width: 100%;
-  }
-
-  .dash-mobile-dd.open {
-    right: 8px;
-    top: 56px;
+    text-align: center;
   }
 }

@@ -313,7 +313,7 @@ export default function RoadPrice() {
                     <img src={logo} className="pro-logo" />
                     <div className="pro-text">
                         <span className="pro-brand">BGauss Portal</span>
-                        <span className="pro-page">Modules</span>
+                        <span className="pro-page">Road Price Manager</span>
                     </div>
                 </div>
 
@@ -326,7 +326,7 @@ export default function RoadPrice() {
                         </div>
                     </div>
 
-                    <button className="rp-navbar-circle-btn rp-circle-blue" title="Dashboard" onClick={() => navigate("/dashboard")}>
+<button className="rp-navbar-circle-btn rp-circle-blue" title="Dashboard" aria-label="Dashboard" data-tip="Dashboard" onClick={() => navigate("/dashboard")}> 
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <rect x="3" y="3" width="7" height="7" rx="1" />
                             <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -335,14 +335,14 @@ export default function RoadPrice() {
                         </svg>
                     </button>
 
-                    <button className="rp-navbar-circle-btn rp-circle-indigo" title="Home" onClick={() => navigate("/modules")}>
+<button className="rp-navbar-circle-btn rp-circle-indigo" title="Home" aria-label="Home" data-tip="Home" onClick={() => navigate("/modules")}> 
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" />
                             <path d="M9 21V12h6v9" />
                         </svg>
                     </button>
 
-                    <button className="rp-navbar-circle-btn rp-circle-red" title="Logout" onClick={() => navigate("/login")}>
+                    <button className="rp-navbar-circle-btn rp-circle-red" title="Logout" aria-label="Logout" data-tip="Logout" onClick={() => navigate("/login") }>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
                             <polyline points="16 17 21 12 16 7" />
