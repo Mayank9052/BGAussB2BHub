@@ -1,7 +1,7 @@
-import "./VehicleEntry.css";
+import "./NewVehicleDetails.css";
 import logo from "./assets/logo.jpg";
 import Tooltip from "./Tooltip";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -10,6 +10,18 @@ interface DropdownOption {
   modelName?: string;
   variantName?: string;
   colourName?: string;
+}
+
+interface VehicleItem {
+  scootyId: number;
+  modelName?: string;
+  variantName?: string;
+  colourName?: string;
+  price?: number;
+  rangeKm?: number;
+  stockAvailable: boolean;
+  image?: string;
+  createdAt?: string;
 }
 
 export default function NewVehicleDetails() {
@@ -30,7 +42,13 @@ export default function NewVehicleDetails() {
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
+  const [tableSearch, setTableSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const PAGE_SIZE = 10;
 
   const username = localStorage.getItem("username") ?? "";
   const role     = localStorage.getItem("role")     ?? "";
@@ -129,6 +147,24 @@ export default function NewVehicleDetails() {
     loadColours();
   }, [selectedModel, selectedVariant]);
 
+  /* ── Fetch vehicles ── */
+  const fetchVehicles = useCallback(async () => {
+    setLoadingVehicles(true);
+    try {
+      const res = await axios.get<VehicleItem[]>("/api/ScootyInventory/items");
+      setVehicles(res.data || []);
+    } catch {
+      // Silent fail
+    } finally {
+      setLoadingVehicles(false);
+    }
+  }, []);
+
+  /* ── Load vehicles on mount ── */
+  useEffect(() => {
+    fetchVehicles();
+  }, [fetchVehicles]);
+
   /* ── Submit ── */
   const handleSubmit = async () => {
     if (!selectedModel || !selectedVariant) {
@@ -155,8 +191,22 @@ export default function NewVehicleDetails() {
       });
       const createdId = res.data?.data?.scootyId;
       if (!createdId) { setError("Vehicle item was created but no ID was returned."); return; }
-      setMessage("Vehicle created successfully. Opening details...");
-      window.setTimeout(() => navigate(`/vehicle/${createdId}`), 500);
+      
+      setMessage("✓ Vehicle created successfully!");
+      
+      // Reset form
+      setPrice("");
+      setRangeKm("");
+      setStockAvailable(true);
+      setImageFile(null);
+      
+      // Refresh vehicle list
+      await fetchVehicles();
+      
+      // Scroll to table
+      setTimeout(() => {
+        document.querySelector(".nv-table-card")?.scrollIntoView({ behavior: "smooth" });
+      }, 500);
     } catch (err: unknown) {
       const msg = axios.isAxiosError(err) && err.response?.data
         ? String(err.response.data)
@@ -167,10 +217,24 @@ export default function NewVehicleDetails() {
     }
   };
 
+  /* ── Filter vehicles ── */
+  const filteredVehicles = vehicles.filter(v => {
+    const q = tableSearch.toLowerCase().trim();
+    if (!q) return true;
+    return [v.modelName, v.variantName, v.colourName]
+      .join(" ").toLowerCase().includes(q);
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filteredVehicles.length / PAGE_SIZE));
+  const paginated = filteredVehicles.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
     <div className="ve-page">
 
-      {/* ═════════ NAVBAR ═════════ */}
+      {/* TOP BAR */}
+      <div className="ve-topbar" />
+
+      {/* ═══ NAVBAR ═══ */}
       <header className="pro-navbar">
         <div className="pro-left">
           <img src={logo} className="pro-logo" alt="BGauss Logo" />
@@ -182,22 +246,6 @@ export default function NewVehicleDetails() {
 
         <div className="pro-right">
           <div className="vc-icon-group">
-
-            {/* Modules */}
-            <Tooltip text="Modules">
-              <button
-                className="vc-icon-btn btn-vc-modules"
-                aria-label="Modules"
-                onClick={() => navigate("/dashboard")}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
-              </button>
-            </Tooltip>
 
             {/* Dashboard */}
             <Tooltip text="Dashboard">
@@ -256,7 +304,7 @@ export default function NewVehicleDetails() {
         </div>
       </header>
 
-      {/* ═════════ MAIN ═════════ */}
+      {/* ═══ MAIN ═══ */}
       <main className="ve-main">
 
         {/* Hero banner */}
@@ -388,6 +436,124 @@ export default function NewVehicleDetails() {
             </div>
 
           </div>
+        </div>
+
+        {/* ═══ VEHICLES TABLE ═══ */}
+        <div className="nv-table-card">
+          
+          {/* Table header */}
+          <div className="nv-table-header">
+            <div className="nv-table-title">
+              <div className="nv-table-icon">🛵</div>
+              <div>
+                <h2>Vehicle Inventory</h2>
+                <p>All added vehicles in your inventory</p>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="nv-search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="text" className="nv-search" placeholder="Search vehicles…"
+                value={tableSearch}
+                onChange={(e) => { setTableSearch(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+
+            <span className="nv-count-pill">{filteredVehicles.length} vehicles</span>
+          </div>
+
+          {/* Table body */}
+          {loadingVehicles ? (
+            <div className="nv-table-state">Loading vehicles…</div>
+          ) : vehicles.length === 0 ? (
+            <div className="nv-table-state nv-table-empty">
+              <div className="nv-empty-icon">🛵</div>
+              <div className="nv-empty-title">No vehicles added yet</div>
+              <div className="nv-empty-sub">Add your first vehicle using the form above.</div>
+            </div>
+          ) : (
+            <>
+              <div className="nv-table-scroll">
+                <table className="nv-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Model</th>
+                      <th>Variant</th>
+                      <th>Colour</th>
+                      <th>Price</th>
+                      <th>Range (km)</th>
+                      <th>Stock</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginated.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="nv-no-results">
+                          No vehicles match your search.
+                        </td>
+                      </tr>
+                    ) : paginated.map((v, idx) => (
+                      <tr key={v.scootyId}>
+                        <td data-label="#">
+                          <span className="nv-row-num">{(currentPage-1)*PAGE_SIZE+idx+1}</span>
+                        </td>
+                        <td data-label="Model">{v.modelName || "—"}</td>
+                        <td data-label="Variant">{v.variantName || "—"}</td>
+                        <td data-label="Colour">{v.colourName || "—"}</td>
+                        <td data-label="Price" className="nv-mono">₹{v.price?.toLocaleString() || "—"}</td>
+                        <td data-label="Range (km)" className="nv-mono">{v.rangeKm || "—"}</td>
+                        <td data-label="Stock">
+                          <span className={`nv-stock-badge ${v.stockAvailable ? "in-stock" : "out-stock"}`}>
+                            {v.stockAvailable ? "In Stock" : "Out of Stock"}
+                          </span>
+                        </td>
+                        <td data-label="Action">
+                          <button 
+                            className="nv-view-btn"
+                            onClick={() => navigate(`/vehicle/${v.scootyId}`)}
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="nv-pagination">
+                  <span className="nv-pg-info">
+                    Showing {(currentPage-1)*PAGE_SIZE+1}–{Math.min(currentPage*PAGE_SIZE, filteredVehicles.length)} of {filteredVehicles.length}
+                  </span>
+                  <div className="nv-pg-btns">
+                    <button className="nv-pg" onClick={() => setCurrentPage(1)} disabled={currentPage===1}>«</button>
+                    <button className="nv-pg" onClick={() => setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1}>‹</button>
+                    {Array.from({length: totalPages}, (_,i)=>i+1)
+                      .filter(p => p===1||p===totalPages||Math.abs(p-currentPage)<=1)
+                      .reduce<(number|"…")[]>((acc, p, i, arr) => {
+                        if (i > 0 && (p as number) - (arr[i-1] as number) > 1) acc.push("…");
+                        acc.push(p);
+                        return acc;
+                      }, [])
+                      .map((p, i) => p === "…"
+                        ? <span key={`e${i}`} className="nv-pg-ellipsis">…</span>
+                        : <button key={p} className={`nv-pg ${currentPage===p?"active":""}`} onClick={() => setCurrentPage(p as number)}>{p}</button>
+                      )
+                    }
+                    <button className="nv-pg" onClick={() => setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages}>›</button>
+                    <button className="nv-pg" onClick={() => setCurrentPage(totalPages)} disabled={currentPage===totalPages}>»</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </main>
     </div>
