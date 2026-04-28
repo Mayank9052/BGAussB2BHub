@@ -7,7 +7,7 @@ import { Routes, Route } from "react-router-dom";
 import SplashScreen from "./SplashScreen";
 import LoginPage from "./LoginPage";
 import Dashboard from "./Dashboard";
-import VehicleEntry from "./Vehicleentry";
+import VehicleEntry from "./VehicleEntry";
 import VehicleDetails from "./VehicleDetails";
 import NewVehicleDetails from "./NewVehicleDetails";
 import Modules from "./Modules";
