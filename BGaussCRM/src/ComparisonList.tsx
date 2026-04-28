@@ -93,7 +93,7 @@ export default function ComparisonList() {
             </div>
           </div>
           <div className="dash-actions">
-            <button className="dash-icon-btn dash-btn-dashboard" onClick={() => navigate("/dashboard")} title="Dashboard">
+            <button className="dash-icon-btn dash-btn-dashboard" onClick={() => navigate("/dashboard")} title="Dashboard" aria-label="Dashboard" data-tip="Dashboard">
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round">
                 <rect x="3" y="3" width="18" height="18" rx="2" stroke="white"/>
                 <line x1="9" y1="3" x2="9" y2="21" stroke="white"/>
@@ -102,7 +102,7 @@ export default function ComparisonList() {
                 <line x1="9" y1="15" x2="21" y2="15" stroke="white"/>
               </svg>
             </button>
-            <button className="dash-icon-btn dash-btn-logout" onClick={handleLogout} title="Logout">
+            <button className="dash-icon-btn dash-btn-logout" onClick={handleLogout} title="Logout" aria-label="Logout" data-tip="Logout">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
                 <polyline points="16 17 21 12 16 7"/>

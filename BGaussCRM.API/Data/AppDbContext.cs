@@ -48,6 +48,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<VehicleVariant> VehicleVariants { get; set; }
 
+    public virtual DbSet<CustomerRequest> CustomerRequests { get; set; }
+
     public virtual DbSet<VwAreaStockSummary> VwAreaStockSummaries { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

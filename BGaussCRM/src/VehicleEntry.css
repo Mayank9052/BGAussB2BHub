@@ -1,0 +1,925 @@
+﻿/* ─────────────────────────────────────────────
+   GLOBAL PAGE
+───────────────────────────────────────────── */
+.ve-page {
+  min-height: 100vh;
+  background: #f0f4f8;
+  font-family: "Segoe UI", system-ui;
+}
+
+/* ─────────────────────────────────────────────
+   NAVBAR — matches screenshot exactly
+───────────────────────────────────────────── */
+.pro-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 12px;
+  box-shadow: 0 1px 4px rgba(15,23,42,0.06);
+  overflow: visible;        /* ✅ allows tooltip to escape navbar */
+}
+
+.pro-left,
+.pro-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* BG logo square — matches screenshot */
+.pro-logo {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: contain;
+  border-radius: 10px;
+  background: #1e3a8a;
+  border: none;
+  box-shadow: 0 4px 12px rgba(30,58,138,0.25);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.pro-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+
+.pro-brand {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pro-page {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* ── Right side icon buttons ── */
+.pro-right {
+  gap: 10px;
+}
+
+.vc-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Shared circular button base */
+.vc-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.vc-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.vc-icon-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.vc-icon-btn:active {
+  transform: scale(0.92);
+}
+
+/* Grid / modules icon — blue */
+.btn-vc-modules {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+}
+
+/* Home / dashboard icon — blue */
+.btn-vc-dashboard {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+}
+
+/* Logout icon — red */
+.btn-vc-logout {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(239,68,68,0.35);
+}
+
+/* Also cover mod-icon-btn used in JSX */
+.mod-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.mod-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.mod-icon-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.mod-icon-btn:active {
+  transform: scale(0.92);
+}
+
+.btn-mod-dashboard {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(37,99,235,0.35);
+}
+
+/* dash-icon-btn used in older JSX */
+.dash-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.dash-icon-btn svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.dash-icon-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.dash-icon-btn:active {
+  transform: scale(0.92);
+}
+
+.dash-btn-logout {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(239,68,68,0.35);
+}
+
+/* ── Tooltip via data-tip attr ── */
+.vc-icon-btn[data-tip],
+.mod-icon-btn[data-tip],
+.dash-icon-btn[data-tip] {
+  overflow: visible;
+}
+
+.vc-icon-btn::after,
+.mod-icon-btn::after,
+.dash-icon-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 48px;   
+  bottom: -34px;
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: #0f172a;
+  color: #fff;
+  padding: 5px 9px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 999;
+}
+
+.vc-icon-btn:hover::after,
+.mod-icon-btn:hover::after,
+.dash-icon-btn:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ── User avatar pill — matches screenshot (orange circle) ── */
+.vc-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
+  background: #f3f4f6;
+  border-radius: 999px;
+}
+
+.vc-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f97316, #ea580c); /* orange like screenshot */
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.vc-user-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.vc-user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  display: block;
+}
+
+.vc-user-role {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+/* ── Hamburger ── */
+.dash-hamburger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: none;
+}
+
+.dash-hamburger span {
+  display: block;
+  height: 2px;
+  width: 20px;
+  background: #111827;
+  margin: 4px 0;
+  transition: 0.2s;
+}
+
+.dash-mobile-dd {
+  display: none;
+}
+
+.dash-mobile-dd.open {
+  display: block;
+  position: absolute;
+  right: 10px;
+  top: 64px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 10px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15,23,42,0.1);
+  z-index: 200;
+}
+
+.dash-mobile-dd.open button {
+  display: block;
+  width: 100%;
+  padding: 9px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+.dash-mobile-dd.open button:hover {
+  background: #f3f4f6;
+}
+
+/* ─────────────────────────────────────────────
+   HERO BANNER — matches screenshot gradient
+───────────────────────────────────────────── */
+.ve-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 30px 18px 36px;
+}
+
+/* Hero banner — light blue gradient like screenshot */
+.ve-page-header {
+  max-width: 1060px;
+  margin: 0 auto 28px;
+  background: linear-gradient(135deg, #e8f0fe 0%, #dbeafe 50%, #eff6ff 100%);
+  border-radius: 18px;
+  padding: 32px 24px;
+  text-align: center;
+  border: 1px solid #bfdbfe;
+}
+
+.ve-page-header h2 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
+}
+
+.ve-page-header p {
+  font-size: 14px;
+  color: #2563eb;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* ─────────────────────────────────────────────
+   FORM CARD — matches screenshot card style
+───────────────────────────────────────────── */
+.ve-form-wrapper {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.07);
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* Card header with + icon — matches screenshot */
+.ve-form-card-header {
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+  gap: 16px;
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fbff 100%);
+}
+
+.ve-form-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 300;
+  box-shadow: 0 8px 20px rgba(37,99,235,0.25);
+  margin: 0 auto;
+}
+
+.ve-form-card-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.ve-form-card-subtitle {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 500;
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+/* Inner padding for fields */
+.ve-form-body {
+  padding: 24px;
+}
+
+/* ── Alerts ── */
+.ve-alert {
+  padding: 14px 16px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+
+.ve-alert.success {
+  background: #ecfdf5;
+  color: #166534;
+  border: 1px solid #d1fae5;
+}
+
+.ve-alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* ── Field grid — uppercase labels like screenshot ── */
+.ve-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.ve-field {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ve-field:nth-child(3n) {
+  border-right: none;
+}
+
+/* Last row — remove bottom border */
+.ve-field:nth-last-child(-n+3) {
+  border-bottom: none;
+}
+
+.ve-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 10px 14px 4px;
+}
+
+.ve-field input,
+.ve-field select,
+.ve-field textarea {
+  padding: 6px 14px 12px;
+  border: none;
+  background: #fff;
+  font: inherit;
+  font-size: 14px;
+  color: #111827;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ve-field input::placeholder,
+.ve-field textarea::placeholder {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.ve-field input:focus,
+.ve-field select:focus,
+.ve-field textarea:focus {
+  background: #f8faff;
+}
+
+.ve-field textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.ve-full-width {
+  grid-column: 1 / -1;
+  border-right: none !important;
+}
+
+/* ── Section dividers ── */
+.ve-section-divider {
+  margin: 20px 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ── Gender chips ── */
+.ve-radio-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.ve-radio-chip {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  background: #fff;
+  transition: all 0.15s ease;
+}
+
+.ve-radio-chip:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.ve-radio-chip.selected {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+  font-weight: 600;
+}
+
+/* ── Bottom nav ── */
+.ve-form-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ve-btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  padding: 11px 24px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.ve-btn-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.ve-btn-ghost {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 11px 24px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  transition: background 0.15s ease;
+}
+
+.ve-btn-ghost:hover {
+  background: #f3f4f6;
+}
+
+/* ── Add button style (matching screenshot blue Add btn) ── */
+.ve-btn-add {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(37,99,235,0.25);
+  transition: filter 0.15s ease;
+}
+
+.ve-btn-add:hover {
+  filter: brightness(1.08);
+}
+
+.ve-request-table-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.07);
+  padding: 24px;
+  margin: 28px auto 0;
+  max-width: 1040px;
+}
+
+.ve-request-table-header {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 16px;
+  align-items: center;
+  justify-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ve-table-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ve-table-title-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #dbeafe, #c7d2fe);
+  color: #1d4ed8;
+  font-size: 18px;
+}
+
+.ve-request-table-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.ve-request-table-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.ve-table-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-self: end;
+}
+
+.ve-search-wrap {
+  position: relative;
+}
+
+.ve-search-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.ve-search {
+  width: 220px;
+  height: 38px;
+  padding: 0 14px 0 36px;
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #111827;
+  font-size: 13px;
+}
+
+.ve-search:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+
+.ve-count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  height: 34px;
+  border-radius: 999px;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ve-request-table-scroll {
+  overflow-x: auto;
+}
+
+.ve-request-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 780px;
+  font-size: 13px;
+}
+
+.ve-request-table thead {
+  background: #f8fafc;
+}
+
+.ve-request-table th,
+.ve-request-table td {
+  padding: 14px 16px;
+  vertical-align: middle;
+  border-bottom: 1px solid #e5e7eb;
+  color: #334155;
+  text-align: center;
+}
+
+.ve-request-table th {
+  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #475569;
+  text-align: center;
+  border-right: 1px solid #e5e7eb;
+}
+
+.ve-request-table th:last-child,
+.ve-request-table td:last-child {
+  border-right: none;
+}
+
+.ve-request-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.ve-request-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.ve-row-editing {
+  background: #eff6ff;
+}
+
+.ve-status-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.status-new {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-inprogress {
+  background: #fef3c7;
+  color: #ca8a04;
+}
+
+.status-closed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.ve-row-acts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.ve-act-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 70px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, background 0.15s ease;
+}
+
+.ve-act-btn:hover {
+  transform: translateY(-1px);
+}
+
+.ve-act-edit {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.ve-act-edit:hover {
+  background: #dbeafe;
+}
+
+.ve-act-del {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.ve-act-del:hover {
+  background: #fee2e2;
+}
+
+.ve-request-table-empty,
+.ve-request-table-loading {
+  padding: 20px 18px;
+  color: #475569;
+  background: #f8fafc;
+  border-radius: 12px;
+  text-align: center;
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .ve-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .ve-field {
+    border-right: none !important;
+  }
+
+  .ve-field:nth-last-child(-n+3) {
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .ve-field:last-child {
+    border-bottom: none;
+  }
+
+  .pro-navbar {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .pro-left {
+    flex: 1;
+  }
+
+  .vc-user-text {
+    display: none;
+  }
+
+  .dash-hamburger {
+    display: block;
+  }
+
+  .dash-mobile-wrap {
+    position: relative;
+  }
+
+  .ve-main {
+    padding: 16px 14px 30px;
+  }
+
+  .ve-page-header {
+    padding: 24px 16px;
+    border-radius: 14px;
+  }
+
+  .ve-page-header h2 {
+    font-size: 22px;
+  }
+
+  .ve-form-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ve-btn-ghost,
+  .ve-btn-primary {
+    width: 100%;
+    text-align: center;
+  }
+}
