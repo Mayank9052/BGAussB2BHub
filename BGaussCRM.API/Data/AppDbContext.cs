@@ -22,7 +22,17 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ComparisonConfig> ComparisonConfigs { get; set; }
 
+    public virtual DbSet<CustomerRequest> CustomerRequests { get; set; }
+
     public virtual DbSet<EmiEnquiry> EmiEnquiries { get; set; }
+
+    public virtual DbSet<ExchangeAdminAction> ExchangeAdminActions { get; set; }
+
+    public virtual DbSet<ExchangeCase> ExchangeCases { get; set; }
+
+    public virtual DbSet<ExchangeCaseImage> ExchangeCaseImages { get; set; }
+
+    public virtual DbSet<ExchangeInspectionScore> ExchangeInspectionScores { get; set; }
 
     public virtual DbSet<PriceMaster> PriceMasters { get; set; }
 
@@ -47,8 +57,6 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<VehicleReview> VehicleReviews { get; set; }
 
     public virtual DbSet<VehicleVariant> VehicleVariants { get; set; }
-
-    public virtual DbSet<CustomerRequest> CustomerRequests { get; set; }
 
     public virtual DbSet<VwAreaStockSummary> VwAreaStockSummaries { get; set; }
 
@@ -171,6 +179,25 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK_ComparisonConfigs_Scooty3");
         });
 
+        modelBuilder.Entity<CustomerRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Customer__3214EC07B28A4B56");
+
+            entity.Property(e => e.City).HasMaxLength(100);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CustomerName).HasMaxLength(150);
+            entity.Property(e => e.Email).HasMaxLength(150);
+            entity.Property(e => e.Gender).HasMaxLength(20);
+            entity.Property(e => e.MobileNumber).HasMaxLength(20);
+            entity.Property(e => e.PreferredContact).HasMaxLength(50);
+            entity.Property(e => e.PreferredModel).HasMaxLength(100);
+            entity.Property(e => e.RequestType).HasMaxLength(50);
+            entity.Property(e => e.State).HasMaxLength(100);
+            entity.Property(e => e.Status)
+                .HasMaxLength(50)
+                .HasDefaultValue("New");
+        });
+
         modelBuilder.Entity<EmiEnquiry>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__EmiEnqui__3214EC071B2B0F16");
@@ -194,6 +221,82 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Scooty).WithMany(p => p.EmiEnquiries)
                 .HasForeignKey(d => d.ScootyId)
                 .HasConstraintName("FK_EmiEnquiries_Scooty");
+        });
+
+        modelBuilder.Entity<ExchangeAdminAction>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC078B05E19E");
+
+            entity.Property(e => e.Action).HasMaxLength(30);
+            entity.Property(e => e.ActionAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.AdminUser).HasMaxLength(100);
+            entity.Property(e => e.Note).HasMaxLength(500);
+            entity.Property(e => e.PriceSet).HasColumnType("decimal(12, 2)");
+
+            entity.HasOne(d => d.Case).WithMany(p => p.ExchangeAdminActions)
+                .HasForeignKey(d => d.CaseId)
+                .HasConstraintName("FK__ExchangeA__CaseI__6166761E");
+        });
+
+        modelBuilder.Entity<ExchangeCase>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC079DADD7E4");
+
+            entity.HasIndex(e => e.DealerId, "IX_ExchangeCases_DealerId");
+
+            entity.HasIndex(e => e.Status, "IX_ExchangeCases_Status");
+
+            entity.HasIndex(e => e.CaseNumber, "UQ__Exchange__103BB8D86D78C9D1").IsUnique();
+
+            entity.Property(e => e.AdminNote).HasMaxLength(500);
+            entity.Property(e => e.ApprovedPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.CaseNumber).HasMaxLength(20);
+            entity.Property(e => e.City).HasMaxLength(80);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CustomerName).HasMaxLength(100);
+            entity.Property(e => e.DealerId).HasMaxLength(100);
+            entity.Property(e => e.Grade).HasMaxLength(20);
+            entity.Property(e => e.MaxPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.MinPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.MobileNumber).HasMaxLength(15);
+            entity.Property(e => e.RecommendedPrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.RegistrationNo).HasMaxLength(20);
+            entity.Property(e => e.Status)
+                .HasMaxLength(30)
+                .HasDefaultValue("Draft");
+            entity.Property(e => e.TotalScore).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.VehicleModel).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<ExchangeCaseImage>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC077EFC6E2D");
+
+            entity.HasIndex(e => e.CaseId, "IX_ExchangeImages_CaseId");
+
+            entity.Property(e => e.ImagePath).HasMaxLength(500);
+            entity.Property(e => e.ImageType).HasMaxLength(30);
+            entity.Property(e => e.UploadedAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Case).WithMany(p => p.ExchangeCaseImages)
+                .HasForeignKey(d => d.CaseId)
+                .HasConstraintName("FK__ExchangeC__CaseI__5D95E53A");
+        });
+
+        modelBuilder.Entity<ExchangeInspectionScore>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC07B72FA852");
+
+            entity.HasIndex(e => e.CaseId, "IX_ExchangeScores_CaseId");
+
+            entity.Property(e => e.Category).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Parameter).HasMaxLength(100);
+
+            entity.HasOne(d => d.Case).WithMany(p => p.ExchangeInspectionScores)
+                .HasForeignKey(d => d.CaseId)
+                .HasConstraintName("FK__ExchangeI__CaseI__58D1301D");
         });
 
         modelBuilder.Entity<PriceMaster>(entity =>
