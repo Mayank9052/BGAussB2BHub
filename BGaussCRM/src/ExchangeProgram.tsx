@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./ExchangeProgram.css";
 import logo from "./assets/logo.jpg";
+import Tooltip from "./Tooltip";
 
 // ── Types ─────────────────────────────────────────────────────
 type Screen = "S01" | "S02" | "S03" | "S04" | "S05" | "S06" | "S07" | "S08" | "S09" | "S10";
@@ -68,35 +69,34 @@ const SECTION_LABELS = ["Login", "Vehicle Entry", "Inspection & Scoring", "Image
 // MAIN COMPONENT
 // ══════════════════════════════════════════════════════════════
 export default function ExchangeProgram() {
-  const navigate   = useNavigate();
-  const username   = localStorage.getItem("username") ?? "Dealer";
-  // const role       = localStorage.getItem("role") ?? "";
-  const initials   = username.slice(0, 2).toUpperCase();
+  const navigate = useNavigate();
+  const username = localStorage.getItem("username") ?? "Dealer";
+  const role     = localStorage.getItem("role") ?? "";
+  const initials = username.slice(0, 2).toUpperCase();
 
   // ── State ──────────────────────────────────────────────────
-  const [screen, setScreen]           = useState<Screen>("S01");
-  const [caseId, setCaseId]           = useState<number | null>(null);
-  const [caseNumber, setCaseNumber]   = useState("");
+  const [screen, setScreen]               = useState<Screen>("S01");
+  const [caseId, setCaseId]               = useState<number | null>(null);
+  const [caseNumber, setCaseNumber]       = useState("");
 
-  const [customer, setCustomer]       = useState<CustomerInfo>({ customerName: "", mobileNumber: "", city: "" });
-  const [vehicle, setVehicle]         = useState<VehicleDetails>({ vehicleModel: "", registrationNo: "", yearOfPurchase: "", kmDriven: "" });
+  const [customer, setCustomer]           = useState<CustomerInfo>({ customerName: "", mobileNumber: "", city: "" });
+  const [vehicle, setVehicle]             = useState<VehicleDetails>({ vehicleModel: "", registrationNo: "", yearOfPurchase: "", kmDriven: "" });
 
-  const [inspParams, setInspParams]   = useState<InspectionParam[]>([]);
-  const [scores, setScores]           = useState<Record<string, Record<string, number>>>({});
+  const [inspParams, setInspParams]       = useState<InspectionParam[]>([]);
+  const [scores, setScores]               = useState<Record<string, Record<string, number>>>({});
 
-  const [gradeResult, setGradeResult] = useState<{ totalScore: number; grade: string } | null>(null);
+  const [gradeResult, setGradeResult]     = useState<{ totalScore: number; grade: string } | null>(null);
 
-  const [images, setImages]           = useState<Partial<Record<ImageType, { file: File; preview: string; uploaded: boolean }>>>({});
-  const [uploading, setUploading]     = useState<Partial<Record<ImageType, boolean>>>({});
+  const [images, setImages]               = useState<Partial<Record<ImageType, { file: File; preview: string; uploaded: boolean }>>>({});
+  const [uploading, setUploading]         = useState<Partial<Record<ImageType, boolean>>>({});
   const [missingImages, setMissingImages] = useState<string[]>([]);
 
-  const [priceData, setPriceData]     = useState<{ recommended: number; minPrice: number; maxPrice: number; grade: string; totalScore: number } | null>(null);
+  const [priceData, setPriceData]         = useState<{ recommended: number; minPrice: number; maxPrice: number; grade: string; totalScore: number } | null>(null);
 
-  const [loading, setLoading]         = useState(false);
-  const [errors, setErrors]           = useState<Record<string, string>>({});
-  const [globalError, setGlobalError] = useState("");
-
-  const [models, setModels]           = useState<string[]>([]);
+  const [loading, setLoading]             = useState(false);
+  const [errors, setErrors]               = useState<Record<string, string>>({});
+  const [globalError, setGlobalError]     = useState("");
+  const [models, setModels]               = useState<string[]>([]);
 
   const fileRefs = useRef<Partial<Record<ImageType, HTMLInputElement>>>({});
 
@@ -113,7 +113,6 @@ export default function ExchangeProgram() {
         setScores(initial);
       })
       .catch(() => {
-        // Fallback
         const fallback: InspectionParam[] = [
           { category: "Battery",     parameters: ["Health", "Charge Capacity", "Physical Damage"] },
           { category: "Body",        parameters: ["Dents", "Scratches", "Paint Condition"] },
@@ -160,7 +159,8 @@ export default function ExchangeProgram() {
   // ── S02+S03 → API: start case ─────────────────────────────
   const handleStartCase = async () => {
     if (!validateCustomer() || !validateVehicle()) return;
-    setLoading(true); setGlobalError("");
+    setLoading(true);
+    setGlobalError("");
     try {
       const res = await axios.post<{ id: number; caseNumber: string }>("api/ExchangeCases/start", {
         ...customer,
@@ -172,38 +172,46 @@ export default function ExchangeProgram() {
       setCaseNumber(res.data.caseNumber);
       goTo("S04");
     } catch (e: unknown) {
-        if (axios.isAxiosError(e)) {
-            setGlobalError(
-            e.response?.data?.message ?? "Failed to create case. Please try again."
-            );
-        } else {
-            setGlobalError("Something went wrong. Please try again.");
-        }
+      if (axios.isAxiosError(e)) {
+        setGlobalError(e.response?.data?.message ?? "Failed to create case. Please try again.");
+      } else {
+        setGlobalError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   // ── S04 → save scores ─────────────────────────────────────
   const handleSaveScores = async () => {
     if (!caseId) return;
-    setLoading(true); setGlobalError("");
+    setLoading(true);
+    setGlobalError("");
     try {
       const payload: ScoreEntry[] = [];
       inspParams.forEach(p => {
         p.parameters.forEach(param => {
-          payload.push({ category: p.category, parameter: param, score: scores[p.category]?.[param] ?? 5 });
+          payload.push({
+            category:  p.category,
+            parameter: param,
+            score:     scores[p.category]?.[param] ?? 5,
+          });
         });
       });
-      const res = await axios.post<{ totalScore: number; grade: string }>(`api/ExchangeCases/${caseId}/scores`, payload);
+      const res = await axios.post<{ totalScore: number; grade: string }>(
+        `api/ExchangeCases/${caseId}/scores`,
+        payload
+      );
       setGradeResult(res.data);
       goTo("S05");
     } catch (e: unknown) {
-        if (axios.isAxiosError(e)) {
-            setGlobalError(
-            e.response?.data?.message ?? "Failed to save scores. Please try again."
-            );
-        } else {
-            setGlobalError("Unexpected error occurred.");
-        }
+      if (axios.isAxiosError(e)) {
+        setGlobalError(e.response?.data?.message ?? e.response?.data ?? "Failed to save scores.");
+      } else {
+        setGlobalError("Unexpected error occurred.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -241,7 +249,8 @@ export default function ExchangeProgram() {
   // ── Generate price ────────────────────────────────────────
   const handleGeneratePrice = async () => {
     if (!caseId) return;
-    setLoading(true); setGlobalError("");
+    setLoading(true);
+    setGlobalError("");
     try {
       const res = await axios.post<{ recommended: number; minPrice: number; maxPrice: number; grade: string; totalScore: number }>(
         `api/ExchangeCases/${caseId}/generate-price`
@@ -249,40 +258,45 @@ export default function ExchangeProgram() {
       setPriceData(res.data);
       goTo("S08");
     } catch (e: unknown) {
-        if (axios.isAxiosError(e)) {
-            const err = e.response?.data as {
-            error?: string;
-            missing?: string[];
-            };
-
-            if (err?.error === "ImagesMissing") {
-            setMissingImages(err.missing ?? []);
-            goTo("S07");
-            } else {
-            setGlobalError("Failed to generate price. Please try again.");
-            }
+      if (axios.isAxiosError(e)) {
+        const err = e.response?.data as { error?: string; missing?: string[] };
+        if (err?.error === "ImagesMissing") {
+          setMissingImages(err.missing ?? []);
+          goTo("S07");
         } else {
-            setGlobalError("Unexpected error occurred.");
+          setGlobalError("Failed to generate price. Please try again.");
         }
+      } else {
+        setGlobalError("Unexpected error occurred.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
   // ── Submit for admin ──────────────────────────────────────
   const handleSubmit = async () => {
     if (!caseId) return;
-    setLoading(true); setGlobalError("");
+    setLoading(true);
+    setGlobalError("");
     try {
       await axios.post(`api/ExchangeCases/${caseId}/submit`);
       goTo("S10");
     } catch (e: unknown) {
-        if (axios.isAxiosError(e)) {
-            setGlobalError(
-            e.response?.data ?? "Submission failed. Please try again."
-            );
-        } else {
-            setGlobalError("Unexpected error occurred.");
-        }
+      if (axios.isAxiosError(e)) {
+        setGlobalError(e.response?.data ?? "Submission failed. Please try again.");
+      } else {
+        setGlobalError("Unexpected error occurred.");
+      }
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // ── Logout ────────────────────────────────────────────────
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    navigate("/");
   };
 
   const goTo = (s: Screen) => {
@@ -299,7 +313,7 @@ export default function ExchangeProgram() {
 
   // ── Score slider component ────────────────────────────────
   const ScoreSlider = ({ category, param }: { category: string; param: string }) => {
-    const val = scores[category]?.[param] ?? 5;
+    const val   = scores[category]?.[param] ?? 5;
     const color = val >= 8 ? "#16a34a" : val >= 5 ? "#d97706" : "#dc2626";
     return (
       <div className="ep-score-row">
@@ -326,47 +340,103 @@ export default function ExchangeProgram() {
   return (
     <div className="ep-page">
 
-      {/* ── Navbar ──────────────────────────────────────── */}
+      {/* ════════════════════════════════
+          NAVBAR
+      ════════════════════════════════ */}
       <header className="ep-navbar">
-        <div className="ep-nav-left">
-          <img src={logo} alt="BGauss" className="ep-nav-logo" />
-          <div className="ep-nav-brand">
-            <span className="ep-brand-name">BGauss Exchange</span>
-            <span className="ep-brand-sub">Certified Buyback Program</span>
-          </div>
-        </div>
-        <div className="ep-nav-right">
-          {caseNumber && (
-            <span className="ep-case-pill">📋 {caseNumber}</span>
-          )}
-          <div className="ep-nav-user">
-            <div className="ep-avatar">{initials}</div>
-            <span className="ep-username">{username}</span>
-          </div>
-          <button className="ep-nav-back" onClick={() => navigate("/dashboard")}>
-            ← Dashboard
-          </button>
-        </div>
-      </header>
 
-      {/* ── Progress bar ────────────────────────────────── */}
+          {/* Left — logo + brand */}
+          <div className="ep-nav-left">
+            <img src={logo} alt="BGauss" className="ep-nav-logo" />
+            <div className="ep-nav-brand">
+              <span className="ep-brand-name">BGauss Portal</span>
+              <span className="ep-brand-sub">Exchange & Buyback</span>
+            </div>
+          </div>
+
+          {/* Right — case pill + icons + user */}
+          <div className="ep-nav-right">
+
+            {/* Case pill */}
+            {caseNumber && (
+              <span className="ep-case-pill">📋 {caseNumber}</span>
+            )}
+
+            {/* Icon buttons */}
+            <div className="vc-icon-group">
+
+              {/* Modules */}
+              <Tooltip text="dashboard">
+                <button
+                  className="vc-icon-btn btn-vc-modules"
+                  title=""
+                  onClick={() => navigate("/dashboard")}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3"  y="3"  width="7" height="7" rx="1" />
+                    <rect x="14" y="3"  width="7" height="7" rx="1" />
+                    <rect x="3"  y="14" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                </button>
+              </Tooltip>
+
+              {/* Logout */}
+              <Tooltip text="Logout">
+                <button
+                  className="vc-icon-btn btn-vc-logout"
+                  title=""
+                  onClick={handleLogout}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
+                  </svg>
+                </button>
+              </Tooltip>
+
+            </div>
+
+            {/* User pill */}
+            <div className="ep-nav-user">
+              <div className="ep-avatar">{initials}</div>
+              <span className="ep-username">{username}</span>
+            </div>
+
+          </div>
+        </header>
+
+      {/* ════════════════════════════════
+          PROGRESS BAR
+      ════════════════════════════════ */}
       {screen !== "S01" && screen !== "S10" && (
         <div className="ep-progress-wrap">
           <div className="ep-progress-sections">
             {SECTION_LABELS.slice(1).map((label, i) => (
-              <div key={label} className={`ep-prog-section ${i + 1 === sectionIndex ? "active" : i + 1 < sectionIndex ? "done" : ""}`}>
+              <div
+                key={label}
+                className={`ep-prog-section ${
+                  i + 1 === sectionIndex ? "active" : i + 1 < sectionIndex ? "done" : ""
+                }`}
+              >
                 <div className="ep-prog-dot">{i + 1 < sectionIndex ? "✓" : i + 2}</div>
                 <span>{label}</span>
               </div>
             ))}
           </div>
           <div className="ep-progress-bar">
-            <div className="ep-progress-fill" style={{ width: `${Math.min(100, ((sectionIndex - 1) / 3) * 100)}%` }} />
+            <div
+              className="ep-progress-fill"
+              style={{ width: `${Math.min(100, ((sectionIndex - 1) / 3) * 100)}%` }}
+            />
           </div>
         </div>
       )}
 
-      {/* ── Global error ────────────────────────────────── */}
+      {/* ════════════════════════════════
+          GLOBAL ERROR
+      ════════════════════════════════ */}
       {globalError && (
         <div className="ep-global-error">
           <span>⚠</span> {globalError}
@@ -374,10 +444,13 @@ export default function ExchangeProgram() {
         </div>
       )}
 
+      {/* ════════════════════════════════
+          MAIN
+      ════════════════════════════════ */}
       <main className="ep-main">
 
         {/* ══════════════════════════════
-            S01 — HOME / DASHBOARD
+            S01 — HOME
         ══════════════════════════════ */}
         {screen === "S01" && (
           <div className="ep-screen ep-s01">
@@ -394,12 +467,12 @@ export default function ExchangeProgram() {
               <h3>How It Works</h3>
               <div className="ep-s01-steps">
                 {[
-                  { n: "1", t: "Customer Info", d: "Enter customer details and contact info", icon: "👤" },
-                  { n: "2", t: "Vehicle Details", d: "Log vehicle model, registration & KM driven", icon: "🛵" },
-                  { n: "3", t: "Inspection", d: "Score battery, body, tyres, electricals & misc", icon: "🔍" },
-                  { n: "4", t: "Upload Photos", d: "6 mandatory views: Front, Rear, Left, Right, Odometer, Battery", icon: "📷" },
-                  { n: "5", t: "Price Range", d: "System generates recommended price band (read-only)", icon: "💰" },
-                  { n: "6", t: "Admin Approval", d: "Admin reviews and approves the final price", icon: "✅" },
+                  { n: "1", t: "Customer Info",   d: "Enter customer details and contact info",                              icon: "👤" },
+                  { n: "2", t: "Vehicle Details",  d: "Log vehicle model, registration & KM driven",                         icon: "🛵" },
+                  { n: "3", t: "Inspection",       d: "Score battery, body, tyres, electricals & misc",                      icon: "🔍" },
+                  { n: "4", t: "Upload Photos",    d: "6 mandatory views: Front, Rear, Left, Right, Odometer, Battery",      icon: "📷" },
+                  { n: "5", t: "Price Range",      d: "System generates recommended price band (read-only)",                  icon: "💰" },
+                  { n: "6", t: "Admin Approval",   d: "Admin reviews and approves the final price",                          icon: "✅" },
                 ].map(s => (
                   <div className="ep-s01-step" key={s.n}>
                     <div className="ep-s01-step-icon">{s.icon}</div>
@@ -431,6 +504,7 @@ export default function ExchangeProgram() {
 
             <div className="ep-form-card">
               <div className="ep-field-grid">
+
                 <div className="ep-field">
                   <label>Full Name <span className="req">*</span></label>
                   <input
@@ -467,14 +541,15 @@ export default function ExchangeProgram() {
                   />
                   {errors.city && <span className="ep-err">{errors.city}</span>}
                 </div>
+
               </div>
             </div>
 
             <div className="ep-screen-nav">
               <button className="ep-btn-ghost" onClick={() => goTo("S01")}>← Back</button>
-              <button className="ep-btn-primary" onClick={() => {
-                if (validateCustomer()) goTo("S03");
-              }}>Next: Vehicle Details →</button>
+              <button className="ep-btn-primary" onClick={() => { if (validateCustomer()) goTo("S03"); }}>
+                Next: Vehicle Details →
+              </button>
             </div>
           </div>
         )}
@@ -492,6 +567,7 @@ export default function ExchangeProgram() {
 
             <div className="ep-form-card">
               <div className="ep-field-grid">
+
                 <div className="ep-field">
                   <label>Vehicle Model <span className="req">*</span></label>
                   <select
@@ -521,7 +597,7 @@ export default function ExchangeProgram() {
                   <label>Year of Purchase <span className="req">*</span></label>
                   <input
                     type="number"
-                    placeholder={`e.g. 2022`}
+                    placeholder="e.g. 2022"
                     min={2018}
                     max={new Date().getFullYear()}
                     value={vehicle.yearOfPurchase}
@@ -544,6 +620,7 @@ export default function ExchangeProgram() {
                   />
                   {errors.kmDriven && <span className="ep-err">{errors.kmDriven}</span>}
                 </div>
+
               </div>
             </div>
 
@@ -612,12 +689,20 @@ export default function ExchangeProgram() {
               <p>Inspection complete for <strong>{vehicle.vehicleModel}</strong></p>
             </div>
 
-            <div className="ep-grade-card" style={{
-              border: `2px solid ${GRADE_CONFIG[gradeResult.grade as keyof typeof GRADE_CONFIG]?.border ?? "#e5e7eb"}`,
-              background: GRADE_CONFIG[gradeResult.grade as keyof typeof GRADE_CONFIG]?.bg ?? "#fff",
-            }}>
-              <div className="ep-grade-score">{gradeResult.totalScore.toFixed(1)}<span>/10</span></div>
-              <div className="ep-grade-label" style={{ color: GRADE_CONFIG[gradeResult.grade as keyof typeof GRADE_CONFIG]?.color ?? "#374151" }}>
+            <div
+              className="ep-grade-card"
+              style={{
+                border:     `2px solid ${GRADE_CONFIG[gradeResult.grade as keyof typeof GRADE_CONFIG]?.border ?? "#e5e7eb"}`,
+                background: GRADE_CONFIG[gradeResult.grade as keyof typeof GRADE_CONFIG]?.bg ?? "#fff",
+              }}
+            >
+              <div className="ep-grade-score">
+                {gradeResult.totalScore.toFixed(1)}<span>/10</span>
+              </div>
+              <div
+                className="ep-grade-label"
+                style={{ color: GRADE_CONFIG[gradeResult.grade as keyof typeof GRADE_CONFIG]?.color ?? "#374151" }}
+              >
                 {gradeResult.grade}
               </div>
               <div className="ep-grade-desc">
@@ -629,7 +714,7 @@ export default function ExchangeProgram() {
 
             <div className="ep-scores-breakdown">
               {inspParams.map(p => {
-                const avg = p.parameters.reduce((s, param) => s + (scores[p.category]?.[param] ?? 5), 0) / (p.parameters.length || 1);
+                const avg   = p.parameters.reduce((s, param) => s + (scores[p.category]?.[param] ?? 5), 0) / (p.parameters.length || 1);
                 const color = avg >= 8 ? "#16a34a" : avg >= 5 ? "#d97706" : "#dc2626";
                 return (
                   <div className="ep-breakdown-row" key={p.category}>
@@ -690,10 +775,18 @@ export default function ExchangeProgram() {
                     ) : (
                       <div className="ep-upload-placeholder">
                         <span className="ep-upload-icon">{IMAGE_ICONS[type]}</span>
-                        {isUp
-                          ? <><span className="ep-spinner" /><span>Uploading…</span></>
-                          : <><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg><span>Tap to upload</span></>
-                        }
+                        {isUp ? (
+                          <><span className="ep-spinner" /><span>Uploading…</span></>
+                        ) : (
+                          <>
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                              <polyline points="16 16 12 12 8 16"/>
+                              <line x1="12" y1="12" x2="12" y2="21"/>
+                              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+                            </svg>
+                            <span>Tap to upload</span>
+                          </>
+                        )}
                       </div>
                     )}
                     <div className="ep-upload-label">
@@ -701,7 +794,9 @@ export default function ExchangeProgram() {
                     </div>
                     <input
                       ref={el => { if (el) fileRefs.current[type] = el; }}
-                      type="file" accept="image/*" capture="environment"
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
                       style={{ display: "none" }}
                       onChange={e => {
                         const f = e.target.files?.[0];
@@ -740,7 +835,9 @@ export default function ExchangeProgram() {
                   </div>
                 ))}
               </div>
-              <p className="ep-error-note">All 6 photos (Front, Rear, Left Side, Right Side, Odometer, Battery) must be clear and well-lit.</p>
+              <p className="ep-error-note">
+                All 6 photos (Front, Rear, Left Side, Right Side, Odometer, Battery) must be clear and well-lit.
+              </p>
               <button className="ep-btn-primary ep-btn-large" onClick={() => goTo("S06")}>
                 ← Go Back & Upload Missing Photos
               </button>
@@ -749,7 +846,7 @@ export default function ExchangeProgram() {
         )}
 
         {/* ══════════════════════════════
-            S08 — PRICE RANGE DISPLAY (READ-ONLY)
+            S08 — PRICE RANGE (READ-ONLY)
         ══════════════════════════════ */}
         {screen === "S08" && priceData && (
           <div className="ep-screen ep-s08">
@@ -823,30 +920,32 @@ export default function ExchangeProgram() {
             </div>
 
             <div className="ep-summary-grid">
+
               <div className="ep-summary-section">
                 <h4>👤 Customer Info</h4>
                 <div className="ep-summary-rows">
-                  <div><span>Name</span><strong>{customer.customerName}</strong></div>
-                  <div><span>Mobile</span><strong>{customer.mobileNumber}</strong></div>
-                  <div><span>City</span><strong>{customer.city}</strong></div>
+                  <div><span>Name</span>   <strong>{customer.customerName}</strong></div>
+                  <div><span>Mobile</span> <strong>{customer.mobileNumber}</strong></div>
+                  <div><span>City</span>   <strong>{customer.city}</strong></div>
                 </div>
               </div>
 
               <div className="ep-summary-section">
                 <h4>🛵 Vehicle Details</h4>
                 <div className="ep-summary-rows">
-                  <div><span>Model</span><strong>{vehicle.vehicleModel}</strong></div>
-                  <div><span>Reg. No.</span><strong>{vehicle.registrationNo}</strong></div>
-                  <div><span>Year</span><strong>{vehicle.yearOfPurchase}</strong></div>
-                  <div><span>KM Driven</span><strong>{parseInt(vehicle.kmDriven).toLocaleString("en-IN")} km</strong></div>
+                  <div><span>Model</span>     <strong>{vehicle.vehicleModel}</strong></div>
+                  <div><span>Reg. No.</span>  <strong>{vehicle.registrationNo}</strong></div>
+                  <div><span>Year</span>      <strong>{vehicle.yearOfPurchase}</strong></div>
+                  <div><span>KM Driven</span> <strong>{parseInt(vehicle.kmDriven).toLocaleString("en-IN")} km</strong></div>
                 </div>
               </div>
 
               <div className="ep-summary-section">
                 <h4>🔍 Inspection</h4>
                 <div className="ep-summary-rows">
-                  <div><span>Score</span><strong>{priceData.totalScore.toFixed(1)} / 10</strong></div>
-                  <div><span>Grade</span>
+                  <div><span>Score</span> <strong>{priceData.totalScore.toFixed(1)} / 10</strong></div>
+                  <div>
+                    <span>Grade</span>
                     <strong style={{ color: GRADE_CONFIG[priceData.grade as keyof typeof GRADE_CONFIG]?.color ?? "#374151" }}>
                       {priceData.grade}
                     </strong>
@@ -858,7 +957,8 @@ export default function ExchangeProgram() {
                 <h4>📷 Photos</h4>
                 <div className="ep-summary-rows">
                   {IMAGE_TYPES.map(t => (
-                    <div key={t}><span>{t} View</span>
+                    <div key={t}>
+                      <span>{t} View</span>
                       <strong style={{ color: images[t]?.uploaded ? "#16a34a" : "#dc2626" }}>
                         {images[t]?.uploaded ? "✓ Uploaded" : "✗ Missing"}
                       </strong>
@@ -870,11 +970,12 @@ export default function ExchangeProgram() {
               <div className="ep-summary-section ep-summary-price">
                 <h4>💰 System Price Range</h4>
                 <div className="ep-summary-rows">
-                  <div><span>Min</span><strong>{fmt(priceData.minPrice)}</strong></div>
-                  <div><span>Recommended</span><strong className="ep-price-highlight">{fmt(priceData.recommended)}</strong></div>
-                  <div><span>Max</span><strong>{fmt(priceData.maxPrice)}</strong></div>
+                  <div><span>Min</span>         <strong>{fmt(priceData.minPrice)}</strong></div>
+                  <div><span>Recommended</span> <strong className="ep-price-highlight">{fmt(priceData.recommended)}</strong></div>
+                  <div><span>Max</span>         <strong>{fmt(priceData.maxPrice)}</strong></div>
                 </div>
               </div>
+
             </div>
 
             <div className="ep-submit-confirm">
@@ -899,24 +1000,30 @@ export default function ExchangeProgram() {
             <div className="ep-success-card">
               <div className="ep-success-anim">
                 <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="40" cy="40" r="38" stroke="#16a34a" strokeWidth="3" strokeDasharray="240" strokeDashoffset="0" className="ep-circle-anim" />
-                  <polyline points="24,42 35,53 58,28" stroke="#16a34a" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" className="ep-check-anim" />
+                  <circle cx="40" cy="40" r="38" stroke="#16a34a" strokeWidth="3"
+                    strokeDasharray="240" strokeDashoffset="0" className="ep-circle-anim" />
+                  <polyline points="24,42 35,53 58,28" stroke="#16a34a" strokeWidth="4"
+                    strokeLinecap="round" strokeLinejoin="round" className="ep-check-anim" />
                 </svg>
               </div>
               <h2>Case Submitted!</h2>
               <p className="ep-success-case">Case ID: <strong>{caseNumber}</strong></p>
               <p>Status: <span className="ep-status-pending">⏳ Pending Admin Review</span></p>
-              <p className="ep-success-msg">Your exchange case has been submitted successfully. BGauss Admin will review the inspection data, photos, and system price range and notify you of the decision.</p>
+              <p className="ep-success-msg">
+                Your exchange case has been submitted successfully. BGauss Admin will review the inspection data,
+                photos, and system price range and notify you of the decision.
+              </p>
 
               <div className="ep-success-info">
-                <div><span>Customer</span><strong>{customer.customerName}</strong></div>
-                <div><span>Vehicle</span><strong>{vehicle.vehicleModel} · {vehicle.registrationNo}</strong></div>
-                {priceData && <div><span>Price Range</span><strong>{fmt(priceData.minPrice)} – {fmt(priceData.maxPrice)}</strong></div>}
+                <div><span>Customer</span> <strong>{customer.customerName}</strong></div>
+                <div><span>Vehicle</span>  <strong>{vehicle.vehicleModel} · {vehicle.registrationNo}</strong></div>
+                {priceData && (
+                  <div><span>Price Range</span> <strong>{fmt(priceData.minPrice)} – {fmt(priceData.maxPrice)}</strong></div>
+                )}
               </div>
 
               <div className="ep-s10-actions">
                 <button className="ep-btn-ghost" onClick={() => {
-                  // Reset all state for new case
                   setScreen("S01");
                   setCaseId(null); setCaseNumber("");
                   setCustomer({ customerName: "", mobileNumber: "", city: "" });

@@ -87,6 +87,7 @@ namespace BGaussCRM.API.Controllers
                 .Include(x => x.TotalScore)
                 .Include(x => x.ExchangeCaseImages)
                 .Include(x => x.ExchangeAdminActions)
+                .Include(x => x.ExchangeInspectionScores)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (c == null) return NotFound();
@@ -144,6 +145,7 @@ namespace BGaussCRM.API.Controllers
 
             // Replace all scores
             _db.ExchangeInspectionScores.RemoveRange(c.ExchangeInspectionScores);
+            await _db.SaveChangesAsync(); 
             foreach (var s in scores)
             {
                 _db.ExchangeInspectionScores.Add(new ExchangeInspectionScore
