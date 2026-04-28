@@ -99,8 +99,10 @@ export default function NewVehicleDetails() {
         );
         setVariants(res.data);
         setSelectedVariant(res.data.length > 0 ? res.data[0].id : null);
-      } catch (err) {
-        if ((err as any)?.name !== "CanceledError") setError("Failed to load vehicle variants.");
+      } catch (err: unknown) {
+        if (!axios.isCancel(err)) {
+          setError("Failed to load vehicle variants.");
+        }
       } finally {
         setLoading(false);
       }
