@@ -606,6 +606,13 @@ export default function Dashboard() {
             )}
             <button
               className="s01-primary-btn"
+              style={{ background: "linear-gradient(135deg, #16a34a, #14532d)" }}
+              onClick={() => navigate("/exchange")}
+            >
+              🔄 Exchange / Buyback
+            </button>
+            <button
+              className="s01-primary-btn"
               onClick={() => navigate("/vehicle-entry")}
             >
               + New Vehicle Entry

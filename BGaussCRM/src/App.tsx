@@ -2,7 +2,8 @@
 // FILE: src/App.tsx
 // Added: SplashScreen shown once on first load
 // ─────────────────────────────────────────────
-import { useState, useEffect } from "react";
+//import { useState, useEffect } from "react";
+import { useState} from "react";
 import { Routes, Route } from "react-router-dom";
 import SplashScreen from "./SplashScreen";
 import LoginPage from "./LoginPage";
@@ -26,6 +27,7 @@ import ComparisonList   from "./ComparisonList";
 import ComparisonDetail from "./ComparisonDetail";
 import ComparisonManage from "./ComparisonManage";
 import { Navigate, useLocation } from "react-router-dom";
+import ExchangeProgram from "./ExchangeProgram"
 
 /* ── Auth guards ──────────────────────────── */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -48,14 +50,18 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 /* ── App ───────────────────────────────────── */
 function App() {
   // Show splash on first load. Once dismissed → never again in session.
-  const [showSplash, setShowSplash] = useState(true);
+  // const [showSplash, setShowSplash] = useState(true);
+
+  const [showSplash, setShowSplash] = useState(() => {
+     return !sessionStorage.getItem("splashSeen");
+});
 
   // Optional: skip splash if user is navigating back (already saw it)
-  useEffect(() => {
-    const seen = sessionStorage.getItem("splashSeen");
-    if (seen) setShowSplash(false);
-  }, []);
-
+  // useEffect(() => {
+  //   const seen = sessionStorage.getItem("splashSeen");
+  //   if (seen) setShowSplash(false);
+  // }, []);
+  
   const handleSplashDone = () => {
     sessionStorage.setItem("splashSeen", "1");
     setShowSplash(false);
@@ -132,7 +138,8 @@ function App() {
         <Route path="/comparison"           element={<ComparisonList />} />
         <Route path="/comparison/:id1/:id2/:id3?" element={<ComparisonDetail />} />
         <Route path="/comparison/manage"    element={<ComparisonManage />} />
-
+        <Route path="/exchange" element={
+          <ProtectedRoute><ExchangeProgram /></ProtectedRoute>} />
       </Routes>
     </>
   );
