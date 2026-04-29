@@ -26,6 +26,7 @@ import ComparisonDetail from "./ComparisonDetail";
 import ComparisonManage from "./ComparisonManage";
 import { Navigate, useLocation } from "react-router-dom";
 import ExchangeProgram from "./ExchangeProgram"
+import ExchangeAdminPanel from "./ExchangeAdminPanel";
 
 /* ── Auth guards ──────────────────────────── */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -116,6 +117,10 @@ function App() {
 
         <Route path="/sales" element={
           <AdminRoute><Salespage /></AdminRoute>
+        } />
+
+        <Route path="/exchange-admin" element={
+          <ProtectedRoute><ExchangeAdminPanel /></ProtectedRoute>
         } />
 
         {/* GENERAL */}
