@@ -601,6 +601,14 @@ export default function Dashboard() {
 
           {/* RIGHT SIDE — all actions grouped */}
           <div className="dash-title-actions">
+            {role === "admin" && (
+              <button 
+              className="s01-primary-btn"
+              style={{ background: "linear-gradient(135deg, #16a34a, #14532d)" }}
+              onClick={() => navigate("/exchange-admin")}>
+                🛡 Exchange Admin Panel
+              </button>
+            )}
             {activeLocation && (
               <button className="dash-clear-pin-btn" onClick={clearLocation}>✕ Clear location</button>
             )}

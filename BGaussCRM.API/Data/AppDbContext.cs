@@ -34,6 +34,8 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ExchangeInspectionScore> ExchangeInspectionScores { get; set; }
 
+    public virtual DbSet<ExchangeNotificationLog> ExchangeNotificationLogs { get; set; }
+
     public virtual DbSet<PriceMaster> PriceMasters { get; set; }
 
     public virtual DbSet<RoadPrice> RoadPrices { get; set; }
@@ -59,6 +61,8 @@ public partial class AppDbContext : DbContext
     public virtual DbSet<VehicleVariant> VehicleVariants { get; set; }
 
     public virtual DbSet<VwAreaStockSummary> VwAreaStockSummaries { get; set; }
+
+    public virtual DbSet<VwExchangeDashboardStat> VwExchangeDashboardStats { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -246,6 +250,8 @@ public partial class AppDbContext : DbContext
 
             entity.HasIndex(e => e.Status, "IX_ExchangeCases_Status");
 
+            entity.HasIndex(e => new { e.Status, e.SubmittedAt }, "IX_ExchangeCases_Status_Submitted").IsDescending(false, true);
+
             entity.HasIndex(e => e.CaseNumber, "UQ__Exchange__103BB8D86D78C9D1").IsUnique();
 
             entity.Property(e => e.AdminNote).HasMaxLength(500);
@@ -297,6 +303,26 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Case).WithMany(p => p.ExchangeInspectionScores)
                 .HasForeignKey(d => d.CaseId)
                 .HasConstraintName("FK__ExchangeI__CaseI__58D1301D");
+        });
+
+        modelBuilder.Entity<ExchangeNotificationLog>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC0789F151A4");
+
+            entity.ToTable("ExchangeNotificationLog");
+
+            entity.HasIndex(e => e.CaseId, "IX_NotificationLog_CaseId");
+
+            entity.HasIndex(e => new { e.DealerId, e.IsRead }, "IX_NotificationLog_DealerId");
+
+            entity.Property(e => e.ActionType).HasMaxLength(30);
+            entity.Property(e => e.DealerId).HasMaxLength(100);
+            entity.Property(e => e.Message).HasMaxLength(500);
+            entity.Property(e => e.SentAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Case).WithMany(p => p.ExchangeNotificationLogs)
+                .HasForeignKey(d => d.CaseId)
+                .HasConstraintName("FK__ExchangeN__CaseI__65370702");
         });
 
         modelBuilder.Entity<PriceMaster>(entity =>
@@ -559,6 +585,13 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.StateName).HasMaxLength(100);
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
             entity.Property(e => e.VariantName).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<VwExchangeDashboardStat>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_ExchangeDashboardStats");
         });
 
         OnModelCreatingPartial(modelBuilder);

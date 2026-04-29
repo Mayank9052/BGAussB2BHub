@@ -54,4 +54,6 @@ public partial class ExchangeCase
     public virtual ICollection<ExchangeCaseImage> ExchangeCaseImages { get; set; } = new List<ExchangeCaseImage>();
 
     public virtual ICollection<ExchangeInspectionScore> ExchangeInspectionScores { get; set; } = new List<ExchangeInspectionScore>();
+
+    public virtual ICollection<ExchangeNotificationLog> ExchangeNotificationLogs { get; set; } = new List<ExchangeNotificationLog>();
 }

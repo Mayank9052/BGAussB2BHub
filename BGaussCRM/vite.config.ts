@@ -16,13 +16,17 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-
-      // ✅ ADD THIS BLOCK (VERY IMPORTANT)
       '/ScootyInventoryImage': {
         target: 'http://localhost:5181',
         changeOrigin: true,
         secure: false,
-      }
+      },
+      // ✅ ADD THIS — fixes ExchangeImages not loading
+      '/ExchangeImages': {
+        target: 'http://localhost:5181',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });

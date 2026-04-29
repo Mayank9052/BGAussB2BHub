@@ -71,7 +71,7 @@ const SECTION_LABELS = ["Login", "Vehicle Entry", "Inspection & Scoring", "Image
 export default function ExchangeProgram() {
   const navigate = useNavigate();
   const username = localStorage.getItem("username") ?? "Dealer";
-  const role     = localStorage.getItem("role") ?? "";
+  //const role     = localStorage.getItem("role") ?? "";
   const initials = username.slice(0, 2).toUpperCase();
 
   // ── State ──────────────────────────────────────────────────
