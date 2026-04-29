@@ -465,7 +465,7 @@ export default function Dashboard() {
               </svg>
             </button>
             {role === "admin" && (
-              <button className="dash-icon-btn dash-btn-modules"
+              <button className="dash-icon-btn dash-btn-modules" 
                 onClick={() => navigate("/modules")}
                 aria-label="Modules" data-tip="Modules">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -610,12 +610,6 @@ export default function Dashboard() {
               onClick={() => navigate("/exchange")}
             >
               🔄 Exchange / Buyback
-            </button>
-            <button
-              className="s01-primary-btn"
-              onClick={() => navigate("/vehicle-entry")}
-            >
-              + New Vehicle Entry
             </button>
             <button className="dash-add-btn" onClick={openSheet} title="Add Item">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
