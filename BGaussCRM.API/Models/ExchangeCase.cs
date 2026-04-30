@@ -49,6 +49,8 @@ public partial class ExchangeCase
 
     public DateTime? AdminActionAt { get; set; }
 
+    public string? VehicleVariant { get; set; }
+
     public virtual ICollection<ExchangeAdminAction> ExchangeAdminActions { get; set; } = new List<ExchangeAdminAction>();
 
     public virtual ICollection<ExchangeCaseImage> ExchangeCaseImages { get; set; } = new List<ExchangeCaseImage>();

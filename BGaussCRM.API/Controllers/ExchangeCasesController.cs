@@ -163,6 +163,7 @@ namespace BGaussCRM.API.Controllers
                 MobileNumber   = dto.MobileNumber,
                 City           = dto.City,
                 VehicleModel   = dto.VehicleModel,
+                VehicleVariant = dto.VehicleVariant,   // ← ADD THIS LINE
                 RegistrationNo = dto.RegistrationNo,
                 YearOfPurchase = dto.YearOfPurchase,
                 KmDriven       = dto.KmDriven,
@@ -303,8 +304,62 @@ namespace BGaussCRM.API.Controllers
             return Ok(new { imageType, path = relPath });
         }
 
-        // ── POST /api/ExchangeCases/{id}/generate-price ──────
-        // S08: System generates price range (read-only for dealer)
+        // // ── POST /api/ExchangeCases/{id}/generate-price ──────
+        // // S08: System generates price range (read-only for dealer)
+        // [HttpPost("{id}/generate-price")]
+        // public async Task<IActionResult> GeneratePrice(int id)
+        // {
+        //     var c = await _db.ExchangeCases
+        //         .Include(x => x.ExchangeCaseImages)
+        //         .Include(x => x.ExchangeInspectionScores)
+        //         .FirstOrDefaultAsync(x => x.Id == id);
+
+        //     if (c == null) return NotFound();
+        //     if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
+
+        //     // Validate all 6 images uploaded
+        //     var required = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
+        //     var uploaded  = c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet();
+        //     var missing   = required.Except(uploaded).ToList();
+        //     if (missing.Any())
+        //         return BadRequest(new { error = "ImagesMissing", missing });
+
+        //     // Validate scores exist
+        //     if (!c.ExchangeInspectionScores.Any())
+        //         return BadRequest(new { error = "ScoresMissing" });
+
+        //     // ── Price generation algorithm ──────────────────────────────
+        //     var age          = DateTime.UtcNow.Year - c.YearOfPurchase;
+        //     var score        = c.TotalScore ?? 5m;
+        //     var baseValue    = GetBaseValue(c.VehicleModel);
+        //     var depreciation = Math.Min(0.60m, age * 0.12m + c.KmDriven / 100000m * 0.08m);
+        //     var scoreFactor  = 0.70m + (score / 10m) * 0.30m;
+
+        //     var recommended = Math.Round(baseValue * (1 - depreciation) * scoreFactor / 1000) * 1000;
+        //     var minPrice    = Math.Round(recommended * 0.90m / 1000) * 1000;
+        //     var maxPrice    = Math.Round(recommended * 1.08m / 1000) * 1000;
+
+        //     c.RecommendedPrice = recommended;
+        //     c.MinPrice         = minPrice;
+        //     c.MaxPrice         = maxPrice;
+        //     c.Status           = "ImagesPending";
+        //     c.UpdatedAt        = DateTime.UtcNow;
+
+        //     await _db.SaveChangesAsync();
+        //     return Ok(new
+        //     {
+        //         recommended,
+        //         minPrice,
+        //         maxPrice,
+        //         grade      = c.Grade,
+        //         totalScore = c.TotalScore
+        //     });
+        // }
+
+        // ── POST /api/ExchangeCases/{id}/generate-price ──────────────
+        // DB-driven pricing engine using slabs from ExchangeModelBasePrices,
+        // ExchangeKmSlabs, ExchangeConditionSlabs, ExchangeBatterySlabs,
+        // ExchangePricingConfig
         [HttpPost("{id}/generate-price")]
         public async Task<IActionResult> GeneratePrice(int id)
         {
@@ -316,42 +371,152 @@ namespace BGaussCRM.API.Controllers
             if (c == null) return NotFound();
             if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
 
-            // Validate all 6 images uploaded
+            // ── Validate 6 images ───────────────────────────────────
             var required = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
-            var uploaded  = c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet();
-            var missing   = required.Except(uploaded).ToList();
+            var uploaded = c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet();
+            var missing  = required.Except(uploaded).ToList();
             if (missing.Any())
                 return BadRequest(new { error = "ImagesMissing", missing });
 
-            // Validate scores exist
             if (!c.ExchangeInspectionScores.Any())
                 return BadRequest(new { error = "ScoresMissing" });
 
-            // ── Price generation algorithm ──────────────────────────────
-            var age          = DateTime.UtcNow.Year - c.YearOfPurchase;
-            var score        = c.TotalScore ?? 5m;
-            var baseValue    = GetBaseValue(c.VehicleModel);
-            var depreciation = Math.Min(0.60m, age * 0.12m + c.KmDriven / 100000m * 0.08m);
-            var scoreFactor  = 0.70m + (score / 10m) * 0.30m;
+            // ── 1. Resolve DB model name from stored VehicleModel ───
+            // Map "BG RUV 350" → "RUV350", "BG MAX C12" → "C12i" etc.
+            var modelUpper = (c.VehicleModel ?? "").ToUpper();
+            string dbModel = modelUpper.Contains("RUV")  ? "RUV350"
+                        : modelUpper.Contains("C12")  ? "C12i"
+                        : modelUpper.Contains("OOWAH")? "OOWAH"
+                        : "C12i"; // safe fallback
 
-            var recommended = Math.Round(baseValue * (1 - depreciation) * scoreFactor / 1000) * 1000;
-            var minPrice    = Math.Round(recommended * 0.90m / 1000) * 1000;
-            var maxPrice    = Math.Round(recommended * 1.08m / 1000) * 1000;
+            // ── 2. Use VehicleVariant directly (stored from S03) ────
+            // Falls back to string-parsing only if variant not stored
+            string dbVariant = !string.IsNullOrWhiteSpace(c.VehicleVariant)
+                ? c.VehicleVariant   // e.g. "Max 2.0" — exact match to DB table
+                : modelUpper.Contains("MAX 3") ? "Max 3.0"
+                : modelUpper.Contains("MAX 2") ? "Max 2.0"
+                : modelUpper.Contains("MAX")   ? "Max"
+                : "Ex";
 
-            c.RecommendedPrice = recommended;
+            var year = c.YearOfPurchase;
+
+            // ── 3. Fetch base price ──────────────────────────────────
+            var basePriceRow = await _db.ExchangeModelBasePrices
+                .Where(p => p.ModelName == dbModel && p.VariantName == dbVariant)
+                .OrderBy(p => Math.Abs(p.Year - year))
+                .FirstOrDefaultAsync();
+
+            if (basePriceRow == null)
+                return BadRequest(new
+                {
+                    error = $"No base price found for model '{dbModel}', variant '{dbVariant}', year {year}. " +
+                            $"Please check ExchangeModelBasePrices table."
+                });
+
+            var basePrice  = basePriceRow.BasePrice;
+            var scrapValue = basePriceRow.ScrapValue;
+
+            // ── 4. KM deduction ─────────────────────────────────────
+            var km = c.KmDriven;
+            var kmSlab = await _db.ExchangeKmSlabs
+                .Where(s => s.KmFrom <= km && (s.KmTo == null || s.KmTo >= km))
+                .FirstOrDefaultAsync();
+            var kmDeduction = kmSlab?.Deduction ?? 0;
+
+            // ── 5. Condition score (excluding Battery category) ─────
+            var allScores = c.ExchangeInspectionScores.ToList();
+
+            var conditionScore = (decimal)(allScores
+                .Where(s => s.Category != "Battery")
+                .Select(s => (double)s.Score)
+                .DefaultIfEmpty(5)
+                .Average());
+
+            var condSlab = await _db.ExchangeConditionSlabs
+                .Where(s => s.ScoreFrom <= conditionScore && s.ScoreTo >= conditionScore)
+                .FirstOrDefaultAsync();
+            var conditionAdjustment = condSlab?.Adjustment ?? 0;
+
+            // ── 6. Battery score adjustment ──────────────────────────
+            var batteryScore = (decimal)(allScores
+                .Where(s => s.Category == "Battery")
+                .Select(s => (double)s.Score)
+                .DefaultIfEmpty(5)
+                .Average());
+
+            var batSlab = await _db.ExchangeBatterySlabs
+                .Where(s => s.ScoreFrom <= batteryScore && s.ScoreTo >= batteryScore)
+                .FirstOrDefaultAsync();
+            var batteryAdjustment = batSlab?.Adjustment ?? 0;
+
+            // ── 7. Config values ─────────────────────────────────────
+            var configs = await _db.ExchangePricingConfigs.ToListAsync();
+            decimal GetConfig(string key, decimal def) =>
+                configs.FirstOrDefault(cfg => cfg.ConfigKey == key)?.ConfigValue ?? def;
+
+            var margin        = GetConfig("Margin",            5000m);
+            var rangeLowerPct = GetConfig("RangeLowerPct",      0.90m);
+            var rangeUpperPct = GetConfig("RangeUpperPct",      1.10m);
+            var refurbishment = GetConfig("RefurbishmentCost",  300m);
+
+            // ── 8. Final price formula ───────────────────────────────
+            var rawPrice = basePrice
+                        - kmDeduction
+                        + conditionAdjustment
+                        + batteryAdjustment
+                        - margin
+                        - refurbishment;
+
+            var finalPrice = Math.Max(rawPrice, scrapValue);   // floor = scrap value
+            finalPrice     = Math.Min(finalPrice, basePrice);  // ceiling = base price
+            finalPrice     = Math.Round(finalPrice / 100) * 100;
+
+            var minPrice = Math.Round(finalPrice * rangeLowerPct / 100) * 100;
+            var maxPrice = Math.Round(finalPrice * rangeUpperPct / 100) * 100;
+
+            // ── 9. Grade ─────────────────────────────────────────────
+            var totalScore = c.TotalScore ?? 5m;
+            var grade = totalScore >= 8 ? "Excellent"
+                    : totalScore >= 5 ? "Good"
+                    : "Average";
+
+            // ── 10. Persist ──────────────────────────────────────────
+            c.RecommendedPrice = finalPrice;
             c.MinPrice         = minPrice;
             c.MaxPrice         = maxPrice;
+            c.Grade            = grade;
             c.Status           = "ImagesPending";
             c.UpdatedAt        = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Priced case {CaseId}: model={Model} variant={Variant} year={Year} " +
+                "base={Base} kmDed={KM} cond={Cond} bat={Bat} margin={Margin} refurb={Refurb} " +
+                "→ final={Final} [{Min}–{Max}]",
+                id, dbModel, dbVariant, year,
+                basePrice, kmDeduction, conditionAdjustment,
+                batteryAdjustment, margin, refurbishment,
+                finalPrice, minPrice, maxPrice);
+
             return Ok(new
             {
-                recommended,
+                recommended = finalPrice,
                 minPrice,
                 maxPrice,
-                grade      = c.Grade,
-                totalScore = c.TotalScore
+                grade,
+                totalScore  = c.TotalScore,
+                breakdown   = new
+                {
+                    basePrice,
+                    kmDeduction,
+                    conditionAdjustment,
+                    batteryAdjustment,
+                    margin,
+                    refurbishment,
+                    scrapValue,
+                    rawPrice,
+                }
             });
         }
 

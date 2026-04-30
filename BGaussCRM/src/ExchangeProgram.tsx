@@ -1,7 +1,19 @@
 // ═══════════════════════════════════════════════════════════════
 // FILE: src/ExchangeProgram.tsx
 // BGauss Certified Exchange & Buyback Program — S01 to S10
-// ═══════════════════════════════════════════════════════════════
+//
+// ── CHANGES FROM PREVIOUS VERSION ────────────────────────────
+//   1. VehicleDetails interface: added vehicleVariant field
+//   2. Added VARIANT_MAP constant — model → available variants
+//   3. variants state replaces old static list
+//   4. handleModelChange() — resets variant when model changes,
+//      populates variant dropdown from VARIANT_MAP
+//   5. validateVehicle() — now validates vehicleVariant too
+//   6. handleStartCase() — sends vehicleVariant in POST body
+//   7. S03 form — added Variant dropdown after Model dropdown
+//   8. S09 summary — shows Variant in Vehicle Details section
+//   9. Reset on S10 "Start Another Case" — clears vehicleVariant
+// ════════════════════════════════════════════════════════════
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -20,6 +32,7 @@ interface CustomerInfo {
 
 interface VehicleDetails {
   vehicleModel: string;
+  vehicleVariant: string;   // ← NEW
   registrationNo: string;
   yearOfPurchase: string;
   kmDriven: string;
@@ -49,6 +62,17 @@ const GRADE_CONFIG = {
   Average:   { color: "#dc2626", bg: "#fee2e2", border: "#fca5a5" },
 };
 
+// ── Variant map — keyed by model name from DB ─────────────────
+// Keys must match exactly what the API returns for modelName
+const VARIANT_MAP: Record<string, string[]> = {
+  "BG RUV 350": ["Ex", "Max"],
+  "BG MAX C12": ["Ex", "Max", "Max 2.0", "Max 3.0"],
+  "BG OoWah":   ["Ex", "Max"],
+  // Fallback keys in case DB returns slightly different casing
+  "BG OOWAH":   ["Ex", "Max"],
+  "BG MAX C12I":["Ex", "Max", "Max 2.0", "Max 3.0"],
+};
+
 // ── Step indicator data ────────────────────────────────────────
 const SECTIONS = [
   { id: "S01", label: "Home",       section: 0 },
@@ -71,7 +95,6 @@ const SECTION_LABELS = ["Login", "Vehicle Entry", "Inspection & Scoring", "Image
 export default function ExchangeProgram() {
   const navigate = useNavigate();
   const username = localStorage.getItem("username") ?? "Dealer";
-  //const role     = localStorage.getItem("role") ?? "";
   const initials = username.slice(0, 2).toUpperCase();
 
   // ── State ──────────────────────────────────────────────────
@@ -79,8 +102,17 @@ export default function ExchangeProgram() {
   const [caseId, setCaseId]               = useState<number | null>(null);
   const [caseNumber, setCaseNumber]       = useState("");
 
-  const [customer, setCustomer]           = useState<CustomerInfo>({ customerName: "", mobileNumber: "", city: "" });
-  const [vehicle, setVehicle]             = useState<VehicleDetails>({ vehicleModel: "", registrationNo: "", yearOfPurchase: "", kmDriven: "" });
+  const [customer, setCustomer]           = useState<CustomerInfo>({
+    customerName: "", mobileNumber: "", city: "",
+  });
+
+  // vehicleVariant added to initial state
+  const [vehicle, setVehicle]             = useState<VehicleDetails>({
+    vehicleModel: "", vehicleVariant: "", registrationNo: "", yearOfPurchase: "", kmDriven: "",
+  });
+
+  // Variants available for the currently selected model
+  const [variants, setVariants]           = useState<string[]>([]);
 
   const [inspParams, setInspParams]       = useState<InspectionParam[]>([]);
   const [scores, setScores]               = useState<Record<string, Record<string, number>>>({});
@@ -91,7 +123,10 @@ export default function ExchangeProgram() {
   const [uploading, setUploading]         = useState<Partial<Record<ImageType, boolean>>>({});
   const [missingImages, setMissingImages] = useState<string[]>([]);
 
-  const [priceData, setPriceData]         = useState<{ recommended: number; minPrice: number; maxPrice: number; grade: string; totalScore: number } | null>(null);
+  const [priceData, setPriceData]         = useState<{
+    recommended: number; minPrice: number; maxPrice: number;
+    grade: string; totalScore: number;
+  } | null>(null);
 
   const [loading, setLoading]             = useState(false);
   const [errors, setErrors]               = useState<Record<string, string>>({});
@@ -134,6 +169,19 @@ export default function ExchangeProgram() {
       .catch(() => setModels(["BG RUV 350", "BG MAX C12", "BG OoWah"]));
   }, []);
 
+  // ── Model change handler — resets variant, loads variant list ─
+  const handleModelChange = (modelName: string) => {
+    setVehicle(p => ({ ...p, vehicleModel: modelName, vehicleVariant: "" }));
+
+    // Look up by exact name first, then try uppercase fallback
+    const variantList =
+      VARIANT_MAP[modelName] ??
+      VARIANT_MAP[modelName.toUpperCase()] ??
+      ["Ex", "Max"];  // safe default if model not in map
+
+    setVariants(variantList);
+  };
+
   // ── Validation helpers ─────────────────────────────────────
   const validateCustomer = () => {
     const e: Record<string, string> = {};
@@ -146,12 +194,15 @@ export default function ExchangeProgram() {
 
   const validateVehicle = () => {
     const e: Record<string, string> = {};
-    if (!vehicle.vehicleModel.trim()) e.vehicleModel = "Select a vehicle model";
+    if (!vehicle.vehicleModel.trim())   e.vehicleModel   = "Select a vehicle model";
+    if (!vehicle.vehicleVariant.trim()) e.vehicleVariant = "Select a variant";
     if (!vehicle.registrationNo.trim()) e.registrationNo = "Registration number is required";
     const yr = parseInt(vehicle.yearOfPurchase);
-    if (!yr || yr < 2018 || yr > new Date().getFullYear()) e.yearOfPurchase = "Enter a valid year (2018–present)";
+    if (!yr || yr < 2018 || yr > new Date().getFullYear())
+      e.yearOfPurchase = "Enter a valid year (2018–present)";
     const km = parseInt(vehicle.kmDriven);
-    if (!km || km < 0 || km > 200000) e.kmDriven = "Enter KM driven (0–2,00,000)";
+    if (isNaN(km) || km < 0 || km > 200000)
+      e.kmDriven = "Enter KM driven (0–2,00,000)";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -162,12 +213,17 @@ export default function ExchangeProgram() {
     setLoading(true);
     setGlobalError("");
     try {
-      const res = await axios.post<{ id: number; caseNumber: string }>("api/ExchangeCases/start", {
-        ...customer,
-        ...vehicle,
-        yearOfPurchase: parseInt(vehicle.yearOfPurchase),
-        kmDriven:       parseInt(vehicle.kmDriven),
-      });
+      const res = await axios.post<{ id: number; caseNumber: string }>(
+        "api/ExchangeCases/start",
+        {
+          ...customer,
+          vehicleModel:   vehicle.vehicleModel,
+          vehicleVariant: vehicle.vehicleVariant,   // ← sent to backend
+          registrationNo: vehicle.registrationNo,
+          yearOfPurchase: parseInt(vehicle.yearOfPurchase),
+          kmDriven:       parseInt(vehicle.kmDriven),
+        }
+      );
       setCaseId(res.data.id);
       setCaseNumber(res.data.caseNumber);
       goTo("S04");
@@ -252,9 +308,10 @@ export default function ExchangeProgram() {
     setLoading(true);
     setGlobalError("");
     try {
-      const res = await axios.post<{ recommended: number; minPrice: number; maxPrice: number; grade: string; totalScore: number }>(
-        `api/ExchangeCases/${caseId}/generate-price`
-      );
+      const res = await axios.post<{
+        recommended: number; minPrice: number; maxPrice: number;
+        grade: string; totalScore: number;
+      }>(`api/ExchangeCases/${caseId}/generate-price`);
       setPriceData(res.data);
       goTo("S08");
     } catch (e: unknown) {
@@ -306,9 +363,8 @@ export default function ExchangeProgram() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ── Compute section progress ──────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────
   const sectionIndex = SECTIONS.find(s => s.id === screen)?.section ?? 0;
-
   const fmt = (n: number) => `₹ ${n.toLocaleString("en-IN")}`;
 
   // ── Score slider component ────────────────────────────────
@@ -344,68 +400,56 @@ export default function ExchangeProgram() {
           NAVBAR
       ════════════════════════════════ */}
       <header className="ep-navbar">
+        <div className="ep-nav-left">
+          <img src={logo} alt="BGauss" className="ep-nav-logo" />
+          <div className="ep-nav-brand">
+            <span className="ep-brand-name">BGauss Portal</span>
+            <span className="ep-brand-sub">Exchange & Buyback</span>
+          </div>
+        </div>
 
-          {/* Left — logo + brand */}
-          <div className="ep-nav-left">
-            <img src={logo} alt="BGauss" className="ep-nav-logo" />
-            <div className="ep-nav-brand">
-              <span className="ep-brand-name">BGauss Portal</span>
-              <span className="ep-brand-sub">Exchange & Buyback</span>
-            </div>
+        <div className="ep-nav-right">
+          {caseNumber && (
+            <span className="ep-case-pill">📋 {caseNumber}</span>
+          )}
+
+          <div className="vc-icon-group">
+            <Tooltip text="dashboard">
+              <button
+                className="vc-icon-btn btn-vc-modules"
+                title=""
+                onClick={() => navigate("/dashboard")}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3"  y="3"  width="7" height="7" rx="1" />
+                  <rect x="14" y="3"  width="7" height="7" rx="1" />
+                  <rect x="3"  y="14" width="7" height="7" rx="1" />
+                  <rect x="14" y="14" width="7" height="7" rx="1" />
+                </svg>
+              </button>
+            </Tooltip>
+
+            <Tooltip text="Logout">
+              <button
+                className="vc-icon-btn btn-vc-logout"
+                title=""
+                onClick={handleLogout}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            </Tooltip>
           </div>
 
-          {/* Right — case pill + icons + user */}
-          <div className="ep-nav-right">
-
-            {/* Case pill */}
-            {caseNumber && (
-              <span className="ep-case-pill">📋 {caseNumber}</span>
-            )}
-
-            {/* Icon buttons */}
-            <div className="vc-icon-group">
-
-              {/* Modules */}
-              <Tooltip text="dashboard">
-                <button
-                  className="vc-icon-btn btn-vc-modules"
-                  title=""
-                  onClick={() => navigate("/dashboard")}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="3"  y="3"  width="7" height="7" rx="1" />
-                    <rect x="14" y="3"  width="7" height="7" rx="1" />
-                    <rect x="3"  y="14" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                  </svg>
-                </button>
-              </Tooltip>
-
-              {/* Logout */}
-              <Tooltip text="Logout">
-                <button
-                  className="vc-icon-btn btn-vc-logout"
-                  title=""
-                  onClick={handleLogout}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
-                </button>
-              </Tooltip>
-
-            </div>
-
-            {/* User pill */}
-            <div className="ep-nav-user">
-              <div className="ep-avatar">{initials}</div>
-              <span className="ep-username">{username}</span>
-            </div>
-
+          <div className="ep-nav-user">
+            <div className="ep-avatar">{initials}</div>
+            <span className="ep-username">{username}</span>
           </div>
-        </header>
+        </div>
+      </header>
 
       {/* ════════════════════════════════
           PROGRESS BAR
@@ -457,7 +501,10 @@ export default function ExchangeProgram() {
             <div className="ep-s01-hero">
               <div className="ep-s01-badge">🔄 Certified Exchange Program</div>
               <h1>BGauss EV Exchange<br /><span>& Buyback</span></h1>
-              <p>Seamlessly evaluate and process used BGauss EVs for certified exchange or buyback. Complete inspection → price generation → admin approval in one flow.</p>
+              <p>
+                Seamlessly evaluate and process used BGauss EVs for certified exchange
+                or buyback. Complete inspection → price generation → admin approval in one flow.
+              </p>
               <button className="ep-btn-primary ep-btn-large" onClick={() => goTo("S02")}>
                 + Start New Exchange Case
               </button>
@@ -467,12 +514,12 @@ export default function ExchangeProgram() {
               <h3>How It Works</h3>
               <div className="ep-s01-steps">
                 {[
-                  { n: "1", t: "Customer Info",   d: "Enter customer details and contact info",                              icon: "👤" },
-                  { n: "2", t: "Vehicle Details",  d: "Log vehicle model, registration & KM driven",                         icon: "🛵" },
-                  { n: "3", t: "Inspection",       d: "Score battery, body, tyres, electricals & misc",                      icon: "🔍" },
-                  { n: "4", t: "Upload Photos",    d: "6 mandatory views: Front, Rear, Left, Right, Odometer, Battery",      icon: "📷" },
-                  { n: "5", t: "Price Range",      d: "System generates recommended price band (read-only)",                  icon: "💰" },
-                  { n: "6", t: "Admin Approval",   d: "Admin reviews and approves the final price",                          icon: "✅" },
+                  { n: "1", t: "Customer Info",  d: "Enter customer details and contact info",                         icon: "👤" },
+                  { n: "2", t: "Vehicle Details", d: "Log vehicle model, variant, registration & KM driven",           icon: "🛵" },
+                  { n: "3", t: "Inspection",      d: "Score battery, body, tyres, electricals & misc",                 icon: "🔍" },
+                  { n: "4", t: "Upload Photos",   d: "6 mandatory views: Front, Rear, Left, Right, Odometer, Battery", icon: "📷" },
+                  { n: "5", t: "Price Range",     d: "System generates recommended price band (read-only)",            icon: "💰" },
+                  { n: "6", t: "Admin Approval",  d: "Admin reviews and approves the final price",                     icon: "✅" },
                 ].map(s => (
                   <div className="ep-s01-step" key={s.n}>
                     <div className="ep-s01-step-icon">{s.icon}</div>
@@ -486,7 +533,10 @@ export default function ExchangeProgram() {
 
             <div className="ep-s01-notice">
               <span>ℹ</span>
-              <p>The system auto-generates a price range based on vehicle condition, age, and KM driven. Dealers <strong>cannot modify</strong> the system price — it goes directly for Admin approval.</p>
+              <p>
+                The system auto-generates a price range based on vehicle condition, age, and KM driven.
+                Dealers <strong>cannot modify</strong> the system price — it goes directly for Admin approval.
+              </p>
             </div>
           </div>
         )}
@@ -524,7 +574,9 @@ export default function ExchangeProgram() {
                     placeholder="10-digit mobile number"
                     value={customer.mobileNumber}
                     maxLength={10}
-                    onChange={e => setCustomer(p => ({ ...p, mobileNumber: e.target.value.replace(/\D/g, "") }))}
+                    onChange={e => setCustomer(p => ({
+                      ...p, mobileNumber: e.target.value.replace(/\D/g, "")
+                    }))}
                     className={errors.mobileNumber ? "error" : ""}
                   />
                   {errors.mobileNumber && <span className="ep-err">{errors.mobileNumber}</span>}
@@ -547,7 +599,10 @@ export default function ExchangeProgram() {
 
             <div className="ep-screen-nav">
               <button className="ep-btn-ghost" onClick={() => goTo("S01")}>← Back</button>
-              <button className="ep-btn-primary" onClick={() => { if (validateCustomer()) goTo("S03"); }}>
+              <button
+                className="ep-btn-primary"
+                onClick={() => { if (validateCustomer()) goTo("S03"); }}
+              >
                 Next: Vehicle Details →
               </button>
             </div>
@@ -556,43 +611,78 @@ export default function ExchangeProgram() {
 
         {/* ══════════════════════════════
             S03 — VEHICLE DETAILS FORM
+            [CHANGED] Added Variant dropdown
         ══════════════════════════════ */}
         {screen === "S03" && (
           <div className="ep-screen ep-form-screen">
             <div className="ep-screen-header">
               <div className="ep-screen-icon">🛵</div>
               <h2>Vehicle Details</h2>
-              <p>Enter the vehicle information for <strong>{customer.customerName}</strong></p>
+              <p>
+                Enter the vehicle information for <strong>{customer.customerName}</strong>
+              </p>
             </div>
 
             <div className="ep-form-card">
               <div className="ep-field-grid">
 
+                {/* ── Model ────────────────────────────────── */}
                 <div className="ep-field">
                   <label>Vehicle Model <span className="req">*</span></label>
                   <select
                     value={vehicle.vehicleModel}
-                    onChange={e => setVehicle(p => ({ ...p, vehicleModel: e.target.value }))}
+                    onChange={e => handleModelChange(e.target.value)}
                     className={errors.vehicleModel ? "error" : ""}
                   >
                     <option value="">Select Model</option>
                     {models.map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
-                  {errors.vehicleModel && <span className="ep-err">{errors.vehicleModel}</span>}
+                  {errors.vehicleModel && (
+                    <span className="ep-err">{errors.vehicleModel}</span>
+                  )}
                 </div>
 
+                {/* ── Variant — NEW ─────────────────────────
+                    Disabled until a model is selected.
+                    Resets automatically when model changes.
+                ──────────────────────────────────────────── */}
+                <div className="ep-field">
+                  <label>Variant <span className="req">*</span></label>
+                  <select
+                    value={vehicle.vehicleVariant}
+                    onChange={e => setVehicle(p => ({ ...p, vehicleVariant: e.target.value }))}
+                    disabled={!vehicle.vehicleModel}
+                    className={errors.vehicleVariant ? "error" : ""}
+                    style={!vehicle.vehicleModel ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+                  >
+                    <option value="">
+                      {vehicle.vehicleModel ? "Select Variant" : "Select a model first"}
+                    </option>
+                    {variants.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  {errors.vehicleVariant && (
+                    <span className="ep-err">{errors.vehicleVariant}</span>
+                  )}
+                </div>
+
+                {/* ── Registration ──────────────────────────── */}
                 <div className="ep-field">
                   <label>Registration Number <span className="req">*</span></label>
                   <input
                     type="text"
                     placeholder="e.g. MH12AB1234"
                     value={vehicle.registrationNo}
-                    onChange={e => setVehicle(p => ({ ...p, registrationNo: e.target.value.toUpperCase() }))}
+                    onChange={e => setVehicle(p => ({
+                      ...p, registrationNo: e.target.value.toUpperCase()
+                    }))}
                     className={errors.registrationNo ? "error" : ""}
                   />
-                  {errors.registrationNo && <span className="ep-err">{errors.registrationNo}</span>}
+                  {errors.registrationNo && (
+                    <span className="ep-err">{errors.registrationNo}</span>
+                  )}
                 </div>
 
+                {/* ── Year ──────────────────────────────────── */}
                 <div className="ep-field">
                   <label>Year of Purchase <span className="req">*</span></label>
                   <input
@@ -604,10 +694,13 @@ export default function ExchangeProgram() {
                     onChange={e => setVehicle(p => ({ ...p, yearOfPurchase: e.target.value }))}
                     className={errors.yearOfPurchase ? "error" : ""}
                   />
-                  {errors.yearOfPurchase && <span className="ep-err">{errors.yearOfPurchase}</span>}
+                  {errors.yearOfPurchase && (
+                    <span className="ep-err">{errors.yearOfPurchase}</span>
+                  )}
                 </div>
 
-                <div className="ep-field">
+                {/* ── KM Driven ─────────────────────────────── */}
+                <div className="ep-field ep-field-full">
                   <label>KM Driven <span className="req">*</span></label>
                   <input
                     type="number"
@@ -618,16 +711,38 @@ export default function ExchangeProgram() {
                     onChange={e => setVehicle(p => ({ ...p, kmDriven: e.target.value }))}
                     className={errors.kmDriven ? "error" : ""}
                   />
-                  {errors.kmDriven && <span className="ep-err">{errors.kmDriven}</span>}
+                  {errors.kmDriven && (
+                    <span className="ep-err">{errors.kmDriven}</span>
+                  )}
                 </div>
 
               </div>
+
+              {/* Helper note — shows selected model+variant summary */}
+              {vehicle.vehicleModel && vehicle.vehicleVariant && (
+                <div
+                  className="ep-s01-notice"
+                  style={{ marginTop: 14, marginBottom: 0 }}
+                >
+                  <span>✅</span>
+                  <p>
+                    Selected: <strong>{vehicle.vehicleModel} — {vehicle.vehicleVariant}</strong>.
+                    Pricing will use the base price table for this model, variant, and year.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="ep-screen-nav">
               <button className="ep-btn-ghost" onClick={() => goTo("S02")}>← Back</button>
-              <button className="ep-btn-primary" onClick={handleStartCase} disabled={loading}>
-                {loading ? <><span className="ep-spinner" /> Creating Case…</> : "Start Inspection →"}
+              <button
+                className="ep-btn-primary"
+                onClick={handleStartCase}
+                disabled={loading}
+              >
+                {loading
+                  ? <><span className="ep-spinner" /> Creating Case…</>
+                  : "Start Inspection →"}
               </button>
             </div>
           </div>
@@ -641,7 +756,10 @@ export default function ExchangeProgram() {
             <div className="ep-screen-header">
               <div className="ep-screen-icon">🔍</div>
               <h2>Inspection & Scoring</h2>
-              <p>Score each parameter from 1 (Poor) to 10 (Excellent) for <strong>{vehicle.vehicleModel}</strong> — {vehicle.registrationNo}</p>
+              <p>
+                Score each parameter from 1 (Poor) to 10 (Excellent) for{" "}
+                <strong>{vehicle.vehicleModel} {vehicle.vehicleVariant}</strong> — {vehicle.registrationNo}
+              </p>
             </div>
 
             <div className="ep-inspection-grid">
@@ -652,7 +770,9 @@ export default function ExchangeProgram() {
                     <h3>{p.category}</h3>
                     <span className="ep-category-avg">
                       Avg: {p.parameters.length > 0
-                        ? (p.parameters.reduce((s, param) => s + (scores[p.category]?.[param] ?? 5), 0) / p.parameters.length).toFixed(1)
+                        ? (p.parameters.reduce(
+                            (s, param) => s + (scores[p.category]?.[param] ?? 5), 0
+                          ) / p.parameters.length).toFixed(1)
                         : "–"}
                     </span>
                   </div>
@@ -671,7 +791,11 @@ export default function ExchangeProgram() {
 
             <div className="ep-screen-nav">
               <button className="ep-btn-ghost" onClick={() => goTo("S03")}>← Back</button>
-              <button className="ep-btn-primary" onClick={handleSaveScores} disabled={loading}>
+              <button
+                className="ep-btn-primary"
+                onClick={handleSaveScores}
+                disabled={loading}
+              >
                 {loading ? <><span className="ep-spinner" /> Saving…</> : "Confirm Scores →"}
               </button>
             </div>
@@ -686,7 +810,10 @@ export default function ExchangeProgram() {
             <div className="ep-screen-header">
               <div className="ep-screen-icon">📊</div>
               <h2>Score Summary</h2>
-              <p>Inspection complete for <strong>{vehicle.vehicleModel}</strong></p>
+              <p>
+                Inspection complete for{" "}
+                <strong>{vehicle.vehicleModel} {vehicle.vehicleVariant}</strong>
+              </p>
             </div>
 
             <div
@@ -714,7 +841,9 @@ export default function ExchangeProgram() {
 
             <div className="ep-scores-breakdown">
               {inspParams.map(p => {
-                const avg   = p.parameters.reduce((s, param) => s + (scores[p.category]?.[param] ?? 5), 0) / (p.parameters.length || 1);
+                const avg   = p.parameters.reduce(
+                  (s, param) => s + (scores[p.category]?.[param] ?? 5), 0
+                ) / (p.parameters.length || 1);
                 const color = avg >= 8 ? "#16a34a" : avg >= 5 ? "#d97706" : "#dc2626";
                 return (
                   <div className="ep-breakdown-row" key={p.category}>
@@ -730,7 +859,9 @@ export default function ExchangeProgram() {
 
             <div className="ep-screen-nav">
               <button className="ep-btn-ghost" onClick={() => goTo("S04")}>← Re-score</button>
-              <button className="ep-btn-primary" onClick={() => goTo("S06")}>Next: Upload Photos →</button>
+              <button className="ep-btn-primary" onClick={() => goTo("S06")}>
+                Next: Upload Photos →
+              </button>
             </div>
           </div>
         )}
@@ -747,7 +878,9 @@ export default function ExchangeProgram() {
             </div>
 
             <div className="ep-upload-stats">
-              <span className="ep-up-done">{IMAGE_TYPES.filter(t => images[t]?.uploaded).length}</span>
+              <span className="ep-up-done">
+                {IMAGE_TYPES.filter(t => images[t]?.uploaded).length}
+              </span>
               <span>of 6 photos uploaded</span>
               <div className="ep-up-progress">
                 <div style={{ width: `${(IMAGE_TYPES.filter(t => images[t]?.uploaded).length / 6) * 100}%` }} />
@@ -770,7 +903,11 @@ export default function ExchangeProgram() {
                       <div className="ep-upload-preview-wrap">
                         <img src={img.preview} alt={type} className="ep-upload-preview" />
                         {uploaded && <div className="ep-upload-check">✓</div>}
-                        {isUp && <div className="ep-upload-overlay"><span className="ep-spinner white" /></div>}
+                        {isUp && (
+                          <div className="ep-upload-overlay">
+                            <span className="ep-spinner white" />
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="ep-upload-placeholder">
@@ -779,7 +916,8 @@ export default function ExchangeProgram() {
                           <><span className="ep-spinner" /><span>Uploading…</span></>
                         ) : (
                           <>
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                              stroke="#9ca3af" strokeWidth="1.5">
                               <polyline points="16 16 12 12 8 16"/>
                               <line x1="12" y1="12" x2="12" y2="21"/>
                               <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
@@ -810,8 +948,14 @@ export default function ExchangeProgram() {
 
             <div className="ep-screen-nav">
               <button className="ep-btn-ghost" onClick={() => goTo("S05")}>← Back</button>
-              <button className="ep-btn-primary" onClick={handleImagesDone} disabled={loading}>
-                {loading ? <><span className="ep-spinner" /> Generating Price…</> : "Generate Price Range →"}
+              <button
+                className="ep-btn-primary"
+                onClick={handleImagesDone}
+                disabled={loading}
+              >
+                {loading
+                  ? <><span className="ep-spinner" /> Generating Price…</>
+                  : "Generate Price Range →"}
               </button>
             </div>
           </div>
@@ -836,7 +980,8 @@ export default function ExchangeProgram() {
                 ))}
               </div>
               <p className="ep-error-note">
-                All 6 photos (Front, Rear, Left Side, Right Side, Odometer, Battery) must be clear and well-lit.
+                All 6 photos (Front, Rear, Left Side, Right Side, Odometer, Battery)
+                must be clear and well-lit.
               </p>
               <button className="ep-btn-primary ep-btn-large" onClick={() => goTo("S06")}>
                 ← Go Back & Upload Missing Photos
@@ -853,11 +998,15 @@ export default function ExchangeProgram() {
             <div className="ep-screen-header">
               <div className="ep-screen-icon">💰</div>
               <h2>System-Generated Price Range</h2>
-              <p>Based on inspection score and vehicle condition. <strong>This price range is read-only.</strong></p>
+              <p>
+                Based on inspection score and vehicle condition.{" "}
+                <strong>This price range is read-only.</strong>
+              </p>
             </div>
 
             <div className="ep-readonly-banner">
-              🔒 Dealer CANNOT edit or override the price range. Prices are auto-generated by the system.
+              🔒 Dealer CANNOT edit or override the price range.
+              Prices are auto-generated by the system.
             </div>
 
             <div className="ep-price-card">
@@ -882,7 +1031,9 @@ export default function ExchangeProgram() {
               <div className="ep-price-meta">
                 <div>
                   <span>Grade</span>
-                  <strong style={{ color: GRADE_CONFIG[priceData.grade as keyof typeof GRADE_CONFIG]?.color ?? "#374151" }}>
+                  <strong style={{
+                    color: GRADE_CONFIG[priceData.grade as keyof typeof GRADE_CONFIG]?.color ?? "#374151"
+                  }}>
                     {priceData.grade}
                   </strong>
                 </div>
@@ -898,18 +1049,25 @@ export default function ExchangeProgram() {
                   <span>Year</span>
                   <strong>{vehicle.yearOfPurchase}</strong>
                 </div>
+                <div>
+                  <span>Variant</span>
+                  <strong>{vehicle.vehicleVariant}</strong>
+                </div>
               </div>
             </div>
 
             <div className="ep-screen-nav">
               <span />
-              <button className="ep-btn-primary" onClick={() => goTo("S09")}>Review & Submit →</button>
+              <button className="ep-btn-primary" onClick={() => goTo("S09")}>
+                Review & Submit →
+              </button>
             </div>
           </div>
         )}
 
         {/* ══════════════════════════════
             S09 — SUBMISSION SUMMARY
+            [CHANGED] Variant shown in Vehicle Details
         ══════════════════════════════ */}
         {screen === "S09" && priceData && (
           <div className="ep-screen ep-s09">
@@ -934,19 +1092,28 @@ export default function ExchangeProgram() {
                 <h4>🛵 Vehicle Details</h4>
                 <div className="ep-summary-rows">
                   <div><span>Model</span>     <strong>{vehicle.vehicleModel}</strong></div>
+                  <div><span>Variant</span>   <strong>{vehicle.vehicleVariant}</strong></div>
                   <div><span>Reg. No.</span>  <strong>{vehicle.registrationNo}</strong></div>
                   <div><span>Year</span>      <strong>{vehicle.yearOfPurchase}</strong></div>
-                  <div><span>KM Driven</span> <strong>{parseInt(vehicle.kmDriven).toLocaleString("en-IN")} km</strong></div>
+                  <div>
+                    <span>KM Driven</span>
+                    <strong>{parseInt(vehicle.kmDriven).toLocaleString("en-IN")} km</strong>
+                  </div>
                 </div>
               </div>
 
               <div className="ep-summary-section">
                 <h4>🔍 Inspection</h4>
                 <div className="ep-summary-rows">
-                  <div><span>Score</span> <strong>{priceData.totalScore.toFixed(1)} / 10</strong></div>
+                  <div>
+                    <span>Score</span>
+                    <strong>{priceData.totalScore.toFixed(1)} / 10</strong>
+                  </div>
                   <div>
                     <span>Grade</span>
-                    <strong style={{ color: GRADE_CONFIG[priceData.grade as keyof typeof GRADE_CONFIG]?.color ?? "#374151" }}>
+                    <strong style={{
+                      color: GRADE_CONFIG[priceData.grade as keyof typeof GRADE_CONFIG]?.color ?? "#374151"
+                    }}>
                       {priceData.grade}
                     </strong>
                   </div>
@@ -970,9 +1137,18 @@ export default function ExchangeProgram() {
               <div className="ep-summary-section ep-summary-price">
                 <h4>💰 System Price Range</h4>
                 <div className="ep-summary-rows">
-                  <div><span>Min</span>         <strong>{fmt(priceData.minPrice)}</strong></div>
-                  <div><span>Recommended</span> <strong className="ep-price-highlight">{fmt(priceData.recommended)}</strong></div>
-                  <div><span>Max</span>         <strong>{fmt(priceData.maxPrice)}</strong></div>
+                  <div>
+                    <span>Min</span>
+                    <strong>{fmt(priceData.minPrice)}</strong>
+                  </div>
+                  <div>
+                    <span>Recommended</span>
+                    <strong className="ep-price-highlight">{fmt(priceData.recommended)}</strong>
+                  </div>
+                  <div>
+                    <span>Max</span>
+                    <strong>{fmt(priceData.maxPrice)}</strong>
+                  </div>
                 </div>
               </div>
 
@@ -980,13 +1156,18 @@ export default function ExchangeProgram() {
 
             <div className="ep-submit-confirm">
               <span>ℹ</span>
-              <p>By submitting, this case will be sent to BGauss Admin for price approval. You will be notified once reviewed.</p>
+              <p>
+                By submitting, this case will be sent to BGauss Admin for price approval.
+                You will be notified once reviewed.
+              </p>
             </div>
 
             <div className="ep-screen-nav">
               <button className="ep-btn-ghost" onClick={() => goTo("S08")}>← Back</button>
               <button className="ep-btn-submit" onClick={handleSubmit} disabled={loading}>
-                {loading ? <><span className="ep-spinner" /> Submitting…</> : "🚀 Submit for Admin Approval"}
+                {loading
+                  ? <><span className="ep-spinner" /> Submitting…</>
+                  : "🚀 Submit for Admin Approval"}
               </button>
             </div>
           </div>
@@ -1010,30 +1191,53 @@ export default function ExchangeProgram() {
               <p className="ep-success-case">Case ID: <strong>{caseNumber}</strong></p>
               <p>Status: <span className="ep-status-pending">⏳ Pending Admin Review</span></p>
               <p className="ep-success-msg">
-                Your exchange case has been submitted successfully. BGauss Admin will review the inspection data,
-                photos, and system price range and notify you of the decision.
+                Your exchange case has been submitted successfully. BGauss Admin will review
+                the inspection data, photos, and system price range and notify you of the decision.
               </p>
 
               <div className="ep-success-info">
                 <div><span>Customer</span> <strong>{customer.customerName}</strong></div>
-                <div><span>Vehicle</span>  <strong>{vehicle.vehicleModel} · {vehicle.registrationNo}</strong></div>
+                <div>
+                  <span>Vehicle</span>
+                  <strong>
+                    {vehicle.vehicleModel} {vehicle.vehicleVariant} · {vehicle.registrationNo}
+                  </strong>
+                </div>
                 {priceData && (
-                  <div><span>Price Range</span> <strong>{fmt(priceData.minPrice)} – {fmt(priceData.maxPrice)}</strong></div>
+                  <div>
+                    <span>Price Range</span>
+                    <strong>{fmt(priceData.minPrice)} – {fmt(priceData.maxPrice)}</strong>
+                  </div>
                 )}
               </div>
 
               <div className="ep-s10-actions">
-                <button className="ep-btn-ghost" onClick={() => {
-                  setScreen("S01");
-                  setCaseId(null); setCaseNumber("");
-                  setCustomer({ customerName: "", mobileNumber: "", city: "" });
-                  setVehicle({ vehicleModel: "", registrationNo: "", yearOfPurchase: "", kmDriven: "" });
-                  setImages({}); setPriceData(null); setGradeResult(null);
-                  setGlobalError(""); setErrors({});
-                }}>
+                <button
+                  className="ep-btn-ghost"
+                  onClick={() => {
+                    setScreen("S01");
+                    setCaseId(null);
+                    setCaseNumber("");
+                    setCustomer({ customerName: "", mobileNumber: "", city: "" });
+                    // vehicleVariant reset here too
+                    setVehicle({
+                      vehicleModel: "", vehicleVariant: "",
+                      registrationNo: "", yearOfPurchase: "", kmDriven: "",
+                    });
+                    setVariants([]);
+                    setImages({});
+                    setPriceData(null);
+                    setGradeResult(null);
+                    setGlobalError("");
+                    setErrors({});
+                  }}
+                >
                   Start Another Case
                 </button>
-                <button className="ep-btn-primary" onClick={() => navigate("/dashboard")}>
+                <button
+                  className="ep-btn-primary"
+                  onClick={() => navigate("/dashboard")}
+                >
                   Back to Dashboard
                 </button>
               </div>

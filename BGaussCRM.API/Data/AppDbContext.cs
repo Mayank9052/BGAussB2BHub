@@ -28,13 +28,23 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<ExchangeAdminAction> ExchangeAdminActions { get; set; }
 
+    public virtual DbSet<ExchangeBatterySlab> ExchangeBatterySlabs { get; set; }
+
     public virtual DbSet<ExchangeCase> ExchangeCases { get; set; }
 
     public virtual DbSet<ExchangeCaseImage> ExchangeCaseImages { get; set; }
 
+    public virtual DbSet<ExchangeConditionSlab> ExchangeConditionSlabs { get; set; }
+
     public virtual DbSet<ExchangeInspectionScore> ExchangeInspectionScores { get; set; }
 
+    public virtual DbSet<ExchangeKmSlab> ExchangeKmSlabs { get; set; }
+
+    public virtual DbSet<ExchangeModelBasePrice> ExchangeModelBasePrices { get; set; }
+
     public virtual DbSet<ExchangeNotificationLog> ExchangeNotificationLogs { get; set; }
+
+    public virtual DbSet<ExchangePricingConfig> ExchangePricingConfigs { get; set; }
 
     public virtual DbSet<PriceMaster> PriceMasters { get; set; }
 
@@ -242,6 +252,19 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK__ExchangeA__CaseI__6166761E");
         });
 
+        modelBuilder.Entity<ExchangeBatterySlab>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC07C4C9500D");
+
+            entity.Property(e => e.Adjustment).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.Label).HasMaxLength(100);
+            entity.Property(e => e.ScoreFrom).HasColumnType("decimal(4, 1)");
+            entity.Property(e => e.ScoreTo).HasColumnType("decimal(4, 1)");
+        });
+
         modelBuilder.Entity<ExchangeCase>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC079DADD7E4");
@@ -273,6 +296,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.TotalScore).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.VehicleModel).HasMaxLength(100);
+            entity.Property(e => e.VehicleVariant).HasMaxLength(50);
         });
 
         modelBuilder.Entity<ExchangeCaseImage>(entity =>
@@ -290,6 +314,19 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK__ExchangeC__CaseI__5D95E53A");
         });
 
+        modelBuilder.Entity<ExchangeConditionSlab>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC07BAD5CCE2");
+
+            entity.Property(e => e.Adjustment).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.Label).HasMaxLength(100);
+            entity.Property(e => e.ScoreFrom).HasColumnType("decimal(4, 1)");
+            entity.Property(e => e.ScoreTo).HasColumnType("decimal(4, 1)");
+        });
+
         modelBuilder.Entity<ExchangeInspectionScore>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC07B72FA852");
@@ -303,6 +340,35 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Case).WithMany(p => p.ExchangeInspectionScores)
                 .HasForeignKey(d => d.CaseId)
                 .HasConstraintName("FK__ExchangeI__CaseI__58D1301D");
+        });
+
+        modelBuilder.Entity<ExchangeKmSlab>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC0791249DB8");
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.Deduction).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.Label).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<ExchangeModelBasePrice>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC07A2016528");
+
+            entity.Property(e => e.BasePrice).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.ModelName).HasMaxLength(100);
+            entity.Property(e => e.ScrapValue)
+                .HasDefaultValue(5000m)
+                .HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
+            entity.Property(e => e.VariantName).HasMaxLength(100);
         });
 
         modelBuilder.Entity<ExchangeNotificationLog>(entity =>
@@ -323,6 +389,22 @@ public partial class AppDbContext : DbContext
             entity.HasOne(d => d.Case).WithMany(p => p.ExchangeNotificationLogs)
                 .HasForeignKey(d => d.CaseId)
                 .HasConstraintName("FK__ExchangeN__CaseI__65370702");
+        });
+
+        modelBuilder.Entity<ExchangePricingConfig>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK__Exchange__3214EC07CE6A8463");
+
+            entity.ToTable("ExchangePricingConfig");
+
+            entity.HasIndex(e => e.ConfigKey, "UQ__Exchange__4A3067840C24229F").IsUnique();
+
+            entity.Property(e => e.ConfigKey).HasMaxLength(100);
+            entity.Property(e => e.ConfigValue).HasColumnType("decimal(10, 4)");
+            entity.Property(e => e.Description).HasMaxLength(255);
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("(getutcdate())")
+                .HasColumnType("datetime");
         });
 
         modelBuilder.Entity<PriceMaster>(entity =>

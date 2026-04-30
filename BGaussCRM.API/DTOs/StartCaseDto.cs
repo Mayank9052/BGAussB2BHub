@@ -9,4 +9,5 @@ public class StartCaseDto
         public string RegistrationNo { get; set; } = string.Empty;
         public int    YearOfPurchase { get; set; }
         public int    KmDriven       { get; set; }
+        public string? VehicleVariant { get; set; }
     }
