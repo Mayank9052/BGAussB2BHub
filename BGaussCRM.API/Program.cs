@@ -28,13 +28,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-            ValidAudience = builder.Configuration["JwtSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
+            ValidIssuer              = builder.Configuration["JwtSettings:Issuer"],
+            ValidAudience            = builder.Configuration["JwtSettings:Audience"],
+            IssuerSigningKey         = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"]!))
         };
     });
@@ -43,39 +43,60 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// ── CORS: allow both dev origins AND production IP ────────────
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowReactDev", policy =>
-        policy.WithOrigins("http://localhost:5173", "http://localhost:3000")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
+    options.AddPolicy("AllowAll", policy =>
+        policy
+            .WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "http://34.203.61.70",
+                "http://34.203.61.70:5173",
+                "http://34.203.61.70:80"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
+
+// ── Pre-create wwwroot + upload folders so they always exist ──
+var wwwrootPath      = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
+var exchangeImgPath  = Path.Combine(wwwrootPath, "ExchangeImages");
+var scootyImgPath    = Path.Combine(wwwrootPath, "ScootyInventoryImage");
+var uploadImgPath    = Path.Combine(wwwrootPath, "images");
+
+foreach (var dir in new[] { wwwrootPath, exchangeImgPath, scootyImgPath, uploadImgPath })
+{
+    if (!Directory.Exists(dir))
+        Directory.CreateDirectory(dir);
+}
+
+// Tell ASP.NET where wwwroot is (fixes WebRootPath being null)
+builder.Environment.WebRootPath = wwwrootPath;
 
 var app = builder.Build();
 
-// Swagger only in development
+// ── Swagger (dev only) ────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-// Serve React build from wwwroot
+// ── CORS must be before auth + routing ───────────────────────
+app.UseCors("AllowAll");
+
+// ── Static files (serves wwwroot — React build + uploaded images) ──
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-// Only use CORS in development
-if (app.Environment.IsDevelopment())
-{
-    app.UseCors("AllowReactDev");
-}
-
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
-// React routing fallback
+// ── React SPA fallback ────────────────────────────────────────
 app.MapFallbackToFile("index.html");
 
 app.Run();

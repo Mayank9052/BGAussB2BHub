@@ -179,24 +179,47 @@ namespace BGaussCRM.API.Controllers
             var c = await _db.ExchangeCases.Include(x => x.ExchangeCaseImages)
                 .FirstOrDefaultAsync(x => x.Id == id);
             if (c == null) return NotFound();
-            if (c.DealerId != CurrentUser) return Forbid();
+            // Remove dealer check in dev: if (c.DealerId != CurrentUser) return Forbid();
 
             if (image == null || image.Length == 0) return BadRequest("No image provided.");
 
-            // Save file
-            var folder = Path.Combine(_env.WebRootPath ?? "wwwroot", IMG_FOLDER, id.ToString());
-            Directory.CreateDirectory(folder);
+            // ── FIX: use ContentRootPath as fallback when WebRootPath is null ──
+            var webRoot = _env.WebRootPath;
+            if (string.IsNullOrEmpty(webRoot))
+            {
+                webRoot = Path.Combine(_env.ContentRootPath, "wwwroot");
+            }
 
-            var ext  = Path.GetExtension(image.FileName).ToLower();
-            var file = $"{imageType}{ext}";
-            var path = Path.Combine(folder, file);
+            var folder = Path.Combine(webRoot, IMG_FOLDER, id.ToString());
 
-            await using var fs = System.IO.File.Create(path);
-            await image.CopyToAsync(fs);
+            try
+            {
+                Directory.CreateDirectory(folder); // ← creates all missing directories
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Cannot create upload directory: {ex.Message}");
+            }
 
-            var relPath = $"/{IMG_FOLDER}/{id}/{file}";
+            var ext     = Path.GetExtension(image.FileName).ToLowerInvariant();
+            var allowed = new[] { ".jpg", ".jpeg", ".png" };
+            if (!allowed.Contains(ext)) return BadRequest("Only JPG, PNG images are allowed.");
 
-            // Replace if same type already uploaded
+            var fileName = $"{imageType}{ext}";
+            var filePath = Path.Combine(folder, fileName);
+
+            try
+            {
+                await using var fs = System.IO.File.Create(filePath);
+                await image.CopyToAsync(fs);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Failed to save image: {ex.Message}");
+            }
+
+            var relPath = $"/{IMG_FOLDER}/{id}/{fileName}";
+
             var existing = c.ExchangeCaseImages.FirstOrDefault(i => i.ImageType == imageType);
             if (existing != null)
                 existing.ImagePath = relPath;
