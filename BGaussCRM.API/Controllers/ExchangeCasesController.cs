@@ -15,6 +15,7 @@ namespace BGaussCRM.API.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogger<ExchangeCasesController> _logger;
         private const string IMG_FOLDER = "ExchangeImages";
 
         // ── Inspection parameters definition ──────────────────
@@ -37,10 +38,14 @@ namespace BGaussCRM.API.Controllers
             ["Misc"]        = 0.10m,
         };
 
-        public ExchangeCasesController(AppDbContext db, IWebHostEnvironment env)
+        public ExchangeCasesController(
+            AppDbContext db,
+            IWebHostEnvironment env,
+            ILogger<ExchangeCasesController> logger)
         {
-            _db  = db;
-            _env = env;
+            _db     = db;
+            _env    = env;
+            _logger = logger;
         }
 
         private string CurrentUser => User.Identity?.Name
@@ -49,6 +54,42 @@ namespace BGaussCRM.API.Controllers
             ?? "unknown";
 
         private bool IsAdmin => User.IsInRole("admin");
+
+        // ─────────────────────────────────────────────────────────────
+        // HELPER: resolve the wwwroot folder safely in both dev + prod.
+        //
+        // On a published ASP.NET app the physical wwwroot may live at:
+        //   {ContentRoot}/wwwroot          ← default publish layout
+        //   {ContentRoot}/publish/wwwroot  ← rare alternate
+        //
+        // IWebHostEnvironment.WebRootPath is null when no wwwroot folder
+        // was found at startup. We always fall back to ContentRootPath so
+        // the directory can be created on first upload.
+        // ─────────────────────────────────────────────────────────────
+        private string GetWebRoot()
+        {
+            // 1. Use the configured WebRootPath if it's set and valid
+            if (!string.IsNullOrWhiteSpace(_env.WebRootPath) &&
+                Directory.Exists(_env.WebRootPath))
+            {
+                return _env.WebRootPath;
+            }
+
+            // 2. Fall back: wwwroot alongside the running executable
+            var fallback = Path.Combine(_env.ContentRootPath, "wwwroot");
+
+            // Create the folder so static files middleware can serve from it later
+            if (!Directory.Exists(fallback))
+            {
+                try { Directory.CreateDirectory(fallback); }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not create fallback wwwroot at {Path}", fallback);
+                }
+            }
+
+            return fallback;
+        }
 
         // ── GET /api/ExchangeCases ────────────────────────────
         [HttpGet]
@@ -84,7 +125,6 @@ namespace BGaussCRM.API.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var c = await _db.ExchangeCases
-                .Include(x => x.TotalScore)
                 .Include(x => x.ExchangeCaseImages)
                 .Include(x => x.ExchangeAdminActions)
                 .Include(x => x.ExchangeInspectionScores)
@@ -99,7 +139,11 @@ namespace BGaussCRM.API.Controllers
         // ── GET /api/ExchangeCases/inspection-params ──────────
         [HttpGet("inspection-params")]
         public IActionResult GetInspectionParams()
-            => Ok(InspectionParams.Select(kv => new { category = kv.Key, parameters = kv.Value }));
+            => Ok(InspectionParams.Select(kv => new
+            {
+                category   = kv.Key,
+                parameters = kv.Value
+            }));
 
         // ── POST /api/ExchangeCases/start ────────────────────
         // S02+S03: Create a new case with customer + vehicle info
@@ -108,8 +152,8 @@ namespace BGaussCRM.API.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var year = DateTime.UtcNow.Year;
-            var seq  = await _db.ExchangeCases.CountAsync() + 1;
+            var year    = DateTime.UtcNow.Year;
+            var seq     = await _db.ExchangeCases.CountAsync() + 1;
             var caseNum = $"EX-{year}-{seq:D5}";
 
             var exchangeCase = new ExchangeCase
@@ -135,17 +179,21 @@ namespace BGaussCRM.API.Controllers
         // ── POST /api/ExchangeCases/{id}/scores ──────────────
         // S04: Save inspection scores
         [HttpPost("{id}/scores")]
-        public async Task<IActionResult> SaveScores(int id, [FromBody] List<ScoreDto> scores)
+        public async Task<IActionResult> SaveScores(
+            int id, [FromBody] List<ScoreDto> scores)
         {
-            var c = await _db.ExchangeCases.Include(x => x.ExchangeInspectionScores)
+            var c = await _db.ExchangeCases
+                .Include(x => x.ExchangeInspectionScores)
                 .FirstOrDefaultAsync(x => x.Id == id);
+
             if (c == null) return NotFound();
-            if (c.DealerId != CurrentUser) return Forbid();
+            if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
             if (c.Status != "Draft") return BadRequest("Case is not in Draft status.");
 
             // Replace all scores
             _db.ExchangeInspectionScores.RemoveRange(c.ExchangeInspectionScores);
-            await _db.SaveChangesAsync(); 
+            await _db.SaveChangesAsync();
+
             foreach (var s in scores)
             {
                 _db.ExchangeInspectionScores.Add(new ExchangeInspectionScore
@@ -157,7 +205,6 @@ namespace BGaussCRM.API.Controllers
                 });
             }
 
-            // Compute weighted score + grade
             var (totalScore, grade) = ComputeScore(scores);
             c.TotalScore = totalScore;
             c.Grade      = grade;
@@ -169,42 +216,57 @@ namespace BGaussCRM.API.Controllers
 
         // ── POST /api/ExchangeCases/{id}/images ──────────────
         // S06: Upload one image at a time
+        //
+        // FIX: GetWebRoot() is used instead of _env.WebRootPath directly.
+        //      On AWS/production, WebRootPath is often null because no
+        //      wwwroot folder exists at the default path. GetWebRoot()
+        //      falls back to {ContentRootPath}/wwwroot and creates it.
+        // ─────────────────────────────────────────────────────
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadImage(int id, [FromForm] string imageType, IFormFile image)
+        public async Task<IActionResult> UploadImage(
+            int id,
+            [FromForm] string imageType,
+            IFormFile image)
         {
+            // ── Validate imageType ──────────────────────────────────────
             var validTypes = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
-            if (!validTypes.Contains(imageType)) return BadRequest("Invalid imageType.");
+            if (!validTypes.Contains(imageType))
+                return BadRequest(new { error = $"Invalid imageType '{imageType}'. Must be one of: {string.Join(", ", validTypes)}" });
 
-            var c = await _db.ExchangeCases.Include(x => x.ExchangeCaseImages)
+            // ── Load case ───────────────────────────────────────────────
+            var c = await _db.ExchangeCases
+                .Include(x => x.ExchangeCaseImages)
                 .FirstOrDefaultAsync(x => x.Id == id);
-            if (c == null) return NotFound();
-            // Remove dealer check in dev: if (c.DealerId != CurrentUser) return Forbid();
 
-            if (image == null || image.Length == 0) return BadRequest("No image provided.");
+            if (c == null) return NotFound(new { error = $"Case {id} not found." });
 
-            // ── FIX: use ContentRootPath as fallback when WebRootPath is null ──
-            var webRoot = _env.WebRootPath;
-            if (string.IsNullOrEmpty(webRoot))
-            {
-                webRoot = Path.Combine(_env.ContentRootPath, "wwwroot");
-            }
+            // ── Validate file ───────────────────────────────────────────
+            if (image == null || image.Length == 0)
+                return BadRequest(new { error = "No image provided or file is empty." });
 
-            var folder = Path.Combine(webRoot, IMG_FOLDER, id.ToString());
+            var ext     = Path.GetExtension(image.FileName).ToLowerInvariant();
+            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            if (!allowed.Contains(ext))
+                return BadRequest(new { error = $"File type '{ext}' not allowed. Use JPG, PNG, or WebP." });
+
+            // ── Resolve upload directory (PRODUCTION-SAFE) ──────────────
+            var webRoot = GetWebRoot();
+            var folder  = Path.Combine(webRoot, IMG_FOLDER, id.ToString());
+
+            _logger.LogInformation("UploadImage: webRoot={WebRoot}, folder={Folder}", webRoot, folder);
 
             try
             {
-                Directory.CreateDirectory(folder); // ← creates all missing directories
+                Directory.CreateDirectory(folder);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Cannot create upload directory: {ex.Message}");
+                _logger.LogError(ex, "Cannot create upload directory: {Folder}", folder);
+                return StatusCode(500, new { error = $"Server cannot create upload directory. Check write permissions on: {folder}" });
             }
 
-            var ext     = Path.GetExtension(image.FileName).ToLowerInvariant();
-            var allowed = new[] { ".jpg", ".jpeg", ".png" };
-            if (!allowed.Contains(ext)) return BadRequest("Only JPG, PNG images are allowed.");
-
+            // ── Save file ───────────────────────────────────────────────
             var fileName = $"{imageType}{ext}";
             var filePath = Path.Combine(folder, fileName);
 
@@ -215,26 +277,34 @@ namespace BGaussCRM.API.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, $"Failed to save image: {ex.Message}");
+                _logger.LogError(ex, "Failed to write image file: {FilePath}", filePath);
+                return StatusCode(500, new { error = $"Failed to save image. Server error: {ex.Message}" });
             }
 
-            var relPath = $"/{IMG_FOLDER}/{id}/{fileName}";
+            // ── Store relative URL in DB ────────────────────────────────
+            // Always use forward slashes so the URL works in browsers
+            var relPath  = $"/{IMG_FOLDER}/{id}/{fileName}";
 
             var existing = c.ExchangeCaseImages.FirstOrDefault(i => i.ImageType == imageType);
             if (existing != null)
                 existing.ImagePath = relPath;
             else
                 _db.ExchangeCaseImages.Add(new ExchangeCaseImage
-                    { CaseId = id, ImageType = imageType, ImagePath = relPath });
+                {
+                    CaseId    = id,
+                    ImageType = imageType,
+                    ImagePath = relPath
+                });
 
             c.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
+            _logger.LogInformation("Image saved: {RelPath}", relPath);
             return Ok(new { imageType, path = relPath });
         }
 
         // ── POST /api/ExchangeCases/{id}/generate-price ──────
-        // S08: System generates price range (READ-ONLY for dealer)
+        // S08: System generates price range (read-only for dealer)
         [HttpPost("{id}/generate-price")]
         public async Task<IActionResult> GeneratePrice(int id)
         {
@@ -244,7 +314,7 @@ namespace BGaussCRM.API.Controllers
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (c == null) return NotFound();
-            if (c.DealerId != CurrentUser) return Forbid();
+            if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
 
             // Validate all 6 images uploaded
             var required = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
@@ -257,11 +327,10 @@ namespace BGaussCRM.API.Controllers
             if (!c.ExchangeInspectionScores.Any())
                 return BadRequest(new { error = "ScoresMissing" });
 
-            // Price generation algorithm
-            // Base price band from KM, Year, and Score
-            var age         = DateTime.UtcNow.Year - c.YearOfPurchase;
-            var score       = c.TotalScore ?? 5m;
-            var baseValue   = GetBaseValue(c.VehicleModel);
+            // ── Price generation algorithm ──────────────────────────────
+            var age          = DateTime.UtcNow.Year - c.YearOfPurchase;
+            var score        = c.TotalScore ?? 5m;
+            var baseValue    = GetBaseValue(c.VehicleModel);
             var depreciation = Math.Min(0.60m, age * 0.12m + c.KmDriven / 100000m * 0.08m);
             var scoreFactor  = 0.70m + (score / 10m) * 0.30m;
 
@@ -272,11 +341,18 @@ namespace BGaussCRM.API.Controllers
             c.RecommendedPrice = recommended;
             c.MinPrice         = minPrice;
             c.MaxPrice         = maxPrice;
-            c.Status           = "ImagesPending"; // ready for submission
+            c.Status           = "ImagesPending";
             c.UpdatedAt        = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();
-            return Ok(new { recommended, minPrice, maxPrice, grade = c.Grade, totalScore = c.TotalScore });
+            return Ok(new
+            {
+                recommended,
+                minPrice,
+                maxPrice,
+                grade      = c.Grade,
+                totalScore = c.TotalScore
+            });
         }
 
         // ── POST /api/ExchangeCases/{id}/submit ──────────────
@@ -289,7 +365,7 @@ namespace BGaussCRM.API.Controllers
                 .FirstOrDefaultAsync(x => x.Id == id);
 
             if (c == null) return NotFound();
-            if (c.DealerId != CurrentUser) return Forbid();
+            if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
 
             var required = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
             var uploaded  = c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet();
@@ -308,10 +384,10 @@ namespace BGaussCRM.API.Controllers
         }
 
         // ── POST /api/ExchangeCases/{id}/admin-action ────────
-        // Module 2: Admin approves / modifies / rejects
         [HttpPost("{id}/admin-action")]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> AdminAction(int id, [FromBody] AdminActionDto dto)
+        public async Task<IActionResult> AdminAction(
+            int id, [FromBody] AdminActionDto dto)
         {
             var c = await _db.ExchangeCases.FindAsync(id);
             if (c == null) return NotFound();
@@ -362,7 +438,6 @@ namespace BGaussCRM.API.Controllers
 
         private static decimal GetBaseValue(string model)
         {
-            // Simple lookup — extend with actual price table
             var upper = model.ToUpper();
             if (upper.Contains("RUV") || upper.Contains("350")) return 130000m;
             if (upper.Contains("MAX") || upper.Contains("C12")) return 115000m;
