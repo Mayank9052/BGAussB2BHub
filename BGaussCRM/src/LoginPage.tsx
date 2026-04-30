@@ -1,9 +1,8 @@
 // ─────────────────────────────────────────────────────────────
 // FILE: src/LoginPage.tsx
 // BGauss B2B Portal — Full landing page
-// UPDATED: Role-based routing after login
-//   admin → /exchange-admin (Module 2 Admin Panel)
-//   dealer/user → /dashboard (then can access /exchange)
+// ENHANCED: Role tabs (Dealer/Admin), password strength meter,
+//           removed routing note, bike note per role
 // ─────────────────────────────────────────────────────────────
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +22,8 @@ type LoginResponseData = {
   username?: string; Username?: string;
   role?: string;    Role?: string;
 };
+
+type RoleTab = "dealer" | "admin";
 
 // ── JWT decode ─────────────────────────────────────────────
 const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
@@ -55,6 +56,48 @@ const extractRole = (data: LoginResponseData, token: string): string => {
   return "user";
 };
 
+// ── Password strength ──────────────────────────────────────
+const getPasswordStrength = (pw: string): { score: number; label: string; color: string } => {
+  let score = 0;
+  if (pw.length >= 6) score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+  const map = [
+    { label: "",            color: "#e5e7eb" },
+    { label: "Weak",        color: "#ef4444" },
+    { label: "Fair",        color: "#f59e0b" },
+    { label: "Strong",      color: "#22c55e" },
+    { label: "Very strong", color: "#16a34a" },
+  ];
+  return { score, ...map[score] };
+};
+
+// ── Role meta ──────────────────────────────────────────────
+const ROLE_META: Record<RoleTab, { title: string; placeholder: string; note: React.ReactNode  }> = {
+  dealer: {
+    title: "Dealer Sign In",
+    placeholder: "e.g. EMP001 or dealer@bgauss.com",
+    note: (
+      <>
+        <strong>Dealer access:</strong> exchange program,
+        inventory &amp; order management
+      </>
+    ),
+  },
+  admin: {
+    title: "Admin Sign In",
+    placeholder: "e.g. admin@bgauss.com",
+    note: (
+      <>
+        <strong>Admin access:</strong> approval panel,
+        pricing &amp; dealer oversight
+      </>
+    ),
+  },
+};
+
 // ── Component ──────────────────────────────────────────────
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -68,6 +111,7 @@ const LoginPage = () => {
 
   // Login modal
   const [showLogin,    setShowLogin]    = useState(false);
+  const [selectedRole, setSelectedRole] = useState<RoleTab>("dealer");
   const [identifier,   setIdentifier]   = useState("");
   const [password,     setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -87,14 +131,16 @@ const LoginPage = () => {
   const bookRef     = useRef<HTMLDivElement>(null);
   const storeRef    = useRef<HTMLInputElement>(null);
 
-  // Scroll shadow
+  const pwStrength = getPasswordStrength(password);
+  const roleMeta   = ROLE_META[selectedRole];
+
+  // ── Effects ────────────────────────────────────────────
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Load products
   useEffect(() => {
     axios.get("/api/ScootyInventory/models")
       .then(r => setProducts(r.data))
@@ -105,7 +151,6 @@ const LoginPage = () => {
       ]));
   }, []);
 
-  // Outside click
   useEffect(() => {
     const close = (e: MouseEvent) => {
       if (productsRef.current && !productsRef.current.contains(e.target as Node))
@@ -117,7 +162,6 @@ const LoginPage = () => {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  // Store search debounce
   useEffect(() => {
     if (storeQuery.length < 2) { setStoreSuggests([]); setStoreDropOpen(false); return; }
     const t = setTimeout(async () => {
@@ -130,7 +174,6 @@ const LoginPage = () => {
     return () => clearTimeout(t);
   }, [storeQuery]);
 
-  // Token removal watcher
   useEffect(() => {
     const handleStorageChange = () => {
       if (!localStorage.getItem("token")) {
@@ -141,7 +184,13 @@ const LoginPage = () => {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // ── LOGIN — role-based routing ──────────────────────────
+  // Reset identifier when role changes
+  useEffect(() => {
+    setIdentifier("");
+    setLoginError("");
+  }, [selectedRole]);
+
+  // ── LOGIN ───────────────────────────────────────────────
   const handleLogin = async () => {
     if (!identifier.trim() || !password.trim()) {
       setLoginError("Please enter your credentials.");
@@ -168,9 +217,6 @@ const LoginPage = () => {
 
       setShowLogin(false);
 
-      // ── Role-based routing per the flow spec ──────────
-      // admin  → Module 2 Admin Approval Panel
-      // others → Dashboard (can access Exchange Program from there)
       if (role === "admin") {
         navigate("/exchange-admin", { replace: true });
       } else {
@@ -193,6 +239,14 @@ const LoginPage = () => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     setActiveSection(id);
     setMobileMenuOpen(false);
+  };
+
+  const openModal = () => {
+    setShowLogin(true);
+    setLoginError("");
+    setSelectedRole("dealer");
+    setIdentifier("");
+    setPassword("");
   };
 
   // ── Dropdowns ──────────────────────────────────────────
@@ -232,7 +286,7 @@ const LoginPage = () => {
       </button>
       {bookOpen && (
         <div className="lp-dropdown-menu lp-dropdown-menu-right">
-          <button className="lp-dropdown-item" onClick={() => { setShowLogin(true); setBookOpen(false); }}>
+          <button className="lp-dropdown-item" onClick={() => { openModal(); setBookOpen(false); }}>
             Dealer / B2B Login
           </button>
           <button className="lp-dropdown-item" onClick={() => scrollTo("test-ride")}>
@@ -242,6 +296,24 @@ const LoginPage = () => {
             Contact a Dealer
           </button>
         </div>
+      )}
+    </div>
+  );
+
+  // ── Password strength dots ─────────────────────────────
+  const PasswordStrengthDots = () => (
+    <div className="lp-pw-strength">
+      {[1, 2, 3, 4].map(i => (
+        <div
+          key={i}
+          className="lp-pw-dot"
+          style={{ background: i <= pwStrength.score ? pwStrength.color : "#e5e7eb" }}
+        />
+      ))}
+      {password.length > 0 && (
+        <span className="lp-pw-label" style={{ color: pwStrength.color }}>
+          {pwStrength.label}
+        </span>
       )}
     </div>
   );
@@ -271,7 +343,7 @@ const LoginPage = () => {
           </nav>
 
           <div className="lp-nav-right">
-            <button className="lp-btn-login" onClick={() => setShowLogin(true)}>
+            <button className="lp-btn-login" onClick={openModal}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -295,7 +367,7 @@ const LoginPage = () => {
             ))}
             <a className="lp-mobile-link" href="https://www.bgauss.com/blog/" target="_blank" rel="noreferrer">Blog</a>
             <button className="lp-mobile-link lp-mobile-login"
-              onClick={() => { setShowLogin(true); setMobileMenuOpen(false); }}>
+              onClick={() => { openModal(); setMobileMenuOpen(false); }}>
               Dealer / Admin Login
             </button>
           </div>
@@ -317,7 +389,7 @@ const LoginPage = () => {
               Power. Range. Style.
             </p>
             <div className="lp-hero-actions">
-              <button className="lp-cta-primary" onClick={() => setShowLogin(true)}>
+              <button className="lp-cta-primary" onClick={openModal}>
                 Dealer / Admin Login →
               </button>
               <button className="lp-cta-secondary" onClick={() => scrollTo("products")}>
@@ -416,7 +488,7 @@ const LoginPage = () => {
                       <span>🔌 {sp.charge}</span>
                     </div>
                     <div className="lp-product-actions">
-                      <button className="lp-product-btn-primary" onClick={() => setShowLogin(true)}>View Details</button>
+                      <button className="lp-product-btn-primary" onClick={openModal}>View Details</button>
                       <button className="lp-product-btn-ghost" onClick={() => scrollTo("test-ride")}>Test Ride</button>
                     </div>
                   </div>
@@ -472,7 +544,7 @@ const LoginPage = () => {
                 <div>
                   <p className="lp-store-result-area">{selectedStore.areaName}</p>
                   <p className="lp-store-result-city">{selectedStore.cityName}, {selectedStore.stateName} — {selectedStore.pincode}</p>
-                  <button className="lp-store-directions" onClick={() => setShowLogin(true)}>
+                  <button className="lp-store-directions" onClick={openModal}>
                     View Inventory for this Area →
                   </button>
                 </div>
@@ -554,7 +626,7 @@ const LoginPage = () => {
             <h3>Dealer or Admin?</h3>
             <p>Access the B2B portal for inventory, exchange program, pricing and order management.</p>
             <div className="lp-dealer-cta-btns">
-              <button className="lp-cta-primary" onClick={() => setShowLogin(true)}>
+              <button className="lp-cta-primary" onClick={openModal}>
                 Dealer / Admin Login →
               </button>
             </div>
@@ -584,41 +656,47 @@ const LoginPage = () => {
         <div className="lp-modal-overlay" onClick={() => setShowLogin(false)}>
           <div className="lp-modal" onClick={e => e.stopPropagation()}>
 
-            {/* Left panel */}
+            {/* ── Left panel ── */}
             <div className="lp-modal-left">
               <img src={logo} alt="BGauss" className="lp-modal-logo" />
-              <h3>BGauss Portal</h3>
-              <p>Dealer · Admin</p>
+              <h3>BGauss B2B Portal</h3>
+              <p className="lp-modal-left-sub">Dealer &amp; Admin access</p>
 
-              {/* Role hint */}
-              <div className="lp-modal-role-hints">
-                <div className="lp-role-hint dealer">
-                  <span className="lp-role-icon">🛵</span>
-                  <div>
-                    <strong>Dealer</strong>
-                    <p>Exchange & Inventory</p>
-                  </div>
-                </div>
-                <div className="lp-role-hint admin">
-                  <span className="lp-role-icon">🔐</span>
-                  <div>
-                    <strong>Admin</strong>
-                    <p>Approval Panel</p>
-                  </div>
-                </div>
+              {/* Role tabs */}
+              <div className="lp-role-tabs">
+                <button
+                  className={`lp-role-tab${selectedRole === "dealer" ? " active" : ""}`}
+                  onClick={() => setSelectedRole("dealer")}
+                >
+                  <span className="lp-role-tab-icon">🛵</span>
+                  Dealer
+                </button>
+                <button
+                  className={`lp-role-tab${selectedRole === "admin" ? " active" : ""}`}
+                  onClick={() => setSelectedRole("admin")}
+                >
+                  <span className="lp-role-tab-icon">🔐</span>
+                  Admin
+                </button>
               </div>
 
-              <div className="lp-modal-image-wrapper">
-                <img src={scootyImg} alt="Scooty" className="lp-product-img"
-                  onError={e => { e.currentTarget.style.opacity = "0.3"; }} />
+              {/* Bike image + role note */}
+              <div className="lp-modal-bike-area">
+                <img
+                  src={scootyImg}
+                  alt="BGauss Scooty"
+                  className="lp-modal-bike-img"
+                  onError={e => { e.currentTarget.style.opacity = "0.2"; }}
+                />
+                <p className="lp-modal-bike-note">{roleMeta.note}</p>
               </div>
             </div>
 
-            {/* Right form */}
+            {/* ── Right form ── */}
             <div className="lp-modal-right">
               <button className="lp-modal-close" onClick={() => setShowLogin(false)}>✕</button>
-              <h2 className="lp-modal-title">Sign In</h2>
-              <p className="lp-modal-sub">Access your BGauss B2B Portal</p>
+              <h2 className="lp-modal-title">{roleMeta.title}</h2>
+              <p className="lp-modal-sub">Enter your credentials to access the portal</p>
 
               {loginError && (
                 <div className="lp-modal-error">⚠ {loginError}</div>
@@ -634,7 +712,7 @@ const LoginPage = () => {
                   </svg>
                   <input
                     type="text"
-                    placeholder="e.g. EMP001 or admin@bgauss.com"
+                    placeholder={roleMeta.placeholder}
                     value={identifier}
                     onChange={e => setIdentifier(e.target.value)}
                     onKeyDown={e => e.key === "Enter" && void handleLogin()}
@@ -663,12 +741,7 @@ const LoginPage = () => {
                     {showPassword ? "🙈" : "👁"}
                   </button>
                 </div>
-              </div>
-
-              {/* Role routing info */}
-              <div className="lp-modal-routing-note">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-                <span>Admins are redirected to the <strong>Approval Panel</strong>. Dealers access the <strong>Dealer Dashboard</strong>.</span>
+                <PasswordStrengthDots />
               </div>
 
               <button
@@ -681,6 +754,10 @@ const LoginPage = () => {
                   : "Login →"
                 }
               </button>
+
+              <p className="lp-modal-forgot">
+                Forgot password? <a href="mailto:support@bgauss.com">Contact support</a>
+              </p>
             </div>
           </div>
         </div>

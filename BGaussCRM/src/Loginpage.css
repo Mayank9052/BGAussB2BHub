@@ -1,5 +1,7 @@
 /* ═══════════════════════════════════════════════
    BGauss Landing Page — LoginPage.css
+   ENHANCED: Role tabs, password strength meter,
+             bike note per role, no routing note
 ═══════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap');
@@ -1012,9 +1014,9 @@
   color: rgba(255,255,255,0.3);
 }
 
-/* ═══════════════════════════════
-   LOGIN MODAL — fully responsive
-═══════════════════════════════ */
+/* ═══════════════════════════════════════════════
+   LOGIN MODAL
+═══════════════════════════════════════════════ */
 .lp-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1042,7 +1044,6 @@
   background: #fff;
   box-shadow: 0 32px 80px rgba(0,0,0,0.3);
   animation: modalIn 0.28s cubic-bezier(0.16,1,0.3,1);
-  /* Never exceed viewport */
   max-height: calc(100vh - 32px);
   overflow-y: auto;
 }
@@ -1054,70 +1055,131 @@
 
 /* ── Modal LEFT panel ── */
 .lp-modal-left {
-  width: 260px;
-  min-width: 260px;
+  width: 268px;
+  min-width: 268px;
   flex-shrink: 0;
-  background: linear-gradient(160deg, #111827 0%, #d32f2f 100%);
-  padding: 36px 24px;
+  background: linear-gradient(160deg, #111827 0%, #7a1010 100%);
+  padding: 32px 22px 26px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   color: #fff;
   text-align: center;
 }
 
 .lp-modal-logo {
-  width: 64px; height: 64px;
+  width: 60px; height: 60px;
   border-radius: 14px;
   object-fit: contain;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.12);
   padding: 8px;
   margin-bottom: 4px;
   flex-shrink: 0;
 }
 
 .lp-modal-left h3 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   margin: 0;
   line-height: 1.2;
 }
 
-.lp-modal-left p {
-  font-size: 12px;
-  color: rgba(255,255,255,0.65);
+.lp-modal-left-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
   margin: 0;
 }
 
-/* Scooty image inside modal — constrained so it never crowds text */
-.lp-modal-image-wrapper {
-  width: 100%;
-  margin-top: 12px;
+/* ── Role Tabs ── */
+.lp-role-tabs {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  min-height: 0;
+  gap: 0;
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 3px;
+  width: 100%;
+  margin-top: 10px;
+  flex-shrink: 0;
 }
 
-.lp-modal-image-wrapper .lp-product-img {
+.lp-role-tab {
+  flex: 1;
+  padding: 9px 6px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.2;
+}
+
+.lp-role-tab-icon { font-size: 17px; }
+
+.lp-role-tab.active {
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+}
+
+.lp-role-tab:hover:not(.active) {
+  background: rgba(255,255,255,0.09);
+  color: rgba(255,255,255,0.8);
+}
+
+/* ── Bike area with role note ── */
+.lp-modal-bike-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  max-width: 180px;
+  min-height: 0;
+  margin-top: 6px;
+  gap: 10px;
+}
+
+.lp-modal-bike-img {
+  width: 100%;
+  max-width: 175px;
+  max-height: 140px;
   object-fit: contain;
-  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.3));
-  /* Don't let image overflow on small heights */
-  max-height: 160px;
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.35));
+  transition: opacity 0.3s;
+}
+
+.lp-modal-bike-note {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.55;
+  max-width: 190px;
+  text-align: center;
+}
+
+.lp-modal-bike-note strong {
+  color: rgba(255,255,255,0.85);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 2px;
 }
 
 /* ── Modal RIGHT panel ── */
 .lp-modal-right {
   flex: 1;
   min-width: 0;
-  padding: 36px 32px 32px;
+  padding: 32px 30px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   position: relative;
 }
 
@@ -1145,11 +1207,12 @@
   font-weight: 800;
   color: #111827;
   margin-top: 4px;
-  padding-right: 36px; /* avoid overlap with close button */
+  padding-right: 36px;
+  transition: all 0.2s;
 }
 
 .lp-modal-sub {
-  font-size: 13px;
+  font-size: 12px;
   color: #6b7280;
   margin-top: -8px;
 }
@@ -1164,8 +1227,16 @@
   border-radius: 8px;
 }
 
+/* ── Form fields ── */
 .lp-modal-field { display: flex; flex-direction: column; gap: 5px; }
-.lp-modal-field label { font-size: 12px; font-weight: 700; color: #374151; }
+
+.lp-modal-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
 .lp-input-wrap {
   display: flex;
@@ -1180,9 +1251,9 @@
 }
 
 .lp-input-wrap:focus-within {
-  border-color: #d32f2f;
+  border-color: #c62828;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(211,47,47,0.08);
+  box-shadow: 0 0 0 3px rgba(198,40,40,0.08);
 }
 
 .lp-input-wrap input {
@@ -1207,13 +1278,37 @@
 
 .lp-pw-eye:hover { opacity: 1; }
 
+/* ── Password strength ── */
+.lp-pw-strength {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.lp-pw-dot {
+  width: 26px;
+  height: 3px;
+  border-radius: 2px;
+  background: #e5e7eb;
+  transition: background 0.25s;
+}
+
+.lp-pw-label {
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  transition: color 0.2s;
+}
+
+/* ── Login button ── */
 .lp-modal-login-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 13px;
-  background: #d32f2f;
+  background: #c62828;
   border: none;
   border-radius: 10px;
   font-family: 'Montserrat', sans-serif;
@@ -1222,15 +1317,15 @@
   color: #fff;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 6px 18px rgba(211,47,47,0.35);
-  margin-top: 4px;
+  box-shadow: 0 6px 18px rgba(198,40,40,0.35);
+  margin-top: 2px;
   width: 100%;
 }
 
 .lp-modal-login-btn:hover:not(:disabled) {
   background: #b71c1c;
   transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(211,47,47,0.45);
+  box-shadow: 0 10px 24px rgba(183,28,28,0.45);
 }
 
 .lp-modal-login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -1244,6 +1339,23 @@
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Forgot link ── */
+.lp-modal-forgot {
+  text-align: center;
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: -4px;
+}
+
+.lp-modal-forgot a {
+  color: #c62828;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.lp-modal-forgot a:hover { color: #b71c1c; }
 
 /* ═══════════════════════════════
    RESPONSIVE
@@ -1262,24 +1374,24 @@
 @media (max-width: 900px) {
   .lp-nav-links  { display: none; }
   .lp-hamburger  { display: flex; }
-
-  /* Hide login/book on mobile — they're in mobile menu */
   .lp-btn-login  { display: none; }
   .lp-btn-book   { display: none; }
 
-  .lp-hero-inner { flex-direction: column; text-align: center; padding: 80px 24px 56px; }
+  .lp-hero-inner    { flex-direction: column; text-align: center; padding: 80px 24px 56px; }
   .lp-hero-img-wrap { width: 100%; max-width: 340px; }
   .lp-hero-actions  { justify-content: center; }
   .lp-hero-stats    { justify-content: center; }
 
   .lp-testride-steps { grid-template-columns: repeat(2, 1fr); }
 
-  /* Modal: side-by-side but narrower left panel */
   .lp-modal { max-width: 600px; }
-  .lp-modal-left { width: 200px; min-width: 200px; padding: 28px 18px; }
-  .lp-modal-left h3 { font-size: 16px; }
-  .lp-modal-image-wrapper .lp-product-img { max-width: 140px; max-height: 120px; }
-  .lp-modal-right { padding: 28px 24px; }
+  .lp-modal-left {
+    width: 210px;
+    min-width: 210px;
+    padding: 26px 16px;
+  }
+  .lp-modal-bike-img { max-width: 130px; max-height: 110px; }
+  .lp-modal-right { padding: 26px 22px 24px; }
 }
 
 /* Phones */
@@ -1293,7 +1405,7 @@
   .lp-contact-grid    { grid-template-columns: 1fr 1fr; }
   .lp-testride-steps  { grid-template-columns: 1fr 1fr; }
 
-  /* ── MODAL goes full-width, stacks vertically ── */
+  /* Modal goes full-width, stacks vertically */
   .lp-modal {
     flex-direction: column;
     border-radius: 16px;
@@ -1308,34 +1420,33 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    padding: 18px 20px;
-    gap: 14px;
+    padding: 16px 18px;
+    gap: 12px;
     text-align: left;
+    flex-wrap: wrap;
   }
 
   .lp-modal-logo {
-    width: 48px; height: 48px;
-    border-radius: 12px;
+    width: 44px; height: 44px;
+    border-radius: 10px;
     flex-shrink: 0;
     margin-bottom: 0;
   }
 
-  /* Text block inside left panel */
-  .lp-modal-left-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  .lp-modal-left h3        { font-size: 14px; }
+  .lp-modal-left-sub       { font-size: 10px; }
+  .lp-modal-bike-area      { display: none; }
+
+  /* Role tabs still visible in mobile header */
+  .lp-role-tabs {
+    margin-top: 0;
+    flex-shrink: 0;
+    min-width: 140px;
   }
 
-  .lp-modal-left h3 { font-size: 15px; font-weight: 800; }
-  .lp-modal-left p  { font-size: 11px; }
-
-  /* Hide scooty image on mobile — no room */
-  .lp-modal-image-wrapper { display: none; }
-
   .lp-modal-right {
-    padding: 20px 20px 24px;
-    gap: 14px;
+    padding: 20px 18px 22px;
+    gap: 12px;
   }
 
   .lp-modal-title { font-size: 18px; }
