@@ -68,27 +68,59 @@ namespace BGaussCRM.API.Controllers
         // ─────────────────────────────────────────────────────────────
         private string GetWebRoot()
         {
-            // 1. Use the configured WebRootPath if it's set and valid
+            // 1. Configured WebRootPath (set in Program.cs before app.Build())
             if (!string.IsNullOrWhiteSpace(_env.WebRootPath) &&
                 Directory.Exists(_env.WebRootPath))
             {
-                return _env.WebRootPath;
+                // Quick write-permission probe
+                if (CanWrite(_env.WebRootPath))
+                    return _env.WebRootPath;
+
+                _logger.LogWarning(
+                    "WebRootPath '{Path}' is not writable by this process.", _env.WebRootPath);
             }
 
-            // 2. Fall back: wwwroot alongside the running executable
-            var fallback = Path.Combine(_env.ContentRootPath, "wwwroot");
+            // 2. {ContentRootPath}/wwwroot  (next to the published executable)
+            var beside = Path.Combine(_env.ContentRootPath, "wwwroot");
+            EnsureDir(beside);
+            if (CanWrite(beside))
+                return beside;
 
-            // Create the folder so static files middleware can serve from it later
-            if (!Directory.Exists(fallback))
+            _logger.LogWarning(
+                "ContentRoot wwwroot '{Path}' is not writable. Falling back to /tmp.", beside);
+
+            // 3. /tmp fallback (Linux; images won't be publicly served from here)
+            var tmp = Path.Combine(Path.GetTempPath(), "bgauss-uploads");
+            EnsureDir(tmp);
+            _logger.LogWarning(
+                "Using temp upload path: {Path}. " +
+                "Files will NOT be served as static assets. " +
+                "Fix folder permissions on the server.", tmp);
+            return tmp;
+        }
+
+        private static bool CanWrite(string path)
+        {
+            try
             {
-                try { Directory.CreateDirectory(fallback); }
+                var probe = Path.Combine(path, $".probe_{Guid.NewGuid():N}");
+                System.IO.File.WriteAllText(probe, "ok");
+                System.IO.File.Delete(probe);
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private void EnsureDir(string path)
+        {
+            if (!Directory.Exists(path))
+            {
+                try { Directory.CreateDirectory(path); }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Could not create fallback wwwroot at {Path}", fallback);
+                    _logger.LogWarning(ex, "Could not create directory: {Path}", path);
                 }
             }
-
-            return fallback;
         }
 
         // ── GET /api/ExchangeCases ────────────────────────────
@@ -223,6 +255,7 @@ namespace BGaussCRM.API.Controllers
         //      wwwroot folder exists at the default path. GetWebRoot()
         //      falls back to {ContentRootPath}/wwwroot and creates it.
         // ─────────────────────────────────────────────────────
+        // ── POST /api/ExchangeCases/{id}/images ──────────────────────────────────
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadImage(
@@ -230,61 +263,90 @@ namespace BGaussCRM.API.Controllers
             [FromForm] string imageType,
             IFormFile image)
         {
-            // ── Validate imageType ──────────────────────────────────────
+            // ── 1. Validate imageType ─────────────────────────────────────────────
             var validTypes = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
             if (!validTypes.Contains(imageType))
-                return BadRequest(new { error = $"Invalid imageType '{imageType}'. Must be one of: {string.Join(", ", validTypes)}" });
+                return BadRequest(new
+                {
+                    error = $"Invalid imageType '{imageType}'. Allowed: {string.Join(", ", validTypes)}"
+                });
 
-            // ── Load case ───────────────────────────────────────────────
+            // ── 2. Load case ──────────────────────────────────────────────────────
             var c = await _db.ExchangeCases
                 .Include(x => x.ExchangeCaseImages)
                 .FirstOrDefaultAsync(x => x.Id == id);
 
-            if (c == null) return NotFound(new { error = $"Case {id} not found." });
+            if (c == null)
+                return NotFound(new { error = $"Case {id} not found." });
 
-            // ── Validate file ───────────────────────────────────────────
+            // ── 3. Validate file ──────────────────────────────────────────────────
             if (image == null || image.Length == 0)
                 return BadRequest(new { error = "No image provided or file is empty." });
 
             var ext     = Path.GetExtension(image.FileName).ToLowerInvariant();
-            var allowed = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var allowed = new[] { ".jpg", ".jpeg", ".png"};
             if (!allowed.Contains(ext))
-                return BadRequest(new { error = $"File type '{ext}' not allowed. Use JPG, PNG, or WebP." });
+                return BadRequest(new
+                {
+                    error = $"File type '{ext}' not allowed. Use JPG, PNG."
+                });
 
-            // ── Resolve upload directory (PRODUCTION-SAFE) ──────────────
+            // ── 4. Resolve upload directory ───────────────────────────────────────
             var webRoot = GetWebRoot();
             var folder  = Path.Combine(webRoot, IMG_FOLDER, id.ToString());
 
-            _logger.LogInformation("UploadImage: webRoot={WebRoot}, folder={Folder}", webRoot, folder);
+            _logger.LogInformation(
+                "UploadImage → webRoot={WebRoot}  folder={Folder}", webRoot, folder);
 
-            try
-            {
-                Directory.CreateDirectory(folder);
-            }
+            try { Directory.CreateDirectory(folder); }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Cannot create upload directory: {Folder}", folder);
-                return StatusCode(500, new { error = $"Server cannot create upload directory. Check write permissions on: {folder}" });
+                return StatusCode(500, new
+                {
+                    error   = "Server cannot create the upload directory.",
+                    detail  = ex.Message,
+                    path    = folder,
+                    hint    = "Run: sudo chown -R <app-user> /path/to/wwwroot && sudo chmod -R 755 /path/to/wwwroot"
+                });
             }
 
-            // ── Save file ───────────────────────────────────────────────
-            var fileName = $"{imageType}{ext}";
-            var filePath = Path.Combine(folder, fileName);
+            // ── 5. Save file ──────────────────────────────────────────────────────
+            // Use a unique name so concurrent uploads don't overwrite each other mid-stream.
+            // Final name is still {imageType}{ext} — we write to a temp first then rename.
+            var finalName = $"{imageType}{ext}";
+            var tempPath  = Path.Combine(folder, $"{imageType}_{Guid.NewGuid():N}{ext}");
+            var finalPath = Path.Combine(folder, finalName);
 
             try
             {
-                await using var fs = System.IO.File.Create(filePath);
-                await image.CopyToAsync(fs);
+                await using (var fs = System.IO.File.Create(tempPath))
+                    await image.CopyToAsync(fs);
+
+                // Atomic rename — replaces previous image for this type if any
+                if (System.IO.File.Exists(finalPath))
+                    System.IO.File.Delete(finalPath);
+
+                System.IO.File.Move(tempPath, finalPath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to write image file: {FilePath}", filePath);
-                return StatusCode(500, new { error = $"Failed to save image. Server error: {ex.Message}" });
+                _logger.LogError(ex, "Failed to write image file: {Path}", finalPath);
+                // Clean up temp if it exists
+                if (System.IO.File.Exists(tempPath))
+                    try { System.IO.File.Delete(tempPath); } catch { /* ignore */ }
+
+                return StatusCode(500, new
+                {
+                    error  = "Failed to save image on server.",
+                    detail = ex.Message,
+                    hint   = "Check disk space and file-system permissions."
+                });
             }
 
-            // ── Store relative URL in DB ────────────────────────────────
-            // Always use forward slashes so the URL works in browsers
-            var relPath  = $"/{IMG_FOLDER}/{id}/{fileName}";
+            // ── 6. Persist relative URL in DB ─────────────────────────────────────
+            // Always forward-slashes so the browser can request it as a static file.
+            var relPath = $"/{IMG_FOLDER}/{id}/{finalName}";
 
             var existing = c.ExchangeCaseImages.FirstOrDefault(i => i.ImageType == imageType);
             if (existing != null)
@@ -294,13 +356,13 @@ namespace BGaussCRM.API.Controllers
                 {
                     CaseId    = id,
                     ImageType = imageType,
-                    ImagePath = relPath
+                    ImagePath = relPath,
                 });
 
             c.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
 
-            _logger.LogInformation("Image saved: {RelPath}", relPath);
+            _logger.LogInformation("Image saved → DB path: {RelPath}", relPath);
             return Ok(new { imageType, path = relPath });
         }
 
