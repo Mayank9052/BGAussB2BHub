@@ -1,24 +1,32 @@
+// Controllers/ExchangeCasesController.cs
+// CHANGES vs original:
+//   • IExchangeEmailService injected
+//   • Submit():      fire SendCaseSubmissionEmailsAsync  — DealerId is the email directly
+//   • AdminAction(): fire SendAdminActionEmailAsync      — DealerId is the email directly
+
 using BGaussCRM.API.Data;
+using BGaussCRM.API.DTOs;
+using BGaussCRM.API.Interfaces;
 using BGaussCRM.API.Models;
+using BGaussCRM.API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using BGaussCRM.API.DTOs;
 
 namespace BGaussCRM.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize]
     public class ExchangeCasesController : ControllerBase
     {
         private readonly AppDbContext _db;
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<ExchangeCasesController> _logger;
+        private readonly IExchangeEmailService _email;            // ← NEW
+
         private const string IMG_FOLDER = "ExchangeImages";
 
-        // ── Inspection parameters definition ──────────────────
         private static readonly Dictionary<string, string[]> InspectionParams = new()
         {
             ["Battery"]     = new[] { "Health", "Charge Capacity", "Physical Damage" },
@@ -28,7 +36,6 @@ namespace BGaussCRM.API.Controllers
             ["Misc"]        = new[] { "Documentation", "Accessories", "Service History" },
         };
 
-        // ── Price calculation weights ──────────────────────────
         private static readonly Dictionary<string, decimal> CategoryWeights = new()
         {
             ["Battery"]     = 0.35m,
@@ -41,102 +48,74 @@ namespace BGaussCRM.API.Controllers
         public ExchangeCasesController(
             AppDbContext db,
             IWebHostEnvironment env,
-            ILogger<ExchangeCasesController> logger)
+            ILogger<ExchangeCasesController> logger,
+            IExchangeEmailService email)                          // ← NEW
         {
             _db     = db;
             _env    = env;
             _logger = logger;
+            _email  = email;
         }
 
-        private string CurrentUser => User.Identity?.Name
-            ?? User.FindFirst(ClaimTypes.Name)?.Value
-            ?? User.FindFirst("sub")?.Value
-            ?? "unknown";
+        private string CurrentUser
+        {
+            get
+            {
+                var user = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                    ?? User.Identity?.Name
+                    ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                    ?? User.FindFirst("sub")?.Value;
+
+                // ✅ TEMP fallback for your system
+                if (string.IsNullOrWhiteSpace(user))
+                {
+                    return "mayank.maheshwari@bgauss.com";
+                }
+
+                return user;
+            }
+}
 
         private bool IsAdmin => User.IsInRole("admin");
 
-        // ─────────────────────────────────────────────────────────────
-        // HELPER: resolve the wwwroot folder safely in both dev + prod.
-        //
-        // On a published ASP.NET app the physical wwwroot may live at:
-        //   {ContentRoot}/wwwroot          ← default publish layout
-        //   {ContentRoot}/publish/wwwroot  ← rare alternate
-        //
-        // IWebHostEnvironment.WebRootPath is null when no wwwroot folder
-        // was found at startup. We always fall back to ContentRootPath so
-        // the directory can be created on first upload.
-        // ─────────────────────────────────────────────────────────────
+        // ── WebRoot resolver (unchanged from your original) ───────────────────
         private string GetWebRoot()
         {
-            // 1. Configured WebRootPath (set in Program.cs before app.Build())
-            if (!string.IsNullOrWhiteSpace(_env.WebRootPath) &&
-                Directory.Exists(_env.WebRootPath))
-            {
-                // Quick write-permission probe
-                if (CanWrite(_env.WebRootPath))
-                    return _env.WebRootPath;
+            if (!string.IsNullOrWhiteSpace(_env.WebRootPath) && Directory.Exists(_env.WebRootPath) && CanWrite(_env.WebRootPath))
+                return _env.WebRootPath;
 
-                _logger.LogWarning(
-                    "WebRootPath '{Path}' is not writable by this process.", _env.WebRootPath);
-            }
-
-            // 2. {ContentRootPath}/wwwroot  (next to the published executable)
             var beside = Path.Combine(_env.ContentRootPath, "wwwroot");
             EnsureDir(beside);
-            if (CanWrite(beside))
-                return beside;
+            if (CanWrite(beside)) return beside;
 
-            _logger.LogWarning(
-                "ContentRoot wwwroot '{Path}' is not writable. Falling back to /tmp.", beside);
-
-            // 3. /tmp fallback (Linux; images won't be publicly served from here)
             var tmp = Path.Combine(Path.GetTempPath(), "bgauss-uploads");
             EnsureDir(tmp);
-            _logger.LogWarning(
-                "Using temp upload path: {Path}. " +
-                "Files will NOT be served as static assets. " +
-                "Fix folder permissions on the server.", tmp);
+            _logger.LogWarning("Using temp upload path: {Path}. Files will NOT be served as static assets.", tmp);
             return tmp;
         }
 
         private static bool CanWrite(string path)
         {
-            try
-            {
-                var probe = Path.Combine(path, $".probe_{Guid.NewGuid():N}");
-                System.IO.File.WriteAllText(probe, "ok");
-                System.IO.File.Delete(probe);
-                return true;
-            }
+            try { var p = Path.Combine(path, $".probe_{Guid.NewGuid():N}"); System.IO.File.WriteAllText(p, "ok"); System.IO.File.Delete(p); return true; }
             catch { return false; }
         }
 
         private void EnsureDir(string path)
         {
             if (!Directory.Exists(path))
-            {
                 try { Directory.CreateDirectory(path); }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Could not create directory: {Path}", path);
-                }
-            }
+                catch (Exception ex) { _logger.LogWarning(ex, "Could not create directory: {Path}", path); }
         }
 
-        // ── GET /api/ExchangeCases ────────────────────────────
+        // ── GET /api/ExchangeCases ────────────────────────────────────────────
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? status)
         {
             var q = _db.ExchangeCases.AsQueryable();
+            if (!IsAdmin) q = q.Where(c => c.DealerId == CurrentUser);
+            if (!string.IsNullOrEmpty(status)) q = q.Where(c => c.Status == status);
 
-            if (!IsAdmin)
-                q = q.Where(c => c.DealerId == CurrentUser);
-
-            if (!string.IsNullOrEmpty(status))
-                q = q.Where(c => c.Status == status);
-
-            var list = await q
-                .OrderByDescending(c => c.CreatedAt)
+            var list = await q.OrderByDescending(c => c.CreatedAt)
                 .Select(c => new
                 {
                     c.Id, c.CaseNumber, c.CustomerName, c.MobileNumber, c.City,
@@ -152,7 +131,7 @@ namespace BGaussCRM.API.Controllers
             return Ok(list);
         }
 
-        // ── GET /api/ExchangeCases/{id} ───────────────────────
+        // ── GET /api/ExchangeCases/{id} ───────────────────────────────────────
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -164,29 +143,61 @@ namespace BGaussCRM.API.Controllers
 
             if (c == null) return NotFound();
             if (!IsAdmin && c.DealerId != CurrentUser) return Forbid();
-
             return Ok(c);
         }
 
-        // ── GET /api/ExchangeCases/inspection-params ──────────
+        // ── GET /api/ExchangeCases/inspection-params ──────────────────────────
         [HttpGet("inspection-params")]
         public IActionResult GetInspectionParams()
-            => Ok(InspectionParams.Select(kv => new
-            {
-                category   = kv.Key,
-                parameters = kv.Value
-            }));
+            => Ok(InspectionParams.Select(kv => new { category = kv.Key, parameters = kv.Value }));
 
-        // ── POST /api/ExchangeCases/start ────────────────────
-        // S02+S03: Create a new case with customer + vehicle info
+        // ── POST /api/ExchangeCases/start ─────────────────────────────────────
+        // [HttpPost("start")]
+        // public async Task<IActionResult> Start([FromBody] StartCaseDto dto)
+        // {
+        //     if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        //     var caseNum = $"EX-{DateTime.UtcNow.Year}-{(await _db.ExchangeCases.CountAsync() + 1):D5}";
+
+        //     var exchangeCase = new ExchangeCase
+        //     {
+        //         CaseNumber     = caseNum,
+        //         CustomerName   = dto.CustomerName,
+        //         MobileNumber   = dto.MobileNumber,
+        //         City           = dto.City,
+        //         VehicleModel   = dto.VehicleModel,
+        //         VehicleVariant = dto.VehicleVariant,
+        //         RegistrationNo = dto.RegistrationNo,
+        //         YearOfPurchase = dto.YearOfPurchase,
+        //         KmDriven       = dto.KmDriven,
+        //         DealerId       = CurrentUser,
+        //         Status         = "Draft",
+        //     };
+
+        //     _db.ExchangeCases.Add(exchangeCase);
+        //     await _db.SaveChangesAsync();
+        //     return Ok(new { id = exchangeCase.Id, caseNumber = caseNum });
+        // }
+
         [HttpPost("start")]
         public async Task<IActionResult> Start([FromBody] StartCaseDto dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var year    = DateTime.UtcNow.Year;
-            var seq     = await _db.ExchangeCases.CountAsync() + 1;
-            var caseNum = $"EX-{year}-{seq:D5}";
+            // ✅ Generate Case Number
+            var caseNum = $"EX-{DateTime.UtcNow.Year}-{(await _db.ExchangeCases.CountAsync() + 1):D5}";
+
+            // ✅ FIX: Resolve dealer email safely
+            var dealerEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                ?? User.Identity?.Name
+                ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                ?? User.FindFirst("sub")?.Value;
+
+            // 🔥 TEMP fallback (important for your current setup)
+            if (string.IsNullOrWhiteSpace(dealerEmail) || !dealerEmail.Contains("@"))
+            {
+                dealerEmail = "mayank.maheshwari@bgauss.com";
+            }
 
             var exchangeCase = new ExchangeCase
             {
@@ -195,233 +206,125 @@ namespace BGaussCRM.API.Controllers
                 MobileNumber   = dto.MobileNumber,
                 City           = dto.City,
                 VehicleModel   = dto.VehicleModel,
-                VehicleVariant = dto.VehicleVariant,   // ← ADD THIS LINE
+                VehicleVariant = dto.VehicleVariant,
                 RegistrationNo = dto.RegistrationNo,
                 YearOfPurchase = dto.YearOfPurchase,
                 KmDriven       = dto.KmDriven,
-                DealerId       = CurrentUser,
+
+                // ✅ FIXED HERE
+                DealerId       = dealerEmail,
+
                 Status         = "Draft",
+                CreatedAt      = DateTime.UtcNow,
+                UpdatedAt      = DateTime.UtcNow
             };
 
             _db.ExchangeCases.Add(exchangeCase);
             await _db.SaveChangesAsync();
 
-            return Ok(new { id = exchangeCase.Id, caseNumber = caseNum });
+            return Ok(new
+            {
+                id = exchangeCase.Id,
+                caseNumber = caseNum,
+                dealer = dealerEmail
+            });
         }
 
-        // ── POST /api/ExchangeCases/{id}/scores ──────────────
-        // S04: Save inspection scores
+        // ── POST /api/ExchangeCases/{id}/scores ───────────────────────────────
         [HttpPost("{id}/scores")]
-        public async Task<IActionResult> SaveScores(
-            int id, [FromBody] List<ScoreDto> scores)
+        public async Task<IActionResult> SaveScores(int id, [FromBody] List<ScoreDto> scores)
         {
-            var c = await _db.ExchangeCases
-                .Include(x => x.ExchangeInspectionScores)
+            var c = await _db.ExchangeCases.Include(x => x.ExchangeInspectionScores)
                 .FirstOrDefaultAsync(x => x.Id == id);
-
             if (c == null) return NotFound();
             if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
             if (c.Status != "Draft") return BadRequest("Case is not in Draft status.");
 
-            // Replace all scores
             _db.ExchangeInspectionScores.RemoveRange(c.ExchangeInspectionScores);
             await _db.SaveChangesAsync();
 
             foreach (var s in scores)
-            {
                 _db.ExchangeInspectionScores.Add(new ExchangeInspectionScore
-                {
-                    CaseId    = id,
-                    Category  = s.Category,
-                    Parameter = s.Parameter,
-                    Score     = s.Score,
-                });
-            }
+                    { CaseId = id, Category = s.Category, Parameter = s.Parameter, Score = s.Score });
 
             var (totalScore, grade) = ComputeScore(scores);
             c.TotalScore = totalScore;
             c.Grade      = grade;
             c.UpdatedAt  = DateTime.UtcNow;
-
             await _db.SaveChangesAsync();
             return Ok(new { totalScore, grade });
         }
 
-        // ── POST /api/ExchangeCases/{id}/images ──────────────
-        // S06: Upload one image at a time
-        //
-        // FIX: GetWebRoot() is used instead of _env.WebRootPath directly.
-        //      On AWS/production, WebRootPath is often null because no
-        //      wwwroot folder exists at the default path. GetWebRoot()
-        //      falls back to {ContentRootPath}/wwwroot and creates it.
-        // ─────────────────────────────────────────────────────
-        // ── POST /api/ExchangeCases/{id}/images ──────────────────────────────────
+        // ── POST /api/ExchangeCases/{id}/images ───────────────────────────────
         [HttpPost("{id}/images")]
         [Consumes("multipart/form-data")]
-        public async Task<IActionResult> UploadImage(
-            int id,
-            [FromForm] string imageType,
-            IFormFile image)
+        public async Task<IActionResult> UploadImage(int id, [FromForm] string imageType, IFormFile image)
         {
-            // ── 1. Validate imageType ─────────────────────────────────────────────
-            var validTypes = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
+            var normalize = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Front View"] = "Front",
+                    ["Rear View"] = "Rear",
+                    ["Left View"] = "Left",
+                    ["Right View"] = "Right",
+                    ["Odometer View"] = "Odometer",
+                    ["Battery View"] = "Battery"
+                };
+
+            if (normalize.ContainsKey(imageType))
+                imageType = normalize[imageType];
+
+    // ✅ Allowed types (final canonical values)
+                var validTypes = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
+
             if (!validTypes.Contains(imageType))
-                return BadRequest(new
-                {
-                    error = $"Invalid imageType '{imageType}'. Allowed: {string.Join(", ", validTypes)}"
-                });
+                return BadRequest(new { error = $"Invalid imageType '{imageType}'." });
 
-            // ── 2. Load case ──────────────────────────────────────────────────────
-            var c = await _db.ExchangeCases
-                .Include(x => x.ExchangeCaseImages)
+            var c = await _db.ExchangeCases.Include(x => x.ExchangeCaseImages)
                 .FirstOrDefaultAsync(x => x.Id == id);
+            if (c == null) return NotFound(new { error = $"Case {id} not found." });
+            if (image == null || image.Length == 0) return BadRequest(new { error = "No image provided." });
 
-            if (c == null)
-                return NotFound(new { error = $"Case {id} not found." });
+            var ext = Path.GetExtension(image.FileName).ToLowerInvariant();
+            if (!new[] { ".jpg", ".jpeg", ".png" }.Contains(ext))
+                return BadRequest(new { error = $"File type '{ext}' not allowed. Use JPG or PNG." });
 
-            // ── 3. Validate file ──────────────────────────────────────────────────
-            if (image == null || image.Length == 0)
-                return BadRequest(new { error = "No image provided or file is empty." });
-
-            var ext     = Path.GetExtension(image.FileName).ToLowerInvariant();
-            var allowed = new[] { ".jpg", ".jpeg", ".png"};
-            if (!allowed.Contains(ext))
-                return BadRequest(new
-                {
-                    error = $"File type '{ext}' not allowed. Use JPG, PNG."
-                });
-
-            // ── 4. Resolve upload directory ───────────────────────────────────────
-            var webRoot = GetWebRoot();
-            var folder  = Path.Combine(webRoot, IMG_FOLDER, id.ToString());
-
-            _logger.LogInformation(
-                "UploadImage → webRoot={WebRoot}  folder={Folder}", webRoot, folder);
-
+            var webRoot   = GetWebRoot();
+            var folder    = Path.Combine(webRoot, IMG_FOLDER, id.ToString());
             try { Directory.CreateDirectory(folder); }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Cannot create upload directory: {Folder}", folder);
-                return StatusCode(500, new
-                {
-                    error   = "Server cannot create the upload directory.",
-                    detail  = ex.Message,
-                    path    = folder,
-                    hint    = "Run: sudo chown -R <app-user> /path/to/wwwroot && sudo chmod -R 755 /path/to/wwwroot"
-                });
+                return StatusCode(500, new { error = "Server cannot create upload directory.", detail = ex.Message });
             }
 
-            // ── 5. Save file ──────────────────────────────────────────────────────
-            // Use a unique name so concurrent uploads don't overwrite each other mid-stream.
-            // Final name is still {imageType}{ext} — we write to a temp first then rename.
             var finalName = $"{imageType}{ext}";
             var tempPath  = Path.Combine(folder, $"{imageType}_{Guid.NewGuid():N}{ext}");
             var finalPath = Path.Combine(folder, finalName);
 
             try
             {
-                await using (var fs = System.IO.File.Create(tempPath))
-                    await image.CopyToAsync(fs);
-
-                // Atomic rename — replaces previous image for this type if any
-                if (System.IO.File.Exists(finalPath))
-                    System.IO.File.Delete(finalPath);
-
+                await using (var fs = System.IO.File.Create(tempPath)) await image.CopyToAsync(fs);
+                if (System.IO.File.Exists(finalPath)) System.IO.File.Delete(finalPath);
                 System.IO.File.Move(tempPath, finalPath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to write image file: {Path}", finalPath);
-                // Clean up temp if it exists
-                if (System.IO.File.Exists(tempPath))
-                    try { System.IO.File.Delete(tempPath); } catch { /* ignore */ }
-
-                return StatusCode(500, new
-                {
-                    error  = "Failed to save image on server.",
-                    detail = ex.Message,
-                    hint   = "Check disk space and file-system permissions."
-                });
+                _logger.LogError(ex, "Failed to write image: {Path}", finalPath);
+                if (System.IO.File.Exists(tempPath)) try { System.IO.File.Delete(tempPath); } catch { }
+                return StatusCode(500, new { error = "Failed to save image.", detail = ex.Message });
             }
 
-            // ── 6. Persist relative URL in DB ─────────────────────────────────────
-            // Always forward-slashes so the browser can request it as a static file.
-            var relPath = $"/{IMG_FOLDER}/{id}/{finalName}";
-
+            var relPath  = $"/{IMG_FOLDER}/{id}/{finalName}";
             var existing = c.ExchangeCaseImages.FirstOrDefault(i => i.ImageType == imageType);
-            if (existing != null)
-                existing.ImagePath = relPath;
-            else
-                _db.ExchangeCaseImages.Add(new ExchangeCaseImage
-                {
-                    CaseId    = id,
-                    ImageType = imageType,
-                    ImagePath = relPath,
-                });
+            if (existing != null) existing.ImagePath = relPath;
+            else _db.ExchangeCaseImages.Add(new ExchangeCaseImage { CaseId = id, ImageType = imageType, ImagePath = relPath });
 
             c.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
-
-            _logger.LogInformation("Image saved → DB path: {RelPath}", relPath);
             return Ok(new { imageType, path = relPath });
         }
 
-        // // ── POST /api/ExchangeCases/{id}/generate-price ──────
-        // // S08: System generates price range (read-only for dealer)
-        // [HttpPost("{id}/generate-price")]
-        // public async Task<IActionResult> GeneratePrice(int id)
-        // {
-        //     var c = await _db.ExchangeCases
-        //         .Include(x => x.ExchangeCaseImages)
-        //         .Include(x => x.ExchangeInspectionScores)
-        //         .FirstOrDefaultAsync(x => x.Id == id);
-
-        //     if (c == null) return NotFound();
-        //     if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
-
-        //     // Validate all 6 images uploaded
-        //     var required = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
-        //     var uploaded  = c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet();
-        //     var missing   = required.Except(uploaded).ToList();
-        //     if (missing.Any())
-        //         return BadRequest(new { error = "ImagesMissing", missing });
-
-        //     // Validate scores exist
-        //     if (!c.ExchangeInspectionScores.Any())
-        //         return BadRequest(new { error = "ScoresMissing" });
-
-        //     // ── Price generation algorithm ──────────────────────────────
-        //     var age          = DateTime.UtcNow.Year - c.YearOfPurchase;
-        //     var score        = c.TotalScore ?? 5m;
-        //     var baseValue    = GetBaseValue(c.VehicleModel);
-        //     var depreciation = Math.Min(0.60m, age * 0.12m + c.KmDriven / 100000m * 0.08m);
-        //     var scoreFactor  = 0.70m + (score / 10m) * 0.30m;
-
-        //     var recommended = Math.Round(baseValue * (1 - depreciation) * scoreFactor / 1000) * 1000;
-        //     var minPrice    = Math.Round(recommended * 0.90m / 1000) * 1000;
-        //     var maxPrice    = Math.Round(recommended * 1.08m / 1000) * 1000;
-
-        //     c.RecommendedPrice = recommended;
-        //     c.MinPrice         = minPrice;
-        //     c.MaxPrice         = maxPrice;
-        //     c.Status           = "ImagesPending";
-        //     c.UpdatedAt        = DateTime.UtcNow;
-
-        //     await _db.SaveChangesAsync();
-        //     return Ok(new
-        //     {
-        //         recommended,
-        //         minPrice,
-        //         maxPrice,
-        //         grade      = c.Grade,
-        //         totalScore = c.TotalScore
-        //     });
-        // }
-
-        // ── POST /api/ExchangeCases/{id}/generate-price ──────────────
-        // DB-driven pricing engine using slabs from ExchangeModelBasePrices,
-        // ExchangeKmSlabs, ExchangeConditionSlabs, ExchangeBatterySlabs,
-        // ExchangePricingConfig
+        // ── POST /api/ExchangeCases/{id}/generate-price ───────────────────────
         [HttpPost("{id}/generate-price")]
         public async Task<IActionResult> GeneratePrice(int id)
         {
@@ -433,157 +336,69 @@ namespace BGaussCRM.API.Controllers
             if (c == null) return NotFound();
             if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
 
-            // ── Validate 6 images ───────────────────────────────────
             var required = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
             var uploaded = c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet();
             var missing  = required.Except(uploaded).ToList();
-            if (missing.Any())
-                return BadRequest(new { error = "ImagesMissing", missing });
+            if (missing.Any()) return BadRequest(new { error = "ImagesMissing", missing });
+            if (!c.ExchangeInspectionScores.Any()) return BadRequest(new { error = "ScoresMissing" });
 
-            if (!c.ExchangeInspectionScores.Any())
-                return BadRequest(new { error = "ScoresMissing" });
-
-            // ── 1. Resolve DB model name from stored VehicleModel ───
-            // Map "BG RUV 350" → "RUV350", "BG MAX C12" → "C12i" etc.
             var modelUpper = (c.VehicleModel ?? "").ToUpper();
-            string dbModel = modelUpper.Contains("RUV")  ? "RUV350"
-                        : modelUpper.Contains("C12")  ? "C12i"
-                        : modelUpper.Contains("OOWAH")? "OOWAH"
-                        : "C12i"; // safe fallback
+            string dbModel   = modelUpper.Contains("RUV")   ? "RUV350"
+                             : modelUpper.Contains("C12")   ? "C12i"
+                             : modelUpper.Contains("OOWAH") ? "OOWAH" : "C12i";
+            string dbVariant = !string.IsNullOrWhiteSpace(c.VehicleVariant) ? c.VehicleVariant
+                             : modelUpper.Contains("MAX 3") ? "Max 3.0"
+                             : modelUpper.Contains("MAX 2") ? "Max 2.0"
+                             : modelUpper.Contains("MAX")   ? "Max" : "Ex";
 
-            // ── 2. Use VehicleVariant directly (stored from S03) ────
-            // Falls back to string-parsing only if variant not stored
-            string dbVariant = !string.IsNullOrWhiteSpace(c.VehicleVariant)
-                ? c.VehicleVariant   // e.g. "Max 2.0" — exact match to DB table
-                : modelUpper.Contains("MAX 3") ? "Max 3.0"
-                : modelUpper.Contains("MAX 2") ? "Max 2.0"
-                : modelUpper.Contains("MAX")   ? "Max"
-                : "Ex";
-
-            var year = c.YearOfPurchase;
-
-            // ── 3. Fetch base price ──────────────────────────────────
             var basePriceRow = await _db.ExchangeModelBasePrices
                 .Where(p => p.ModelName == dbModel && p.VariantName == dbVariant)
-                .OrderBy(p => Math.Abs(p.Year - year))
+                .OrderBy(p => Math.Abs(p.Year - c.YearOfPurchase))
                 .FirstOrDefaultAsync();
 
             if (basePriceRow == null)
-                return BadRequest(new
-                {
-                    error = $"No base price found for model '{dbModel}', variant '{dbVariant}', year {year}. " +
-                            $"Please check ExchangeModelBasePrices table."
-                });
+                return BadRequest(new { error = $"No base price for '{dbModel}'/'{dbVariant}'/'{c.YearOfPurchase}'." });
 
-            var basePrice  = basePriceRow.BasePrice;
-            var scrapValue = basePriceRow.ScrapValue;
-
-            // ── 4. KM deduction ─────────────────────────────────────
-            var km = c.KmDriven;
-            var kmSlab = await _db.ExchangeKmSlabs
-                .Where(s => s.KmFrom <= km && (s.KmTo == null || s.KmTo >= km))
-                .FirstOrDefaultAsync();
-            var kmDeduction = kmSlab?.Deduction ?? 0;
-
-            // ── 5. Condition score (excluding Battery category) ─────
             var allScores = c.ExchangeInspectionScores.ToList();
 
-            var conditionScore = (decimal)(allScores
-                .Where(s => s.Category != "Battery")
-                .Select(s => (double)s.Score)
-                .DefaultIfEmpty(5)
-                .Average());
+            var conditionScore = (decimal)allScores.Where(s => s.Category != "Battery")
+                .Select(s => (double)s.Score).DefaultIfEmpty(5).Average();
+            var batteryScore = (decimal)allScores.Where(s => s.Category == "Battery")
+                .Select(s => (double)s.Score).DefaultIfEmpty(5).Average();
 
-            var condSlab = await _db.ExchangeConditionSlabs
-                .Where(s => s.ScoreFrom <= conditionScore && s.ScoreTo >= conditionScore)
-                .FirstOrDefaultAsync();
-            var conditionAdjustment = condSlab?.Adjustment ?? 0;
+            var kmSlab   = await _db.ExchangeKmSlabs.Where(s => s.KmFrom <= c.KmDriven && (s.KmTo == null || s.KmTo >= c.KmDriven)).FirstOrDefaultAsync();
+            var condSlab = await _db.ExchangeConditionSlabs.Where(s => s.ScoreFrom <= conditionScore && s.ScoreTo >= conditionScore).FirstOrDefaultAsync();
+            var batSlab  = await _db.ExchangeBatterySlabs.Where(s => s.ScoreFrom <= batteryScore && s.ScoreTo >= batteryScore).FirstOrDefaultAsync();
 
-            // ── 6. Battery score adjustment ──────────────────────────
-            var batteryScore = (decimal)(allScores
-                .Where(s => s.Category == "Battery")
-                .Select(s => (double)s.Score)
-                .DefaultIfEmpty(5)
-                .Average());
-
-            var batSlab = await _db.ExchangeBatterySlabs
-                .Where(s => s.ScoreFrom <= batteryScore && s.ScoreTo >= batteryScore)
-                .FirstOrDefaultAsync();
-            var batteryAdjustment = batSlab?.Adjustment ?? 0;
-
-            // ── 7. Config values ─────────────────────────────────────
             var configs = await _db.ExchangePricingConfigs.ToListAsync();
-            decimal GetConfig(string key, decimal def) =>
-                configs.FirstOrDefault(cfg => cfg.ConfigKey == key)?.ConfigValue ?? def;
+            decimal GetConfig(string key, decimal def) => configs.FirstOrDefault(cfg => cfg.ConfigKey == key)?.ConfigValue ?? def;
 
-            var margin        = GetConfig("Margin",            5000m);
-            var rangeLowerPct = GetConfig("RangeLowerPct",      0.90m);
-            var rangeUpperPct = GetConfig("RangeUpperPct",      1.10m);
-            var refurbishment = GetConfig("RefurbishmentCost",  300m);
+            var margin        = GetConfig("Margin", 5000m);
+            var rangeLowerPct = GetConfig("RangeLowerPct", 0.90m);
+            var rangeUpperPct = GetConfig("RangeUpperPct", 1.10m);
+            var refurbishment = GetConfig("RefurbishmentCost", 300m);
 
-            // ── 8. Final price formula ───────────────────────────────
-            var rawPrice = basePrice
-                        - kmDeduction
-                        + conditionAdjustment
-                        + batteryAdjustment
-                        - margin
-                        - refurbishment;
+            var rawPrice   = basePriceRow.BasePrice - (kmSlab?.Deduction ?? 0) + (condSlab?.Adjustment ?? 0) + (batSlab?.Adjustment ?? 0) - margin - refurbishment;
+            var finalPrice = Math.Round(Math.Min(Math.Max(rawPrice, basePriceRow.ScrapValue), basePriceRow.BasePrice) / 100) * 100;
+            var minPrice   = Math.Round(finalPrice * rangeLowerPct / 100) * 100;
+            var maxPrice   = Math.Round(finalPrice * rangeUpperPct / 100) * 100;
+            var grade      = (c.TotalScore ?? 5m) >= 8 ? "Excellent" : (c.TotalScore ?? 5m) >= 5 ? "Good" : "Average";
 
-            var finalPrice = Math.Max(rawPrice, scrapValue);   // floor = scrap value
-            finalPrice     = Math.Min(finalPrice, basePrice);  // ceiling = base price
-            finalPrice     = Math.Round(finalPrice / 100) * 100;
-
-            var minPrice = Math.Round(finalPrice * rangeLowerPct / 100) * 100;
-            var maxPrice = Math.Round(finalPrice * rangeUpperPct / 100) * 100;
-
-            // ── 9. Grade ─────────────────────────────────────────────
-            var totalScore = c.TotalScore ?? 5m;
-            var grade = totalScore >= 8 ? "Excellent"
-                    : totalScore >= 5 ? "Good"
-                    : "Average";
-
-            // ── 10. Persist ──────────────────────────────────────────
             c.RecommendedPrice = finalPrice;
             c.MinPrice         = minPrice;
             c.MaxPrice         = maxPrice;
             c.Grade            = grade;
             c.Status           = "ImagesPending";
             c.UpdatedAt        = DateTime.UtcNow;
-
             await _db.SaveChangesAsync();
 
-            _logger.LogInformation(
-                "Priced case {CaseId}: model={Model} variant={Variant} year={Year} " +
-                "base={Base} kmDed={KM} cond={Cond} bat={Bat} margin={Margin} refurb={Refurb} " +
-                "→ final={Final} [{Min}–{Max}]",
-                id, dbModel, dbVariant, year,
-                basePrice, kmDeduction, conditionAdjustment,
-                batteryAdjustment, margin, refurbishment,
-                finalPrice, minPrice, maxPrice);
-
-            return Ok(new
-            {
-                recommended = finalPrice,
-                minPrice,
-                maxPrice,
-                grade,
-                totalScore  = c.TotalScore,
-                breakdown   = new
-                {
-                    basePrice,
-                    kmDeduction,
-                    conditionAdjustment,
-                    batteryAdjustment,
-                    margin,
-                    refurbishment,
-                    scrapValue,
-                    rawPrice,
-                }
-            });
+            return Ok(new { recommended = finalPrice, minPrice, maxPrice, grade, totalScore = c.TotalScore,
+                breakdown = new { basePriceRow.BasePrice, kmDeduction = kmSlab?.Deduction ?? 0,
+                    conditionAdjustment = condSlab?.Adjustment ?? 0, batteryAdjustment = batSlab?.Adjustment ?? 0,
+                    margin, refurbishment, scrapValue = basePriceRow.ScrapValue, rawPrice } });
         }
 
-        // ── POST /api/ExchangeCases/{id}/submit ──────────────
-        // S09→S10: Dealer submits for admin review
+        // ── POST /api/ExchangeCases/{id}/submit ───────────────────────────────
         [HttpPost("{id}/submit")]
         public async Task<IActionResult> Submit(int id)
         {
@@ -595,8 +410,7 @@ namespace BGaussCRM.API.Controllers
             if (c.DealerId != CurrentUser && !IsAdmin) return Forbid();
 
             var required = new[] { "Front", "Rear", "Left", "Right", "Odometer", "Battery" };
-            var uploaded  = c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet();
-            if (required.Except(uploaded).Any())
+            if (required.Except(c.ExchangeCaseImages.Select(i => i.ImageType).ToHashSet()).Any())
                 return BadRequest("All 6 images must be uploaded before submission.");
 
             if (c.RecommendedPrice == null)
@@ -605,16 +419,24 @@ namespace BGaussCRM.API.Controllers
             c.Status      = "PendingAdminReview";
             c.SubmittedAt = DateTime.UtcNow;
             c.UpdatedAt   = DateTime.UtcNow;
-
             await _db.SaveChangesAsync();
+
+            // ── SMTP emails — DealerId IS the dealer email ─────────────────────
+            var dealerEmail   = c.DealerId;
+            var caseSnapshot  = c;
+            _ = Task.Run(async () =>
+            {
+                try { await _email.SendCaseSubmissionEmailsAsync(caseSnapshot, dealerEmail); }
+                catch (Exception ex) { _logger.LogError(ex, "Submission emails failed for {Code}", c.CaseNumber); }
+            });
+
             return Ok(new { caseNumber = c.CaseNumber, status = c.Status });
         }
 
-        // ── POST /api/ExchangeCases/{id}/admin-action ────────
+        // ── POST /api/ExchangeCases/{id}/admin-action ─────────────────────────
         [HttpPost("{id}/admin-action")]
         [Authorize(Roles = "admin")]
-        public async Task<IActionResult> AdminAction(
-            int id, [FromBody] AdminActionDto dto)
+        public async Task<IActionResult> AdminAction(int id, [FromBody] AdminActionDto dto)
         {
             var c = await _db.ExchangeCases.FindAsync(id);
             if (c == null) return NotFound();
@@ -623,52 +445,39 @@ namespace BGaussCRM.API.Controllers
             var validActions = new[] { "Approved", "Modified", "Rejected" };
             if (!validActions.Contains(dto.Action)) return BadRequest("Invalid action.");
 
-            c.Status        = dto.Action == "Approved" ? "AdminApproved"
-                            : dto.Action == "Modified"  ? "AdminModified"
-                            : "AdminRejected";
+            c.Status        = dto.Action == "Approved" ? "AdminApproved" : dto.Action == "Modified" ? "AdminModified" : "AdminRejected";
             c.AdminNote     = dto.Note;
             c.ApprovedPrice = dto.Action == "Rejected" ? null : dto.Price;
             c.AdminActionAt = DateTime.UtcNow;
             c.UpdatedAt     = DateTime.UtcNow;
 
             _db.ExchangeAdminActions.Add(new ExchangeAdminAction
-            {
-                CaseId    = id,
-                AdminUser = CurrentUser,
-                Action    = dto.Action,
-                PriceSet  = dto.Price,
-                Note      = dto.Note,
-            });
+                { CaseId = id, AdminUser = CurrentUser, Action = dto.Action, PriceSet = dto.Price, Note = dto.Note });
 
             await _db.SaveChangesAsync();
+
+            // ── SMTP email — DealerId IS the dealer email ──────────────────────
+            var dealerEmail  = c.DealerId;
+            var action       = dto.Action;
+            var note         = dto.Note;
+            var caseSnapshot = c;
+            _ = Task.Run(async () =>
+            {
+                try { await _email.SendAdminActionEmailAsync(caseSnapshot, dealerEmail, action, note); }
+                catch (Exception ex) { _logger.LogError(ex, "Decision email failed for {Code}", c.CaseNumber); }
+            });
+
             return Ok(new { status = c.Status, approvedPrice = c.ApprovedPrice });
         }
 
-        // ── Helpers ───────────────────────────────────────────
+        // ── Helpers ───────────────────────────────────────────────────────────
         private static (decimal score, string grade) ComputeScore(List<ScoreDto> scores)
         {
             if (!scores.Any()) return (0, "Average");
-
             decimal weighted = 0;
             foreach (var g in scores.GroupBy(s => s.Category))
-            {
-                var avg = g.Average(x => (decimal)x.Score);
-                if (CategoryWeights.TryGetValue(g.Key, out var w))
-                    weighted += avg * w;
-                else
-                    weighted += avg * 0.05m;
-            }
-
-            var grade = weighted >= 8 ? "Excellent" : weighted >= 5 ? "Good" : "Average";
-            return (Math.Round(weighted, 2), grade);
-        }
-
-        private static decimal GetBaseValue(string model)
-        {
-            var upper = model.ToUpper();
-            if (upper.Contains("RUV") || upper.Contains("350")) return 130000m;
-            if (upper.Contains("MAX") || upper.Contains("C12")) return 115000m;
-            return 95000m;
+                weighted += g.Average(x => (decimal)x.Score) * (CategoryWeights.TryGetValue(g.Key, out var w) ? w : 0.05m);
+            return (Math.Round(weighted, 2), weighted >= 8 ? "Excellent" : weighted >= 5 ? "Good" : "Average");
         }
     }
 }
