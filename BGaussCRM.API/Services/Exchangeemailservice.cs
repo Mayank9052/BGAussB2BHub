@@ -1,11 +1,22 @@
 // Services/ExchangeEmailService.cs
-// Handles all exchange/buyback email notifications:
-//   1. Dealer ACK on case submission
-//   2. Admin notification on case submission
-//   3. Dealer notification on admin decision (Approved / Modified / Rejected)
 //
-// DealerId == dealer's email address — no extra lookup needed.
-// SmtpClient is NOT thread-safe; each send creates its own instance.
+// EMAIL FLOW:
+//   SMTP AUTH  : priyanka.nikam@bgauss.com  (fixed Office365 credentials — never changes)
+//   FROM       : BGauss Exchange <priyanka.nikam@bgauss.com>  (must match SMTP auth for Office365)
+//   REPLY-TO   : dealer.Email  (so admin/dealer can reply to the right person)
+//
+//   ┌─────────────────────────────────────────────────────────────────┐
+//   │  Email Type          │  TO                    │  REPLY-TO       │
+//   ├─────────────────────────────────────────────────────────────────┤
+//   │  Dealer ACK          │  dealer.Email (DB)     │  AdminEmail     │
+//   │  Admin Notification  │  AdminEmail            │  dealer.Email   │
+//   │  Decision to dealer  │  dealer.Email (DB)     │  AdminEmail     │
+//   └─────────────────────────────────────────────────────────────────┘
+//
+//   dealer.Email is resolved from the Users table by UserId JWT claim.
+//   Example: Karan Mehta logs in → DB Email = priyankanikam12101@gmail.com
+//            → ALL dealer emails go TO priyankanikam12101@gmail.com
+//            → Admin sees "Hi Admin, case from Karan Mehta (priyankanikam12101@gmail.com)"
 
 using System.Net;
 using System.Net.Mail;
@@ -19,9 +30,9 @@ public class ExchangeEmailService : IExchangeEmailService
     private readonly IConfiguration _config;
     private readonly ILogger<ExchangeEmailService> _logger;
 
-    // Admin recipient — read from appsettings so it's configurable
-    private string AdminEmail => _config["Exchange:AdminEmail"] ?? "mayank.maheshwari@bgauss.com";
-    private const string AdminName = "Mayank Maheshwari";
+    // Admin email from appsettings → Exchange:AdminEmail
+    private string AdminEmail => _config["Exchange:AdminEmail"] ?? "priyanka.nikam@bgauss.com";
+    private const string AdminName = "Admin";
 
     public ExchangeEmailService(IConfiguration config, ILogger<ExchangeEmailService> logger)
     {
@@ -29,7 +40,7 @@ public class ExchangeEmailService : IExchangeEmailService
         _logger = logger;
     }
 
-    // ── SMTP factory — fresh instance per call ────────────────────────────────
+    // ── SMTP factory ── always authenticates as priyanka.nikam@bgauss.com ────
     private SmtpClient BuildClient()
     {
         var s = _config.GetSection("Smtp");
@@ -41,33 +52,47 @@ public class ExchangeEmailService : IExchangeEmailService
         };
     }
 
-    private string From   => _config["Smtp:From"] ?? _config["Smtp:User"] ?? "exchange@bgauss.com";
-    private string AppUrl => _config["AppUrl"] ?? "https://bgauss.com";
+    // ── FROM address: always the SMTP auth account ────────────────────────────
+    // Office365 requires From == authenticated user for external (Gmail etc.) recipients.
+    // We use a friendly display name so emails look professional.
+    private MailAddress FromAddress =>
+        new MailAddress(
+            _config["Smtp:User"] ?? "priyanka.nikam@bgauss.com",
+            "BGauss Exchange"
+        );
+
+    // ── AppUrl for deep-link buttons ──────────────────────────────────────────
+    private string AppUrl => (_config["AppUrl"] ?? "http://34.203.61.70").TrimEnd('/');
+
+    // ── Validate that dealer has a real email address ─────────────────────────
+    private static bool HasValidEmail(User dealer) =>
+        !string.IsNullOrWhiteSpace(dealer.Email) && dealer.Email.Contains("@");
 
     // ═════════════════════════════════════════════════════════════════════════
-    // PUBLIC — called from controllers
+    // PUBLIC INTERFACE
     // ═════════════════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Triggered by Submit().
-    /// DealerId == dealerEmail — passed directly, no lookup required.
-    /// Sends sequentially: dealer ACK first, then admin notification.
+    /// Called when dealer submits a case.
+    /// Sends ACK to dealer + notification to admin.
     /// </summary>
-    public async Task SendCaseSubmissionEmailsAsync(ExchangeCase c, string dealerEmail)
+    public async Task SendCaseSubmissionEmailsAsync(ExchangeCase c, User dealer)
     {
-        await SendDealerAckAsync(c, dealerEmail);
-        await SendAdminNotificationAsync(c, dealerEmail);
+        await SendDealerAckAsync(c, dealer);
+        await SendAdminNotificationAsync(c, dealer);
     }
 
     /// <summary>
-    /// Triggered by AdminAction() and DecideCase().
-    /// Sends a single decision email (Approved / Modified / Rejected) to the dealer.
+    /// Called when admin approves / modifies / rejects.
+    /// Sends decision email TO dealer's registered DB email.
     /// </summary>
-    public async Task SendAdminActionEmailAsync(ExchangeCase c, string dealerEmail, string action, string? note)
+    public async Task SendAdminActionEmailAsync(ExchangeCase c, User dealer, string action, string? note)
     {
-        if (string.IsNullOrWhiteSpace(dealerEmail))
+        if (!HasValidEmail(dealer))
         {
-            _logger.LogWarning("Empty dealer email — skipping decision email for {Code}", c.CaseNumber);
+            _logger.LogWarning(
+                "Skipping decision email for {Code} — dealer has no valid email (UserId={UserId})",
+                c.CaseNumber, dealer.UserId);
             return;
         }
 
@@ -79,29 +104,40 @@ public class ExchangeEmailService : IExchangeEmailService
             {
                 "Approved" => (
                     $"[BGauss Exchange] ✅ Case Approved — {c.CaseNumber}",
-                    "#16A34A",
-                    "✅ Exchange Case Approved"),
+                    "#16A34A", "✅ Exchange Case Approved"),
                 "Modified" => (
                     $"[BGauss Exchange] 🔄 Price Modified — {c.CaseNumber}",
-                    "#D97706",
-                    "🔄 Exchange Case — Price Modified by Admin"),
+                    "#D97706", "🔄 Exchange Case — Price Modified by Admin"),
                 _ => (
                     $"[BGauss Exchange] ❌ Case Rejected — {c.CaseNumber}",
-                    "#DC2626",
-                    "❌ Exchange Case Rejected"),
+                    "#DC2626", "❌ Exchange Case Rejected"),
             };
 
-            var mail = new MailMessage(From, dealerEmail, subject,
-                DecisionHtml(c, dealerEmail, action, note, accent, heading))
-            { IsBodyHtml = true };
+            var mail = new MailMessage
+            {
+                From       = FromAddress,                  // priyanka.nikam@bgauss.com
+                Subject    = subject,
+                Body       = DecisionHtml(c, dealer, action, note, accent, heading),
+                IsBodyHtml = true,
+            };
+
+            // ▶ TO: dealer's actual registered email (e.g. priyankanikam12101@gmail.com)
+            mail.To.Add(new MailAddress(dealer.Email, dealer.FullName));
+
+            // Reply-To: admin, so dealer can reply back to admin
+            mail.ReplyToList.Add(new MailAddress(AdminEmail, "BGauss Exchange Admin"));
 
             await client.SendMailAsync(mail);
+
             _logger.LogInformation(
-                "Decision ({Action}) email sent to {Email} for {Code}", action, dealerEmail, c.CaseNumber);
+                "✅ Decision ({Action}) email sent → TO: {Email} ({FullName}) | Case: {Code}",
+                action, dealer.Email, dealer.FullName, c.CaseNumber);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send decision email for {Code}", c.CaseNumber);
+            _logger.LogError(ex,
+                "❌ Failed to send decision email to {Email} for case {Code}",
+                dealer.Email, c.CaseNumber);
         }
     }
 
@@ -109,46 +145,87 @@ public class ExchangeEmailService : IExchangeEmailService
     // PRIVATE SENDERS
     // ═════════════════════════════════════════════════════════════════════════
 
-    private async Task SendDealerAckAsync(ExchangeCase c, string dealerEmail)
+    // ── 1. Dealer ACK ─────────────────────────────────────────────────────────
+    // FROM  : priyanka.nikam@bgauss.com  (SMTP auth)
+    // TO    : dealer.Email from DB  (e.g. priyankanikam12101@gmail.com)
+    // REPLY : AdminEmail  (so dealer replies to admin)
+    private async Task SendDealerAckAsync(ExchangeCase c, User dealer)
     {
-        if (string.IsNullOrWhiteSpace(dealerEmail))
+        if (!HasValidEmail(dealer))
         {
-            _logger.LogWarning("Empty dealer email — skipping ACK for {Code}", c.CaseNumber);
+            _logger.LogWarning(
+                "Skipping dealer ACK for {Code} — no valid email for {FullName}",
+                c.CaseNumber, dealer.FullName);
             return;
         }
+
         try
         {
             using var client = BuildClient();
-            var mail = new MailMessage(From, dealerEmail,
-                $"[BGauss Exchange] Case Submitted — {c.CaseNumber}",
-                DealerAckHtml(c, dealerEmail))
-            { IsBodyHtml = true };
+
+            var mail = new MailMessage
+            {
+                From       = FromAddress,
+                Subject    = $"[BGauss Exchange] ✅ Case Submitted — {c.CaseNumber}",
+                Body       = DealerAckHtml(c, dealer),
+                IsBodyHtml = true,
+            };
+
+            // ▶ TO: dealer's DB email
+            mail.To.Add(new MailAddress(dealer.Email, dealer.FullName));
+
+            // Reply-To admin so dealer's reply reaches admin
+            mail.ReplyToList.Add(new MailAddress(AdminEmail, "BGauss Exchange Admin"));
+
             await client.SendMailAsync(mail);
-            _logger.LogInformation("Exchange ACK sent to {Email} for {Code}", dealerEmail, c.CaseNumber);
+
+            _logger.LogInformation(
+                "✅ ACK email sent → TO: {Email} ({FullName}) | Case: {Code}",
+                dealer.Email, dealer.FullName, c.CaseNumber);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send dealer ACK for {Code}", c.CaseNumber);
+            _logger.LogError(ex,
+                "❌ Failed to send ACK email to {Email} for case {Code}",
+                dealer.Email, c.CaseNumber);
         }
     }
 
-    private async Task SendAdminNotificationAsync(ExchangeCase c, string dealerEmail)
+    // ── 2. Admin notification ─────────────────────────────────────────────────
+    // FROM  : priyanka.nikam@bgauss.com  (SMTP auth)
+    // TO    : AdminEmail (priyanka.nikam@bgauss.com)
+    // REPLY : dealer.Email  (so admin can reply directly to dealer)
+    private async Task SendAdminNotificationAsync(ExchangeCase c, User dealer)
     {
         try
         {
             using var client = BuildClient();
-            var mail = new MailMessage(From, AdminEmail,
-                $"[BGauss Exchange] Review Required — {c.CaseNumber} | {dealerEmail}",
-                AdminNotificationHtml(c, dealerEmail))
-            { IsBodyHtml = true };
-            mail.CC.Add(new MailAddress(From, "BGauss Exchange System"));
+
+            var mail = new MailMessage
+            {
+                From       = FromAddress,
+                Subject    = $"[BGauss Exchange] ⚡ Action Required — {c.CaseNumber} | {dealer.FullName}",
+                Body       = AdminNotificationHtml(c, dealer),
+                IsBodyHtml = true,
+            };
+
+            // ▶ TO: admin
+            mail.To.Add(new MailAddress(AdminEmail, "BGauss Exchange Admin"));
+
+            // Reply-To dealer — admin clicks Reply and goes straight to dealer
+            if (HasValidEmail(dealer))
+                mail.ReplyToList.Add(new MailAddress(dealer.Email, dealer.FullName));
+
             await client.SendMailAsync(mail);
+
             _logger.LogInformation(
-                "Exchange review request sent to {Admin} for {Code}", AdminEmail, c.CaseNumber);
+                "✅ Admin notification sent → TO: {Admin} | Dealer: {FullName} <{Email}> | Case: {Code}",
+                AdminEmail, dealer.FullName, dealer.Email, c.CaseNumber);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send admin notification for {Code}", c.CaseNumber);
+            _logger.LogError(ex,
+                "❌ Failed to send admin notification for case {Code}", c.CaseNumber);
         }
     }
 
@@ -157,11 +234,11 @@ public class ExchangeEmailService : IExchangeEmailService
     // ═════════════════════════════════════════════════════════════════════════
 
     private static string H(string? s)        => WebUtility.HtmlEncode(s ?? "");
-    private static string Fmt(decimal? price) => price.HasValue ? $"&#8377; {price.Value:N0}" : "—";
+    private static string Fmt(decimal? price) => price.HasValue ? $"&#8377;&nbsp;{price.Value:N0}" : "—";
 
     private static string Row(string label, string value) => $"""
         <tr>
-          <td style="padding:8px 0;color:#6b7280;width:185px;vertical-align:top;font-size:13px">{label}</td>
+          <td style="padding:8px 0;color:#6b7280;width:190px;vertical-align:top;font-size:13px">{label}</td>
           <td style="padding:8px 0;font-weight:600;color:#0f172a;font-size:13px">{value}</td>
         </tr>
         """;
@@ -179,14 +256,14 @@ public class ExchangeEmailService : IExchangeEmailService
             </div>
             <div style="padding:28px 32px">{body}</div>
             <div style="background:#f8fafc;padding:14px 32px;font-size:11px;color:#94a3b8;
-                         border-top:1px solid #e2e8f0">
+                         border-top:1px solid #e2e8f0;text-align:center">
               BGauss Exchange &amp; Buyback System &nbsp;·&nbsp; Auto-generated &nbsp;·&nbsp; Do not reply
             </div>
           </div>
         </body></html>
         """;
 
-    private string InfoBox(string bg, string border, string color, string text) =>
+    private static string InfoBox(string bg, string border, string color, string text) =>
         $"""
         <div style="margin-top:20px;padding:14px 18px;background:{bg};border:1px solid {border};
                     border-radius:8px;font-size:13px;color:{color}">
@@ -194,27 +271,43 @@ public class ExchangeEmailService : IExchangeEmailService
         </div>
         """;
 
+    // Deep-link button — opens admin portal with ?caseId=N&action=X pre-selected
+    private string ActionBtn(int caseId, string action, string label, string bg, string emoji) =>
+        $"""
+        <a href="{AppUrl}/exchange-admin?caseId={caseId}&action={WebUtility.UrlEncode(action)}"
+           style="display:inline-block;background:{bg};color:#fff;padding:12px 22px;margin:4px 6px 4px 0;
+                  border-radius:8px;text-decoration:none;font-size:14px;font-weight:700;
+                  letter-spacing:0.2px;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+          {emoji} {label}
+        </a>
+        """;
+
     private string CTA(string path, string label, string color) =>
         $"""
         <a href="{AppUrl}{path}"
-           style="display:inline-block;background:{color};color:#fff;padding:11px 22px;
+           style="display:inline-block;background:{color};color:#fff;padding:11px 24px;
                   border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">
           {label}
         </a>
         """;
 
     // ═════════════════════════════════════════════════════════════════════════
-    // TEMPLATES
+    // EMAIL TEMPLATES
     // ═════════════════════════════════════════════════════════════════════════
 
-    // ── 1. Dealer ACK ─────────────────────────────────────────────────────────
-    private string DealerAckHtml(ExchangeCase c, string dealerEmail) =>
+    // ── 1. Dealer ACK — sent TO dealer's DB email, greets by FullName ─────────
+    private string DealerAckHtml(ExchangeCase c, User dealer) =>
         Wrap("#1D4ED8", "Exchange Case Submitted", $"""
-            <p style="margin:0 0 20px;color:#374151;font-size:14px">
-              Hi <strong>{H(dealerEmail)}</strong>,<br/>
-              Your exchange case has been submitted and is now <strong>pending Admin review</strong>.
-              You will receive an email once a decision is made.
+            <p style="margin:0 0 4px;color:#6b7280;font-size:12px">
+              Sent to: <strong>{H(dealer.Email)}</strong>
             </p>
+            <p style="margin:0 0 20px;color:#374151;font-size:14px">
+              Hi <strong>{H(dealer.FullName)}</strong>,<br/><br/>
+              Your exchange case has been successfully submitted and is now
+              <strong>pending Admin review</strong>.
+              You will receive another email at this address once a decision is made.
+            </p>
+
             <table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e8f0">
               {Row("Case Number",      H(c.CaseNumber))}
               {Row("Customer Name",    H(c.CustomerName))}
@@ -230,25 +323,48 @@ public class ExchangeEmailService : IExchangeEmailService
               {Row("Recommended",      Fmt(c.RecommendedPrice))}
               {Row("Submitted At",     (c.SubmittedAt ?? DateTime.UtcNow).ToString("dd MMM yyyy, hh:mm tt") + " UTC")}
             </table>
+
             {InfoBox("#eff6ff", "#bfdbfe", "#1e40af",
-                "ℹ The system-generated price range has been forwarded to Admin. " +
+                "ℹ️ The system-generated price range has been forwarded to Admin for review. " +
                 "Prices <strong>cannot be modified</strong> by dealers.")}
+
             <div style="margin-top:24px">
               {CTA($"/exchange/cases/{c.Id}", "View Case →", "#1D4ED8")}
             </div>
             """);
 
-    // ── 2. Admin notification ─────────────────────────────────────────────────
-    private string AdminNotificationHtml(ExchangeCase c, string dealerEmail) =>
-        Wrap("#D97706", $"Review Required — {c.CaseNumber}", $"""
-            <p style="margin:0 0 20px;color:#374151;font-size:14px">
-              Hi <strong>{AdminName}</strong>,<br/>
-              A new exchange case from dealer <strong>{H(dealerEmail)}</strong>
-              requires your review and price decision.
+    // ── 2. Admin notification — TO admin, shows full dealer info ──────────────
+    private string AdminNotificationHtml(ExchangeCase c, User dealer) =>
+        Wrap("#D97706", $"⚡ Action Required — {c.CaseNumber}", $"""
+            <p style="margin:0 0 6px;color:#374151;font-size:14px">
+              Hi <strong>{AdminName}</strong>,
             </p>
+            <p style="margin:0 0 20px;color:#374151;font-size:14px">
+              A new exchange case submitted by dealer
+              <strong>{H(dealer.FullName)}</strong>
+              requires your decision. Use the action buttons below to respond directly
+              from this email — no login search needed.
+            </p>
+
+            <!-- ── Dealer Info Card ── -->
+            <div style="margin-bottom:24px;padding:16px 20px;background:#f0f9ff;
+                        border:1px solid #bae6fd;border-radius:10px">
+              <p style="margin:0 0 10px;font-weight:700;font-size:11px;
+                         letter-spacing:0.8px;text-transform:uppercase;color:#0369a1">
+                👤 Dealer Information
+              </p>
+              <table style="width:100%;border-collapse:collapse">
+                {Row("Full Name",   H(dealer.FullName))}
+                {Row("Email",       $"<a href='mailto:{H(dealer.Email)}' style='color:#1d4ed8'>{H(dealer.Email)}</a>")}
+                {Row("Phone",       H(dealer.PhoneNumber ?? "—"))}
+                {Row("Employee ID", H(dealer.EmployeeId  ?? "—"))}
+                {Row("Department",  H(dealer.Department  ?? "—"))}
+              </table>
+            </div>
+
+            <!-- ── Case Details ── -->
             <table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e8f0">
               {Row("Case Number",      H(c.CaseNumber))}
-              {Row("Dealer",           H(dealerEmail))}
               {Row("Customer Name",    H(c.CustomerName))}
               {Row("Mobile",           H(c.MobileNumber))}
               {Row("City",             H(c.City))}
@@ -263,20 +379,34 @@ public class ExchangeEmailService : IExchangeEmailService
               {Row("Max Price",        Fmt(c.MaxPrice))}
               {Row("Submitted At",     (c.SubmittedAt ?? DateTime.UtcNow).ToString("dd MMM yyyy, hh:mm tt") + " UTC")}
             </table>
-            <p style="margin:20px 0 8px;font-weight:600;font-size:14px;color:#0f172a">Action Required</p>
-            <p style="margin:0 0 20px;font-size:13px;color:#6b7280">
-              Review the inspection scores, uploaded photos and system price in the portal,
-              then approve, modify, or reject with remarks.
-            </p>
-            <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
-              {CTA($"/admin/exchange/{c.Id}", "✅ Approve",       "#16A34A")}
-              {CTA($"/admin/exchange/{c.Id}", "🔄 Modify Price",  "#D97706")}
-              {CTA($"/admin/exchange/{c.Id}", "❌ Reject",        "#DC2626")}
+
+            <!-- ── One-Click Action Buttons ── -->
+            <div style="margin-top:28px;padding:20px;background:#f8fafc;border-radius:10px;
+                        border:1px solid #e2e8f0">
+              <p style="margin:0 0 6px;font-weight:700;font-size:14px;color:#0f172a">
+                ⚡ Take Action Directly
+              </p>
+              <p style="margin:0 0 16px;font-size:12px;color:#6b7280">
+                Click a button to open the admin portal with this case and action pre-selected.
+                You must be logged in (browser session is remembered).
+              </p>
+              <div>
+                {ActionBtn(c.Id, "Approved", "Approve Case", "#16A34A", "✅")}
+                {ActionBtn(c.Id, "Modified", "Modify Price", "#D97706", "✏️")}
+                {ActionBtn(c.Id, "Rejected", "Reject Case",  "#DC2626", "❌")}
+              </div>
+              <p style="margin:16px 0 0;font-size:11px;color:#94a3b8">
+                Or
+                <a href="{AppUrl}/exchange-admin?caseId={c.Id}"
+                   style="color:#1d4ed8;text-decoration:none">
+                  open case without pre-selecting an action →
+                </a>
+              </p>
             </div>
             """);
 
-    // ── 3. Decision → dealer ──────────────────────────────────────────────────
-    private string DecisionHtml(ExchangeCase c, string dealerEmail,
+    // ── 3. Decision email — TO dealer's DB email, greets by FullName ──────────
+    private string DecisionHtml(ExchangeCase c, User dealer,
                                 string action, string? note,
                                 string accent, string heading)
     {
@@ -302,14 +432,19 @@ public class ExchangeEmailService : IExchangeEmailService
                 $"🔄 Admin has set a modified price of <strong>{Fmt(c.ApprovedPrice)}</strong>. " +
                 $"Use this price for the transaction."),
             _ => InfoBox("#fef2f2", "#fecaca", "#991b1b",
-                "❌ This case has been rejected. Review the admin remarks below and contact " +
-                "BGauss if you have questions."),
+                "❌ This case has been rejected. Review the admin remarks below and " +
+                "contact BGauss if you have questions."),
         };
 
         return Wrap(accent, heading, $"""
-            <p style="margin:0 0 20px;color:#374151;font-size:14px">
-              Hi <strong>{H(dealerEmail)}</strong>,<br/>{intro}
+            <p style="margin:0 0 4px;color:#6b7280;font-size:12px">
+              Sent to: <strong>{H(dealer.Email)}</strong>
             </p>
+            <p style="margin:0 0 20px;color:#374151;font-size:14px">
+              Hi <strong>{H(dealer.FullName)}</strong>,<br/><br/>
+              {intro}
+            </p>
+
             <table style="width:100%;border-collapse:collapse;border-top:1px solid #e2e8f0">
               {Row("Case Number",        H(c.CaseNumber))}
               {Row("Customer Name",      H(c.CustomerName))}
@@ -322,13 +457,17 @@ public class ExchangeEmailService : IExchangeEmailService
               {Row("System Max",         Fmt(c.MaxPrice))}
               {(action != "Rejected"
                   ? Row("Admin Approved Price",
-                        $"<span style=\"color:{accent};font-size:15px\">{Fmt(c.ApprovedPrice)}</span>")
+                        $"<span style=\"color:{accent};font-size:16px;font-weight:800\">" +
+                        $"{Fmt(c.ApprovedPrice)}</span>")
                   : "")}
               {Row("Status",             H(c.Status))}
-              {Row("Decision At",        (c.AdminActionAt ?? DateTime.UtcNow).ToString("dd MMM yyyy, hh:mm tt") + " UTC")}
+              {Row("Decision At",
+                   (c.AdminActionAt ?? DateTime.UtcNow).ToString("dd MMM yyyy, hh:mm tt") + " UTC")}
               {(string.IsNullOrWhiteSpace(note) ? "" : Row("Admin Remarks", H(note)))}
             </table>
+
             {banner}
+
             <div style="margin-top:24px">
               {CTA($"/exchange/cases/{c.Id}", "View Case →", accent)}
             </div>

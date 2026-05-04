@@ -32,6 +32,7 @@ interface DashStats {
   approved: number;
   rejected: number;
   draft: number;
+  imagesPending: number;
   thisWeek: number;
   recentActivity: ActivityItem[];
 }
@@ -483,21 +484,66 @@ export default function ExchangeAdminPanel() {
               <>
                 <div className="eap-stat-grid">
                   {[
-                    { label: "Total Cases",    val: stats.total,    color: "#0f172a", icon: "📋", click: undefined },
-                    { label: "Pending Review", val: stats.pending,  color: "#d97706", icon: "⏳",
-                      click: () => { setQueueStatus("PendingAdminReview"); setQueuePage(1); goTo("A03"); } },
-                    { label: "Approved",       val: stats.approved, color: "#16a34a", icon: "✅",
-                      click: () => { setQueueStatus("AdminApproved"); setQueuePage(1); goTo("A03"); } },
-                    { label: "Rejected",       val: stats.rejected, color: "#dc2626", icon: "✗",
-                      click: () => { setQueueStatus("AdminRejected"); setQueuePage(1); goTo("A03"); } },
-                    { label: "Draft",          val: stats.draft,    color: "#64748b", icon: "📝", click: undefined },
-                    { label: "This Week",      val: stats.thisWeek, color: "#7c3aed", icon: "📅", click: undefined },
+                    {
+                      label: "Total Cases",
+                      val: stats.total,
+                      color: "#0f172a",
+                      icon: "📋",
+                      queueStatus: "",           // show all
+                    },
+                    {
+                      label: "Pending Review",
+                      val: stats.pending,
+                      color: "#d97706",
+                      icon: "⏳",
+                      queueStatus: "PendingAdminReview",
+                    },
+                    {
+                      label: "Images Pending",
+                      val: stats.imagesPending ?? 0,
+                      color: "#7c3aed",
+                      icon: "📷",
+                      queueStatus: "ImagesPending",
+                    },
+                    {
+                      label: "Approved",
+                      val: stats.approved,
+                      color: "#16a34a",
+                      icon: "✅",
+                      queueStatus: "AdminApproved",
+                    },
+                    {
+                      label: "Rejected",
+                      val: stats.rejected,
+                      color: "#dc2626",
+                      icon: "✗",
+                      queueStatus: "AdminRejected",
+                    },
+                    {
+                      label: "Draft",
+                      val: stats.draft,
+                      color: "#64748b",
+                      icon: "📝",
+                      queueStatus: "Draft",
+                    },
+                    {
+                      label: "This Week",
+                      val: stats.thisWeek,
+                      color: "#7c3aed",
+                      icon: "📅",
+                      queueStatus: "",           // show all, see all recent
+                    },
                   ].map(s => (
                     <div
                       key={s.label}
-                      className={`eap-stat-card ${s.click ? "clickable" : ""}`}
+                      className="eap-stat-card clickable"
                       style={{ borderTopColor: s.color }}
-                      onClick={s.click}
+                      onClick={() => {
+                        setQueueStatus(s.queueStatus);
+                        setQueuePage(1);
+                        setQueueSearch("");
+                        goTo("A03");
+                      }}
                     >
                       <div className="eap-stat-icon">{s.icon}</div>
                       <div className="eap-stat-val" style={{ color: s.color }}>{s.val}</div>
@@ -579,11 +625,13 @@ export default function ExchangeAdminPanel() {
 
               <div className="eap-status-tabs">
                 {[
-                  { v: "PendingAdminReview", l: "Pending"  },
-                  { v: "AdminApproved",      l: "Approved" },
-                  { v: "AdminModified",      l: "Modified" },
-                  { v: "AdminRejected",      l: "Rejected" },
-                  { v: "",                   l: "All"      },
+                  { v: "PendingAdminReview", l: "Pending"        },
+                  { v: "ImagesPending",      l: "Images Pending" },
+                  { v: "AdminApproved",      l: "Approved"       },
+                  { v: "AdminModified",      l: "Modified"       },
+                  { v: "AdminRejected",      l: "Rejected"       },
+                  { v: "Draft",              l: "Draft"          },
+                  { v: "",                   l: "All"            },
                 ].map(t => (
                   <button
                     key={t.v || "all"}

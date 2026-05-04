@@ -1,8 +1,8 @@
 // Controllers/ExchangeAdminController.cs
-// CHANGES vs original:
-//   • IExchangeEmailService injected
-//   • DecideCase(): fire SendAdminActionEmailAsync after SaveChanges (non-blocking)
-//     DealerId == dealer email — no extra lookup needed
+// CHANGES:
+//   • ResolveDealerEmailAsync() replaced by ResolveDealerAsync() → returns full User
+//   • DecideCase() passes full User to SendAdminActionEmailAsync
+//   • Log messages now include FullName for clarity
 
 using BGaussCRM.API.Data;
 using BGaussCRM.API.DTOs;
@@ -20,15 +20,15 @@ namespace BGaussCRM.API.Controllers
     public class ExchangeAdminController : ControllerBase
     {
         private readonly AppDbContext _db;
-        private readonly IExchangeEmailService _email;            // ← NEW
-        private readonly ILogger<ExchangeAdminController> _logger; // ← NEW
+        private readonly IExchangeEmailService _email;
+        private readonly ILogger<ExchangeAdminController> _logger;
         private readonly IConfiguration _config;
 
         public ExchangeAdminController(
             AppDbContext db,
-            IExchangeEmailService email,                          // ← NEW
+            IExchangeEmailService email,
             ILogger<ExchangeAdminController> logger,
-            IConfiguration config)             // ← NEW
+            IConfiguration config)
         {
             _db     = db;
             _email  = email;
@@ -40,6 +40,40 @@ namespace BGaussCRM.API.Controllers
             ?? User.FindFirst(ClaimTypes.Name)?.Value
             ?? User.FindFirst("sub")?.Value
             ?? "admin";
+
+        // ── Resolve dealer's full User object from DealerId stored on case ────
+        // DealerId was saved as the dealer's email at case creation.
+        // Cross-reference Users table to get FullName + canonical Email.
+        private async Task<User> ResolveDealerAsync(string dealerId)
+        {
+            if (!string.IsNullOrWhiteSpace(dealerId))
+            {
+                var user = await _db.Users.AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email == dealerId || u.Username == dealerId);
+
+                if (user != null)
+                {
+                    _logger.LogInformation(
+                        "ResolveDealerAsync: {DealerId} → {FullName} <{Email}> (user: {Username})",
+                        dealerId, user.FullName, user.Email, user.Username);
+                    return user;
+                }
+            }
+
+            // Fallback: construct minimal User — DealerId is already an email
+            _logger.LogWarning(
+                "ResolveDealerAsync: could not find User for DealerId={DealerId}, using fallback",
+                dealerId);
+
+            return new User
+            {
+                FullName = dealerId?.Split('@')[0] ?? "BGauss Dealer",
+                Email    = dealerId?.Contains("@") == true
+                               ? dealerId
+                               : (_config["Exchange:AdminEmail"] ?? "mayank.maheshwari@bgauss.com"),
+                Username = dealerId ?? "unknown"
+            };
+        }
 
         // ── GET /api/ExchangeAdmin/dashboard-stats ────────────────────────────
         [HttpGet("dashboard-stats")]
@@ -66,6 +100,7 @@ namespace BGaussCRM.API.Controllers
                 Approved       = cases.Count(c => c.Status == "AdminApproved" || c.Status == "AdminModified"),
                 Rejected       = cases.Count(c => c.Status == "AdminRejected"),
                 Draft          = cases.Count(c => c.Status == "Draft"),
+                ImagesPending  = cases.Count(c => c.Status == "ImagesPending"),
                 ThisWeek       = cases.Count(c => c.CreatedAt >= DateTime.UtcNow.AddDays(-7)),
                 RecentActivity = recentActivity,
             });
@@ -85,17 +120,18 @@ namespace BGaussCRM.API.Controllers
 
             if (!string.IsNullOrEmpty(status)) q = q.Where(c => c.Status == status);
             if (!string.IsNullOrEmpty(search))
-                q = q.Where(c => c.CaseNumber.Contains(search) || c.CustomerName.Contains(search) ||
-                                 c.VehicleModel.Contains(search) || c.RegistrationNo.Contains(search) ||
-                                 c.DealerId.Contains(search));
+                q = q.Where(c =>
+                    c.CaseNumber.Contains(search) || c.CustomerName.Contains(search) ||
+                    c.VehicleModel.Contains(search) || c.RegistrationNo.Contains(search) ||
+                    c.DealerId.Contains(search));
 
             q = sortBy switch
             {
                 "CustomerName" => sortDir == "asc" ? q.OrderBy(c => c.CustomerName)  : q.OrderByDescending(c => c.CustomerName),
                 "VehicleModel" => sortDir == "asc" ? q.OrderBy(c => c.VehicleModel)  : q.OrderByDescending(c => c.VehicleModel),
-                "Grade"        => sortDir == "asc" ? q.OrderBy(c => c.Grade)          : q.OrderByDescending(c => c.Grade),
-                "TotalScore"   => sortDir == "asc" ? q.OrderBy(c => c.TotalScore)     : q.OrderByDescending(c => c.TotalScore),
-                _              => sortDir == "asc" ? q.OrderBy(c => c.SubmittedAt)    : q.OrderByDescending(c => c.SubmittedAt),
+                "Grade"        => sortDir == "asc" ? q.OrderBy(c => c.Grade)         : q.OrderByDescending(c => c.Grade),
+                "TotalScore"   => sortDir == "asc" ? q.OrderBy(c => c.TotalScore)    : q.OrderByDescending(c => c.TotalScore),
+                _              => sortDir == "asc" ? q.OrderBy(c => c.SubmittedAt)   : q.OrderByDescending(c => c.SubmittedAt),
             };
 
             var total = await q.CountAsync();
@@ -127,8 +163,12 @@ namespace BGaussCRM.API.Controllers
 
             var scores = c.ExchangeInspectionScores ?? Enumerable.Empty<ExchangeInspectionScore>();
             var scoresByCategory = scores.GroupBy(s => s.Category)
-                .Select(g => new { Category = g.Key, Parameters = g.Select(s => new { s.Parameter, s.Score }).ToList(),
-                    Average = g.Any() ? g.Average(s => (double)s.Score) : 0.0 }).ToList();
+                .Select(g => new
+                {
+                    Category   = g.Key,
+                    Parameters = g.Select(s => new { s.Parameter, s.Score }).ToList(),
+                    Average    = g.Any() ? g.Average(s => (double)s.Score) : 0.0
+                }).ToList();
 
             var images = (c.ExchangeCaseImages ?? Enumerable.Empty<ExchangeCaseImage>())
                 .Select(i => new { i.ImageType, i.ImagePath, i.UploadedAt }).ToList();
@@ -137,12 +177,20 @@ namespace BGaussCRM.API.Controllers
                 .OrderByDescending(a => a.ActionAt)
                 .Select(a => new { a.Action, a.AdminUser, a.ActionAt, a.PriceSet, a.Note }).ToList();
 
+            // Optionally enrich with dealer FullName for display in admin panel
+            var dealer = await ResolveDealerAsync(c.DealerId);
+
             return Ok(new
             {
                 c.Id, c.CaseNumber, c.CustomerName, c.MobileNumber, c.City,
                 c.VehicleModel, c.RegistrationNo, c.YearOfPurchase, c.KmDriven,
                 c.Grade, c.TotalScore, c.RecommendedPrice, c.MinPrice, c.MaxPrice,
-                c.Status, c.DealerId, c.SubmittedAt, c.CreatedAt,
+                c.Status, c.DealerId,
+                DealerFullName   = dealer.FullName,      // bonus: available to React panel
+                DealerPhone      = dealer.PhoneNumber,
+                DealerEmployeeId = dealer.EmployeeId,
+                DealerDepartment = dealer.Department,
+                c.SubmittedAt, c.CreatedAt,
                 c.AdminNote, c.ApprovedPrice, c.AdminActionAt,
                 ScoresByCategory = scoresByCategory,
                 Images           = images,
@@ -159,6 +207,7 @@ namespace BGaussCRM.API.Controllers
             return Ok(images);
         }
 
+        // ── POST /api/ExchangeAdmin/cases/{id}/decide ─────────────────────────
         [HttpPost("cases/{id}/decide")]
         public async Task<IActionResult> DecideCase(int id, [FromBody] AdminDecisionDto dto)
         {
@@ -168,7 +217,6 @@ namespace BGaussCRM.API.Controllers
             if (c.Status != "PendingAdminReview")
                 return BadRequest(new { error = "Case is not pending review." });
 
-            // ── Validate action ─────────────────────
             var validActions = new[] { "Approved", "Modified", "Rejected" };
             if (!validActions.Contains(dto.Action))
                 return BadRequest("Invalid action");
@@ -179,7 +227,6 @@ namespace BGaussCRM.API.Controllers
             if (dto.Action == "Modified" && dto.Price == null)
                 return BadRequest("Modified price required");
 
-            // ── Update case ─────────────────────────
             c.Status = dto.Action switch
             {
                 "Approved" => "AdminApproved",
@@ -198,7 +245,6 @@ namespace BGaussCRM.API.Controllers
             c.AdminActionAt = DateTime.UtcNow;
             c.UpdatedAt     = DateTime.UtcNow;
 
-            // ── Save logs ───────────────────────────
             _db.ExchangeAdminActions.Add(new ExchangeAdminAction
             {
                 CaseId    = id,
@@ -218,45 +264,29 @@ namespace BGaussCRM.API.Controllers
 
             await _db.SaveChangesAsync();
 
-            // ── EMAIL SECTION (FIXED) ─────────────────────
+            // ── Resolve full User so email says "Hi John Smith" not "Hi john@..." ─
+            var dealer = await ResolveDealerAsync(c.DealerId);
 
-            var dealerEmail = c.DealerId;
-
-            // ❗ Validate email
-            if (string.IsNullOrWhiteSpace(dealerEmail) || !dealerEmail.Contains("@"))
-            {
-                _logger.LogWarning("❌ Invalid dealer email: {Email}", dealerEmail);
-
-                // TEMP fallback for testing
-                dealerEmail = "mayank.maheshwari@bgauss.com";
-            }
+            _logger.LogInformation(
+                "📧 Sending decision ({Action}) email to {FullName} <{Email}> for {Code}",
+                dto.Action, dealer.FullName, dealer.Email, c.CaseNumber);
 
             try
             {
-                _logger.LogInformation("📧 Sending email to dealer: {Email}", dealerEmail);
-
-                await _email.SendAdminActionEmailAsync(c, dealerEmail, dto.Action, dto.Note);
-
-                // ✅ Send to admin also
-                var adminEmail = _config["Exchange:AdminEmail"];
-
-                if (!string.IsNullOrWhiteSpace(adminEmail))
-                {
-                    _logger.LogInformation("📧 Sending email to admin: {Email}", adminEmail);
-
-                    await _email.SendAdminActionEmailAsync(c, adminEmail, dto.Action, dto.Note);
-                }
+                await _email.SendAdminActionEmailAsync(c, dealer, dto.Action, dto.Note);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "❌ Email failed for case {CaseNumber}", c.CaseNumber);
+                // Decision already saved — don't fail the HTTP response
             }
 
             return Ok(new
             {
                 c.CaseNumber,
                 c.Status,
-                c.ApprovedPrice
+                c.ApprovedPrice,
+                message = $"Decision recorded. Email sent to {dealer.FullName} ({dealer.Email})."
             });
         }
 
