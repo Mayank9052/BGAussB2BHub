@@ -13,6 +13,10 @@
 //   7. S03 form — added Variant dropdown after Model dropdown
 //   8. S09 summary — shows Variant in Vehicle Details section
 //   9. Reset on S10 "Start Another Case" — clears vehicleVariant
+//  10. [FIX] useEffect scrolls to top when globalError is set
+//  11. [FIX] handleGeneratePrice — shows raw backend message
+//        (no "Price Generation Error:" prefix) so dealer sees
+//        a clean, actionable message
 // ════════════════════════════════════════════════════════════
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -134,6 +138,13 @@ export default function ExchangeProgram() {
   const [models, setModels]               = useState<string[]>([]);
 
   const fileRefs = useRef<Partial<Record<ImageType, HTMLInputElement>>>({});
+
+  // ── [FIX] Auto-scroll to top whenever a global error is set ──
+  useEffect(() => {
+    if (globalError) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [globalError]);
 
   // ── Load inspection params & models ────────────────────────
   useEffect(() => {
@@ -303,6 +314,10 @@ export default function ExchangeProgram() {
   };
 
   // ── Generate price ────────────────────────────────────────
+  // [FIX] Shows the backend error message directly — no extra prefix.
+  //       The backend already returns a clear, user-readable message like:
+  //       "Price data is not configured for BG RUV 350 (Ex, 2022).
+  //        Please contact BGauss support to set up pricing for this model."
   const handleGeneratePrice = async () => {
     if (!caseId) return;
     setLoading(true);
@@ -316,15 +331,48 @@ export default function ExchangeProgram() {
       goTo("S08");
     } catch (e: unknown) {
       if (axios.isAxiosError(e)) {
-        const err = e.response?.data as { error?: string; missing?: string[] };
-        if (err?.error === "ImagesMissing") {
-          setMissingImages(err.missing ?? []);
-          goTo("S07");
-        } else {
-          setGlobalError("Failed to generate price. Please try again.");
+        const data = e.response?.data as {
+          error?: string;
+          missing?: string[];
+          title?: string;
+        } | string | null;
+
+        if (typeof data === "object" && data !== null) {
+          // ── Images missing → go to S07 ──────────────────────
+          if (data.error === "ImagesMissing") {
+            setMissingImages(data.missing ?? []);
+            goTo("S07");
+            return;
+          }
+
+          // ── Scores missing ───────────────────────────────────
+          if (data.error === "ScoresMissing") {
+            setGlobalError("Inspection scores are missing. Please complete the scoring step.");
+            return;
+          }
+
+          // ── [FIX] "No base price found…" or any other backend
+          //    error string — show it directly without any prefix.
+          //    The C# controller now returns a dealer-friendly message.
+          if (typeof data.error === "string" && data.error.length > 0) {
+            setGlobalError(data.error);
+            return;
+          }
+
+          if (typeof data.title === "string") {
+            setGlobalError(data.title);
+            return;
+          }
         }
+
+        if (typeof data === "string" && data.length > 0) {
+          setGlobalError(data);
+          return;
+        }
+
+        setGlobalError("Failed to generate price. Please check the vehicle model / variant and try again.");
       } else {
-        setGlobalError("Unexpected error occurred.");
+        setGlobalError("Unexpected error occurred while generating price.");
       }
     } finally {
       setLoading(false);
@@ -480,10 +528,12 @@ export default function ExchangeProgram() {
 
       {/* ════════════════════════════════
           GLOBAL ERROR
+          [FIX] whiteSpace pre-wrap so multi-line backend messages
+                display cleanly. Auto-scroll handled by useEffect above.
       ════════════════════════════════ */}
       {globalError && (
-        <div className="ep-global-error">
-          <span>⚠</span> {globalError}
+        <div className="ep-global-error" style={{ whiteSpace: "pre-wrap" }}>
+          {globalError}
           <button onClick={() => setGlobalError("")}>✕</button>
         </div>
       )}

@@ -109,6 +109,26 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 
 const IMAGE_TYPES = ["Front", "Rear", "Left", "Right", "Odometer", "Battery"] as const;
 
+const API_ORIGIN = import.meta.env.VITE_API_BASE ?? "";
+
+const resolveImageUrl = (imagePath: string | null | undefined): string | null => {
+  if (!imagePath || imagePath.trim() === "") return null;
+
+  // 1. Normalize separators
+  let path = imagePath.replace(/\\/g, "/");
+
+  // 2. Strip ALL leading slashes then add exactly one
+  path = "/" + path.replace(/^\/+/, "");
+
+  // 3. Prepend API origin if path doesn't already have it
+  //    (handles both same-origin and cross-origin deployments)
+  if (API_ORIGIN && !path.startsWith(API_ORIGIN)) {
+    return `${API_ORIGIN}${path}`;
+  }
+
+  return path;
+};
+
 const GRADE_COLOR: Record<string, string> = {
   Excellent: "#16a34a",
   Good:      "#d97706",
@@ -888,7 +908,7 @@ export default function ExchangeAdminPanel() {
           </div>
         )}
 
-        {/* ════════════════════════════════════════════════
+       {/* ════════════════════════════════════════════════
             A05 — IMAGE REVIEW SCREEN
         ════════════════════════════════════════════════ */}
         {screen === "A05" && selectedCase && (
@@ -910,10 +930,12 @@ export default function ExchangeAdminPanel() {
 
             <div className="eap-img-grid">
               {IMAGE_TYPES.map(type => {
-                const img = (selectedCase.images ?? []).find(i => i.imageType === type);
-                const src = img?.imagePath
-                  ? `/${img.imagePath.replace(/\\/g, "/").replace(/^\/+/, "")}`
-                  : null;
+                const img = (selectedCase.images ?? []).find(
+                  i => i.imageType.toLowerCase() === type.toLowerCase()
+                );
+
+                // ── Use the robust resolver ───────────────────────────────────
+                const src = resolveImageUrl(img?.imagePath);
 
                 return (
                   <div
@@ -925,16 +947,22 @@ export default function ExchangeAdminPanel() {
                       <>
                         <img
                           src={src}
-                          alt={type}
+                          alt={`${type} view`}
                           onError={e => {
-                            (e.target as HTMLImageElement).style.opacity = "0.3";
+                            const target = e.target as HTMLImageElement;
+                            target.style.opacity = "0.2";
+                            // Show the failed URL in console for debugging
+                            console.warn(`[ExchangeImages] 404: ${target.src}`);
+                            // Optionally swap to a placeholder:
+                            // target.src = "/assets/no-image.png";
                           }}
                         />
                         <div className="eap-img-overlay"><span>🔍 Enlarge</span></div>
                       </>
                     ) : (
                       <div className="eap-img-missing">
-                        <span>⚠</span><p>Missing</p>
+                        <span>⚠</span>
+                        <p>Not uploaded</p>
                       </div>
                     )}
                     <div className={`eap-img-label ${src ? "" : "missing"}`}>

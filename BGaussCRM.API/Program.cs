@@ -83,6 +83,42 @@ app.UseSwaggerUI();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+var possibleImageRoots = new[]
+{
+    app.Environment.WebRootPath,
+    Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
+    Path.Combine(Path.GetTempPath(), "bgauss-uploads"),
+};
+
+foreach (var root in possibleImageRoots.Where(r => !string.IsNullOrWhiteSpace(r)))
+{
+    var imgFolder = Path.Combine(root, "ExchangeImages");
+    if (!Directory.Exists(imgFolder))
+    {
+        try { Directory.CreateDirectory(imgFolder); } catch { /* ignore */ }
+    }
+
+    if (Directory.Exists(imgFolder))
+    {
+        app.UseStaticFiles(new StaticFileOptions
+        {
+            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(imgFolder),
+            RequestPath  = "/ExchangeImages",
+            OnPrepareResponse = ctx =>
+            {
+                // Cache images for 1 hour, allow CORS for same origin
+                ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=3600";
+                ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
+            }
+        });
+
+        // Log which root is active so you can verify in server logs
+        Console.WriteLine($"[ExchangeImages] Serving static files from: {imgFolder}");
+        break; // use first valid root only to avoid duplicate middleware conflicts
+    }
+}
+
+app.UseRouting();
 // ── CORS — apply to ALL environments ─────────────────────────
 app.UseCors("AllowAll");
 

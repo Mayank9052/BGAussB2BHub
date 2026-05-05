@@ -75,28 +75,51 @@ const getPasswordStrength = (pw: string): { score: number; label: string; color:
 };
 
 // ── Role meta ──────────────────────────────────────────────
-const ROLE_META: Record<RoleTab, { title: string; placeholder: string; note: React.ReactNode  }> = {
-  dealer: {
-    title: "Dealer Sign In",
-    placeholder: "e.g. EMP001 or dealer@bgauss.com",
-    note: (
-      <>
-        <strong>Dealer access:</strong> exchange program,
-        inventory &amp; order management
-      </>
-    ),
-  },
-  admin: {
-    title: "Admin Sign In",
-    placeholder: "e.g. admin@bgauss.com",
-    note: (
-      <>
-        <strong>Admin access:</strong> approval panel,
-        pricing &amp; dealer oversight
-      </>
-    ),
-  },
-};
+// const ROLE_META: Record<RoleTab, { title: string; placeholder: string; note: React.ReactNode  }> = {
+//   dealer: {
+//     title: "Dealer Sign In",
+//     placeholder: "e.g. EMP001 or dealer@bgauss.com",
+//     note: (
+//       <>
+//         <strong>Dealer access:</strong> exchange program,
+//         inventory &amp; order management
+//       </>
+//     ),
+//   },
+//   admin: {
+//     title: "Admin Sign In",
+//     placeholder: "e.g. admin@bgauss.com",
+//     note: (
+//       <>
+//         <strong>Admin access:</strong> approval panel,
+//         pricing &amp; dealer oversight
+//       </>
+//     ),
+//   },
+// };
+
+const ROLE_META: Record<RoleTab, { title: string; placeholder: string; note: React.ReactNode }> = {
+       dealer: {
+         title: "Dealer Sign In",
+         placeholder: "e.g. dealer@bgauss.com or username",
+         note: (
+           <>
+             <strong>Dealer access only.</strong> Admin accounts cannot log in here.
+             Use this tab if you manage exchange cases or inventory.
+           </>
+         ),
+       },
+       admin: {
+         title: "Admin Sign In",
+         placeholder: "e.g. priyanka.nikam@bgauss.com",
+         note: (
+           <>
+             <strong>Admin access only.</strong> Dealer accounts cannot log in here.
+             Use this tab to approve, modify or reject exchange cases.
+           </>
+         ),
+      },
+  };
 
 // ── Component ──────────────────────────────────────────────
 const LoginPage = () => {
@@ -209,7 +232,23 @@ const LoginPage = () => {
       if (!token) throw new Error("No token received.");
 
       const username = res.data.username ?? res.data.Username ?? identifier.trim();
-      const role     = extractRole(res.data, token);
+      const role     = extractRole(res.data, token);  // "admin" | "user" | other
+
+      // ── ROLE VALIDATION — must match selected tab ──────────────────────────
+      if (selectedRole === "dealer" && role === "admin") {
+        setLoginError(
+          "This account has admin access. Please use the Admin tab to log in."
+        );
+        return;
+      }
+
+      if (selectedRole === "admin" && role !== "admin") {
+        setLoginError(
+          "This account does not have admin access. Please use the Dealer tab."
+        );
+        return;
+      }
+      // ──────────────────────────────────────────────────────────────────────
 
       localStorage.setItem("token",    token);
       localStorage.setItem("username", username);
@@ -226,9 +265,15 @@ const LoginPage = () => {
     } catch (err: unknown) {
       console.error("Login Error:", err);
       if (axios.isAxiosError(err)) {
-        setLoginError(err.response?.data?.message ?? "Invalid credentials.");
-      } else {
-        setLoginError("Invalid credentials.");
+        // Don't overwrite role mismatch errors we set above
+        if (!loginError) {
+          const msg = err.response?.data?.message
+                   ?? err.response?.data
+                   ?? "Invalid credentials. Please try again.";
+          setLoginError(typeof msg === "string" ? msg : "Invalid credentials.");
+        }
+      } else if (err instanceof Error && err.message !== "No token received.") {
+        setLoginError("Invalid credentials. Please try again.");
       }
     } finally {
       setLoginLoading(false);
