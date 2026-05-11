@@ -45,7 +45,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// ── CORS — allow localhost dev + production IP ────────────────
+// ── CORS ──────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -53,7 +53,7 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://localhost:5173",
                 "http://localhost:3000",
-                "http://34.203.61.70",          // your EC2 IP
+                "http://34.203.61.70",
                 "http://34.203.61.70:80",
                 "http://34.203.61.70:443"
             )
@@ -62,64 +62,63 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-// ── Explicit WebRootPath so uploads work on Linux/AWS ─────────
-// When published, wwwroot must be set to the folder that actually
-// exists next to the executable. Setting it here guarantees
-// IWebHostEnvironment.WebRootPath is never null in controllers.
+// ── Explicit WebRootPath ──────────────────────────────────────
 var wwwrootPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot");
 if (!Directory.Exists(wwwrootPath))
-{
     Directory.CreateDirectory(wwwrootPath);
-}
 builder.Environment.WebRootPath = wwwrootPath;
 
 var app = builder.Build();
 
-// ── Swagger (all environments for now — restrict later if needed) ──
+// ── Swagger ───────────────────────────────────────────────────
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// ── Serve React build from wwwroot ────────────────────────────
+// ── Serve React build (wwwroot) ───────────────────────────────
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles();   // serves wwwroot — React build + /ExchangeImages inside wwwroot
 
-var possibleImageRoots = new[]
+// ── ALSO serve ExchangeImages from its physical disk location ─
+// If images were saved outside wwwroot (e.g. in a temp folder or
+// directly under ContentRoot), this second provider catches them.
+//
+// The controller saves to: GetWebRoot() / ExchangeImages / {id} / {file}
+// GetWebRoot() tries wwwroot first, then ContentRoot/wwwroot, then temp.
+// We register all three possible roots so images are always found.
+
+var possibleRoots = new[]
 {
-    app.Environment.WebRootPath,
-    Path.Combine(app.Environment.ContentRootPath, "wwwroot"),
-    Path.Combine(Path.GetTempPath(), "bgauss-uploads"),
+    wwwrootPath,                                                        // primary
+    builder.Environment.ContentRootPath,                                // fallback 1
+    Path.Combine(Path.GetTempPath(), "bgauss-uploads"),                 // fallback 2
 };
 
-foreach (var root in possibleImageRoots.Where(r => !string.IsNullOrWhiteSpace(r)))
+foreach (var root in possibleRoots)
 {
-    var imgFolder = Path.Combine(root, "ExchangeImages");
-    if (!Directory.Exists(imgFolder))
+    var exchangeImagesFolder = Path.Combine(root, "ExchangeImages");
+
+    // Create the folder if it doesn't exist yet (avoids DirectoryNotFoundException)
+    if (!Directory.Exists(exchangeImagesFolder))
     {
-        try { Directory.CreateDirectory(imgFolder); } catch { /* ignore */ }
+        try { Directory.CreateDirectory(exchangeImagesFolder); }
+        catch { /* ignore — will be created on first upload */ }
     }
 
-    if (Directory.Exists(imgFolder))
+    // Register a static file provider for this root so /ExchangeImages/... URLs work
+    app.UseStaticFiles(new StaticFileOptions
     {
-        app.UseStaticFiles(new StaticFileOptions
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(root),
+        RequestPath  = "",           // serve at root — /ExchangeImages/11/Front.jpg
+        ServeUnknownFileTypes = true, // allow .jpg .png without explicit MIME
+        OnPrepareResponse = ctx =>
         {
-            FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(imgFolder),
-            RequestPath  = "/ExchangeImages",
-            OnPrepareResponse = ctx =>
-            {
-                // Cache images for 1 hour, allow CORS for same origin
-                ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=3600";
-                ctx.Context.Response.Headers["Access-Control-Allow-Origin"] = "*";
-            }
-        });
-
-        // Log which root is active so you can verify in server logs
-        Console.WriteLine($"[ExchangeImages] Serving static files from: {imgFolder}");
-        break; // use first valid root only to avoid duplicate middleware conflicts
-    }
+            // Cache images for 1 hour in the browser
+            ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=3600";
+        }
+    });
 }
 
-app.UseRouting();
-// ── CORS — apply to ALL environments ─────────────────────────
+// ── CORS ──────────────────────────────────────────────────────
 app.UseCors("AllowAll");
 
 app.UseAuthentication();
